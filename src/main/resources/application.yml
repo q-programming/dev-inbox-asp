@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: devinbox
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DATASOURCE_URL:jdbc:postgresql://localhost:5432/devinbox}
+    username: ${DATASOURCE_USERNAME:devinbox}
+    password: ${DATASOURCE_PASSWORD:devinbox}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none  # DatabaseInitializer handles schema creation/migration
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+    open-in-view: false
+  liquibase:
+    enabled: false  # Controlled manually by DatabaseInitializer
+    change-log: classpath:config/liquibase/master.xml
+  modulith:
+    events:
+      republish-outstanding-events-on-restart: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,modulith
+  endpoint:
+    health:
+      show-details: when-authorized
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    # Groups are auto-discovered from GroupedOpenApi beans; urls listed here
+    # just control the display order in the dropdown.
+    urls:
+      - name: shared
+        url: /v3/api-docs/shared
+      - name: inbox
+        url: /v3/api-docs/inbox
+      - name: notes
+        url: /v3/api-docs/notes
+      - name: identity
+        url: /v3/api-docs/identity
+      - name: sync
+        url: /v3/api-docs/sync
+
+logging:
+  level:
+    pl.qprogramming.devinbox: DEBUG
+    org.springframework.modulith: INFO

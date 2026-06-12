@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/devinbox
+    username: postgres
+    password: password
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    pl.qprogramming.devinbox: DEBUG
+    org.springframework.web: DEBUG

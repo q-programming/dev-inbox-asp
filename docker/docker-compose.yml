@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: devinbox-postgres
+    environment:
+      POSTGRES_DB: devinbox
+      POSTGRES_USER: devinbox
+      POSTGRES_PASSWORD: devinbox
+    ports:
+      - "5432:5432"
+    volumes:
+      - devinbox-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devinbox -d devinbox"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: devinbox-otel
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    ports:
+      - "4318:4318"   # OTLP HTTP
+      - "4317:4317"   # OTLP gRPC
+      - "8889:8889"   # Prometheus metrics scrape
+    depends_on:
+      - postgres
+
+volumes:
+  devinbox-pgdata:

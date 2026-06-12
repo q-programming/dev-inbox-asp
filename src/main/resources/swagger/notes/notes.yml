@@ -1,0 +1,129 @@
+openapi: 3.0.3
+info:
+  title: Notes API
+  version: 0.1.0
+  description: Personal notes management
+
+servers:
+  - url: /api
+    description: Base API path
+
+tags:
+  - name: notes
+    description: Personal notes
+
+paths:
+  /notes:
+    get:
+      operationId: listNotes
+      tags: [notes]
+      summary: List personal notes
+      responses:
+        "200":
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NoteDto"
+    post:
+      operationId: createNote
+      tags: [notes]
+      summary: Create a personal note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteRequest"
+      responses:
+        "201":
+          description: Note created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteDto"
+
+  /notes/{id}:
+    put:
+      operationId: updateNote
+      tags: [notes]
+      summary: Update a note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteRequest"
+      responses:
+        "200":
+          description: Updated note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteDto"
+    delete:
+      operationId: deleteNote
+      tags: [notes]
+      summary: Delete a note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Deleted
+
+components:
+  schemas:
+    NoteDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        body:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        followUpAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateNoteRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        followUpAt:
+          type: string
+          format: date-time
+

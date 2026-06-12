@@ -1,16 +1,5 @@
-# Compiled class file
+# ── Java / Maven ──────────────────────────────────────────────────────────────
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
 *.jar
 *.war
 *.nar
@@ -18,7 +7,44 @@
 *.zip
 *.tar.gz
 *.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+*.log
+*.ctxt
+.mtj.tmp/
 hs_err_pid*
 replay_pid*
+target/
+.mvn/timing.properties
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Node / npm ────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Frontend build artifacts ───────────────────────────────────────────────────
+src/main/webapp/dist/
+src/main/webapp/coverage/
+src/main/webapp/test-report.xml
+src/main/webapp/.vite/
+
+# ── Generated API client (regenerated on mvn compile) ─────────────────────────
+src/main/webapp/generated/
+
+# ── Docker / infra ────────────────────────────────────────────────────────────
+docker/*.local.yml
+
+# ── Environment secrets ───────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local

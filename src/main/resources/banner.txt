@@ -1,0 +1,8 @@
+  ____             ___       _
+ |  _ \  _____   _|_ _|_ __ | |__   _____  __
+ | | | |/ _ \ \ / /| || '_ \| '_ \ / _ \ \/ /
+ | |_| |  __/\ V / | || | | | |_) | (_) >  <
+ |____/ \___| \_/ |___|_| |_|_.__/ \___/_/\_\
+
+ :: Dev Inbox :: ${spring.application.name} v${application.version}
+ :: Spring Boot :: ${spring-boot.version}

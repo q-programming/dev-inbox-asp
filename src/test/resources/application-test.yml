@@ -1,0 +1,20 @@
+# Test profile - datasource overridden by @ServiceConnection from PostgresTestContainerConfig
+# Let Hibernate create the schema on fresh Testcontainers DB (DatabaseInitializer is for production)
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  liquibase:
+    enabled: false
+  modulith:
+    events:
+      republish-outstanding-events-on-restart: false
+
+application:
+  database-initializer:
+    enabled: false
+
+logging:
+  level:
+    pl.qprogramming.devinbox: WARN
+

@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: Shared API
+  version: 0.1.0
+  description: Health and readiness probes
+
+servers:
+  - url: /api
+    description: Base API path
+
+tags:
+  - name: health
+    description: Health and readiness
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /health:
+    get:
+      operationId: healthCheckOk
+      tags: [health]
+      summary: Health check (simple OK probe)
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP
+

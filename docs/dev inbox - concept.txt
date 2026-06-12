@@ -1,0 +1,546 @@
+# Dev Inbox — Project Document
+## Overview
+Dev Inbox is a personal engineering workspace application designed to aggregate and triage a developer's daily work context in one place. The core problem it solves is fragmentation: GitHub pull requests live in one tab, Azure DevOps work items in another, personal notes scattered across sticky notes, Notepad and browser bookmarks. Dev Inbox pulls all of this into a unified, filterable inbox, giving the developer a single answer to the question: **"What do I need to focus on today?"**
+
+The application is also a learning project, built deliberately to explore modern Java backend patterns — Spring Modulith, domain events, transactional outbox, virtual threads — and a well-structured React frontend with TanStack Query, Zustand, and a generated TypeScript API client.
+
+***
+## Business Goals
+- Reduce cognitive load caused by switching between GitHub, Azure DevOps, email and personal notes during a working day.
+- Provide a personal "attention layer" on top of existing team tools, without replacing them.
+- Give the developer instant visibility into: what needs review, what was just mentioned or commented on, what ADO work items are assigned or followed, and any personal notes linked to those items.
+- Be a product the developer actually opens every morning and keeps open all day.
+
+***
+## What It Is NOT
+- Not a replacement for GitHub, Azure Boards, Jira or any other team tool.
+- Not a project management or Kanban board.
+- Not a team collaboration tool — this is personal, per-user, not shared.
+- Not a notification relay or email client.
+- Not a monitoring/observability dashboard.
+
+***
+## Key Features (MVP Scope)
+### Unified Inbox
+A single, filterable list of items from all sources. Each item is derived from one of three sources: GitHub, Azure DevOps, or a personal local note. The inbox is the central UI and the primary use case.
+### GitHub Items
+- Pull requests authored by the user (own PRs)
+- Pull requests awaiting user's review (review requests)
+- Comments and threads where the user was @mentioned
+- PR status updates (new review, approved, changes requested)
+
+Items are imported via GitHub REST API and synchronized incrementally on a schedule.[^1][^2]
+### Azure DevOps Items
+- Work items assigned to the user
+- Work items followed by the user
+- Recent activity on followed items
+
+Items are imported via Azure DevOps REST API and synchronized incrementally.[^3][^4]
+### Personal Notes
+- Lightweight freeform notes
+- Can be attached to a GitHub PR or ADO work item, or standalone
+- Support tags and optional follow-up date
+### Item Enrichment
+Every inbox item, regardless of source, supports:
+- Personal priority: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
+- Personal status: `UNREAD`, `SAVED`, `DONE`, `PINNED`, `SNOOZED`
+- Tags (user-defined strings)
+- Private note (freeform text, markdown)
+- Follow-up date
+
+These personal overlays are stored separately from the source data and are never written back to GitHub or Azure DevOps.
+### Filtering and Saved Views
+The inbox list supports persistent filtering by:
+- Source: GitHub / ADO / Notes
+- Item type: review request, mention, own PR, assigned, followed, note
+- Status: unread, saved, done, pinned
+- Age: today, last 3 days, stale (>7 days)
+- Repository or project
+- Tags
+
+Users can save named filter combinations as custom views (e.g., "Review queue", "My ADO today", "Mentions to follow up"). GitHub itself encourages filter-based inbox triage workflows, and the same model applies here.[^5][^6]
+### Connection Settings
+User can configure:
+- GitHub personal access token (PAT) and list of watched repositories
+- Azure DevOps organization, project, and PAT
+- Sync interval preference
+
+***
+## Screen Layout
+The main application view follows a three-zone desktop layout:[^7][^8]
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  [Logo]  Search...              [+ Note]  [Sync]  [User] │  ← Header (56px)
+├──────────────┬────────────────────────────┬──────────────┤
+│              │  [■ 4] [◎ 2] [@ 3] [✓ 8]  │              │
+│  Inbox       │  ─────────────────────     │  Detail      │
+│  Reviews     │  [GH] PR: Fix login flow   │  Panel       │
+│  Mentions    │  [ADO] US-441: Add export  │              │
+│  My PRs      │  [@] Mentioned in thread   │  Title       │
+│  ADO Items   │  [NOTE] Talk to Anna...    │  Source      │
+│  Notes       │  [GH] Review: API changes  │  Author      │
+│  ─────────── │  ...                       │  Status      │
+│  Saved       │                            │  Linked      │
+│  Done        │                            │  Note        │
+│  ─────────── │                            │  Actions     │
+│  [Filter 1]  │                            │              │
+│  [Filter 2]  │                            │              │
+└──────────────┴────────────────────────────┴──────────────┘
+   240px         flexible 700-900px           360-420px
+```
+
+**Summary tiles** above the list show live item counts for key categories. Clicking a tile applies an immediate filter to the list.[^7]
+
+**Sidebar** contains named quick views and saved custom filters.[^2][^5]
+
+**List** is compact by default (density toggle: comfy/compact). Each row shows source icon, title, repository/project, reason badge, age, and read/pin status.[^2]
+
+**Detail panel** opens inline to the right on click. No page navigation. Full item metadata, linked entities, private note field, and action buttons.[^9]
+
+
+
+***
+## Architecture
+### High-Level Architecture
+```mermaid
+graph TB
+    subgraph Frontend["Frontend (Vite + React + TypeScript)"]
+        UI[React UI]
+        TQ[TanStack Query]
+        ZS[Zustand UI State]
+        AC[Generated API Client]
+    end
+
+    subgraph Backend["Backend (Spring Boot + Spring Modulith)"]
+        direction TB
+        subgraph Modules["Application Modules"]
+            GH[github-integration]
+            ADO[ado-integration]
+            INBOX[inbox]
+            NOTES[notes]
+            SYNC[sync]
+            ID[identity]
+        end
+        API[REST API / OpenAPI]
+        OTL[Observability / Micrometer + OTLP]
+    end
+
+    subgraph Infra["Infrastructure"]
+        PG[(PostgreSQL)]
+        FW[Flyway Migrations]
+        OTEL[OpenTelemetry Collector]
+    end
+
+    subgraph External["External APIs"]
+        GHAPI[GitHub REST API]
+        ADOAPI[Azure DevOps REST API]
+    end
+
+    UI --> TQ
+    TQ --> AC
+    AC --> API
+    API --> Modules
+    GH --> GHAPI
+    ADO --> ADOAPI
+    GH --> INBOX
+    ADO --> INBOX
+    SYNC --> GH
+    SYNC --> ADO
+    Backend --> PG
+    Backend --> OTL
+```
+### Module Interaction
+```mermaid
+graph LR
+    subgraph identity
+        User
+        Settings
+    end
+
+    subgraph github-integration
+        GHClient[GitHub API Client]
+        PRImporter[PR Importer]
+        MentionImporter[Mention Importer]
+    end
+
+    subgraph ado-integration
+        ADOClient[ADO API Client]
+        WorkItemImporter[Work Item Importer]
+    end
+
+    subgraph sync
+        SyncScheduler[Sync Scheduler]
+        OutboxProcessor[Outbox Processor]
+    end
+
+    subgraph inbox
+        InboxProjection[Inbox Read Model]
+        InboxQueryService
+        InboxController
+    end
+
+    subgraph notes
+        Note
+        NoteController
+    end
+
+    github-integration -->|domain event| inbox
+    ado-integration -->|domain event| inbox
+    notes -->|domain event| inbox
+    sync --> github-integration
+    sync --> ado-integration
+    identity --> github-integration
+    identity --> ado-integration
+```
+### Sync & Inbox Projection Flow
+```mermaid
+sequenceDiagram
+    participant Scheduler as Sync Scheduler
+    participant GH as GitHub Integration
+    participant ADO as ADO Integration
+    participant DB as PostgreSQL (Outbox)
+    participant Inbox as Inbox Module
+    participant FE as React Frontend
+
+    Scheduler->>GH: trigger PR/mention sync
+    Scheduler->>ADO: trigger work item sync
+    GH->>DB: upsert PR data + publish domain event (outbox)
+    ADO->>DB: upsert ADO items + publish domain event (outbox)
+    DB->>Inbox: outbox processor fires event
+    Inbox->>DB: update inbox_projection table
+    FE->>Inbox: GET /api/inbox?filter=...
+    Inbox->>FE: InboxItemDto[]
+    FE->>FE: TanStack Query caches + renders list
+```
+
+***
+## Backend Architecture
+### Spring Modulith
+The backend is structured as a **modular monolith** using Spring Modulith. Each module is a top-level Java package with strict boundary enforcement. Cross-module communication happens exclusively through domain events, never by direct bean injection from another module's internal types.[^10][^11]
+
+Modulith enforces this with `ModularityTests`, which verify at build time that no module imports internal types from another module. ArchUnit is added as an additional layer for custom architectural rules.[^12][^11]
+### Modules
+| Module | Responsibility |
+|---|---|
+| `identity` | User entity, authentication context, per-user integration credentials (GitHub PAT, ADO PAT/org) |
+| `github-integration` | GitHub API client, PR import, mention import, incremental sync per user |
+| `ado-integration` | Azure DevOps API client, work item import, incremental sync per user |
+| `inbox` | Read model (inbox projection), query service, REST endpoints for frontend. Listens to events from integration modules |
+| `notes` | Personal notes CRUD, note-to-item linking |
+| `sync` | Scheduler triggering incremental sync jobs across integration modules |
+| `shared` | Shared value objects, events, utility types — no business logic |
+### Domain Events & Transactional Outbox
+Integration modules publish domain events (`PullRequestSyncedEvent`, `WorkItemSyncedEvent`, `NoteSavedEvent`) using Spring Modulith's event publication registry, which provides transactional outbox semantics out of the box. Events are written atomically with the data in the same database transaction and processed asynchronously by the inbox module to update the read model.[^10][^11]
+
+This pattern prevents the classic dual-write problem (data saved but event not published, or vice versa). For a sync-heavy application like this, it ensures that the inbox projection stays consistent even if the application restarts mid-sync.[^13][^14]
+### Inbox as Read Model
+The `inbox` module maintains a separate `inbox_projection` table, which is the pre-aggregated, denormalized view of all item types optimized for the list query. This is a lightweight CQRS approach applied only where it adds value: the inbox list query has different requirements (filtering, sorting, pagination by many dimensions) than the write side (upserting sync data).[^13][^10]
+
+The projection contains: `id`, `user_id`, `source_type`, `item_type`, `source_id`, `title`, `subtitle`, `repository`, `reason`, `is_unread`, `is_saved`, `is_done`, `is_pinned`, `priority`, `tags`, `last_activity_at`, `synced_at`, `private_note`, `follow_up_at`.
+### Virtual Threads
+GitHub and ADO sync jobs involve sequential I/O-bound calls (list PRs → fetch details per PR). These run on virtual threads introduced in Java 21, eliminating the need for reactive programming while still achieving good concurrency for multiple per-user sync tasks. Spring Boot's `spring.threads.virtual.enabled=true` enables this globally.[^15]
+### Observability
+- **Micrometer** for application metrics (sync job durations, inbox projection lag, API response times).
+- **Spring Boot Actuator** for health and readiness endpoints.
+- **OpenTelemetry OTLP export** for distributed traces. Pairs with Grafana/Tempo locally via Docker Compose.[^16][^17]
+- **Spring Modulith Insight** for module interaction visibility during development.[^18][^19]
+### OpenAPI Contract
+Springdoc-openapi generates the OpenAPI spec from controllers and DTOs. A Maven profile `generate-client` runs during `mvn compile`, starts the app, dumps the spec, and invokes the TypeScript client generator. The generated client is output directly to the frontend project's `generated/api-client/` folder and is excluded from Git.[^20][^21]
+
+***
+## Frontend Architecture
+### Technology Stack
+| Tool | Role |
+|---|---|
+| React + TypeScript + Vite | Core framework and bundler |
+| React Router | Page routing and URL state |
+| TanStack Query | All server state: fetching, caching, invalidation, background refetch [^22] |
+| Zustand | UI-only state: selected item, open panels, command palette, density toggle [^23] |
+| React Hook Form + Zod | Form handling and runtime schema validation [^24] |
+| Tailwind + shadcn/ui | Styling system and component primitives |
+| TanStack Table | Inbox list with sorting, filtering, virtualization |
+| date-fns | Date formatting |
+| Vitest + Testing Library | Unit and component tests [^25][^26] |
+| MSW | API mocking in tests |
+| Playwright | E2E tests for critical flows |
+### Feature-Based Structure
+The frontend is organized by feature, not by technical type:[^27]
+
+```
+frontend/
+  src/
+    features/
+      inbox/
+        components/
+        hooks/
+        types/
+      review-requests/
+      mentions/
+      ado-items/
+      notes/
+      saved-views/
+      settings/
+    shared/
+      api/          ← facade over generated API client
+      ui/           ← design system components
+      hooks/
+      utils/
+    app/
+      router/
+      shell/
+  generated/
+    api-client/     ← Git-ignored, regenerated on mvn compile
+```
+### API Client Layer
+The generated TypeScript client lives in `generated/api-client/` and is referenced via a Vite/tsconfig path alias `@api`. Frontend code never imports directly from the generated client. Instead, `src/shared/api/` exports typed wrapper functions that map API DTOs to UI-specific view models.[^28][^29]
+### Server State vs UI State
+- **TanStack Query** owns everything that comes from the server: inbox list, detail fetch, notes list, settings. Query keys are derived from URL parameters so filter state changes invalidate cache correctly.[^22]
+- **Zustand** is used only for pure UI state that has no server representation: which item is selected, whether detail panel is open, command palette open/close, density preference.[^23][^30]
+### URL-Driven Filters
+All active filters are encoded in URL query parameters. This makes views bookmarkable, shareable, and browser-navigable. TanStack Query keys include the filter params, so changing a filter triggers an automatic refetch or cache hit.[^27]
+### Keyboard Navigation
+The inbox supports keyboard-first operation — an important consideration for a tool built for developers:
+- `j` / `k` — navigate items
+- `Enter` — open detail panel
+- `s` — save/unsave item
+- `d` — mark done
+- `p` — pin
+- `n` — add note
+- `Cmd/Ctrl + K` — open command palette
+
+***
+## Technology Stack Summary
+### Backend
+| Technology | Version | Purpose |
+|---|---|---|
+| Java | 21 | Language |
+| Spring Boot | 3.x | Framework |
+| Spring Modulith | latest | Module boundaries and domain events [^12] |
+| Spring Web MVC | - | REST API |
+| Spring Security | - | Auth, PAT handling |
+| Spring Data JPA | - | Persistence |
+| PostgreSQL | 15+ | Primary database |
+| Flyway | - | Schema migrations |
+| springdoc-openapi | - | OpenAPI spec generation |
+| Testcontainers | - | Integration tests with real DB [^31] |
+| Micrometer + OTLP | - | Metrics and tracing [^16] |
+| ArchUnit | - | Architecture rule enforcement |
+| JUnit 5 + AssertJ | - | Tests |
+### Frontend
+| Technology | Version | Purpose |
+|---|---|---|
+| React | 18/19 | UI framework |
+| TypeScript | 5.x | Type safety |
+| Vite | - | Build tool and dev server |
+| React Router | 6.x | Routing |
+| TanStack Query | v5 | Server state [^22] |
+| Zustand | v4+ | UI state [^23] |
+| React Hook Form | - | Form state |
+| Zod | - | Schema validation [^24] |
+| Tailwind CSS | v4 | Styling |
+| shadcn/ui | - | UI components |
+| TanStack Table | - | Inbox list |
+| Vitest | - | Unit/component tests [^25] |
+| Testing Library | - | Component test utilities |
+| MSW | - | API mocking in tests |
+| Playwright | - | E2E tests |
+
+***
+## Monorepo Structure
+```
+dev-inbox/
+  backend/
+    src/
+      main/java/com/devinbox/
+        identity/
+        github/
+        ado/
+        inbox/
+        notes/
+        sync/
+        shared/
+      resources/
+        db/migration/
+    pom.xml
+  frontend/
+    src/
+      features/
+      shared/
+      app/
+    generated/
+      api-client/      ← gitignored, generated on build
+    package.json
+    vite.config.ts
+    tsconfig.json
+  docker/
+    docker-compose.yml       ← PostgreSQL + OTel Collector
+    docker-compose.test.yml
+  Makefile
+  .gitignore
+```
+
+The generated `api-client` folder is excluded from Git. It is recreated automatically during `mvn compile` via the `generate-client` Maven profile. Frontend development requires running the backend build at least once before starting the Vite dev server.[^32][^33]
+
+A root `Makefile` provides:
+- `make dev` — starts PostgreSQL via Docker Compose, compiles backend (generates client), starts both servers
+- `make test-backend` — backend unit + integration tests
+- `make test-frontend` — Vitest run
+- `make e2e` — Playwright tests
+
+***
+## Database Design (Key Tables)
+| Table | Purpose |
+|---|---|
+| `users` | User accounts |
+| `user_settings` | Per-user integration credentials, sync preferences |
+| `github_pull_requests` | Raw imported PR data |
+| `github_mentions` | Raw imported mention/comment data |
+| `ado_work_items` | Raw imported ADO work item data |
+| `notes` | Personal notes |
+| `note_links` | Note → PR or ADO item associations |
+| `inbox_projection` | Denormalized read model used exclusively by inbox queries |
+| `inbox_item_overlays` | Per-item personal overlays: priority, status, tags, private note, follow-up |
+| `saved_views` | Named filter presets |
+| `event_publication` | Spring Modulith outbox table (managed by framework) |
+
+All schema changes are managed with Flyway versioned migrations.[^31]
+
+***
+## Sync Strategy
+Each integration module maintains a `last_synced_at` timestamp per user per source. Sync jobs run on a configurable schedule (default: every 5 minutes) and fetch only items updated since the last sync timestamp. On first sync, a configurable lookback window is used (default: 30 days).
+
+GitHub sync fetches:
+- Open PRs authored by user, across configured repositories
+- Review requests assigned to user
+- Notifications filtered by `reason=mention` and `reason=review_requested`[^1][^2]
+
+Azure DevOps sync fetches:
+- Work items where `Assigned To = @Me`
+- Work items in the user's followed list
+- Recent updates on followed items[^3][^4]
+
+***
+## Security Assumptions
+- Single-user or small-team internal application, not a public SaaS.
+- Authentication via session cookie or JWT (Spring Security).
+- Integration credentials (GitHub PAT, ADO PAT) stored encrypted at rest per user.
+- No OAuth flows in MVP — personal access tokens only.
+- No public exposure — runs locally or on an internal server.
+
+***
+## Out of Scope (MVP)
+The following features are explicitly deferred and should **not** be designed into the MVP schema or UI:
+
+- Kanban or board view
+- Team/multi-user shared views
+- Write-back to GitHub or ADO (no creating PRs, comments, work items)
+- Build/pipeline integration (schema placeholder only)
+- Copilot CLI usage tracking
+- AI-powered summaries or suggestions
+- Mobile responsive layout (desktop-first only)
+- Push notifications or browser notifications
+- Rich text editor for notes
+
+***
+## Future Considerations
+These are tracked as intentional future extensions, not hidden scope:
+
+- **Build/CI widget** — placeholder exists in the data model (`source_type: BUILD`), implementation deferred
+- **Copilot CLI usage module** — separate adapter reading from GitHub org-level Copilot metrics API, or local session stats via `/context` command[^34][^35]
+- **AI daily summary** — "What needs my attention today?" generated from inbox state
+- **Command palette AI** — natural language filter ("show stale reviews older than 3 days")
+- **Team view** — aggregate inbox view for a team lead, read-only
+
+***
+## Definition of Done (MVP)
+The MVP is considered complete when:
+
+1. GitHub PR import works: own PRs, review requests, and @mentions appear in inbox.
+2. Azure DevOps work item import works: assigned and followed items appear.
+3. Inbox list renders with filtering by source, type, and status.
+4. Per-item overlays work: save, pin, done, private note, tags.
+5. Saved views can be created and recalled.
+6. Detail panel shows full item metadata and linked entities.
+7. Notes can be created standalone and linked to a PR or ADO item.
+8. Sync runs on schedule and updates the projection.
+9. App starts with a single `make dev` command.
+10. Backend integration tests pass with Testcontainers.
+11. Frontend component tests cover inbox list, filters, and detail panel.
+
+---
+
+## References
+
+1. [Configuring notifications](https://docs.github.com/subscriptions-and-notifications/get-started/configuring-notifications) - Comments on issues and pull requests; Pull request reviews; Pull request pushes; Your own updates, s...
+
+2. [About notifications](https://docs.github.com/en/subscriptions-and-notifications/concepts/about-notifications) - Your inbox shows the reason you're receiving a notification as a label, such as, mention , subscribe...
+
+3. [Follow work items and pull requests - Azure Boards](https://learn.microsoft.com/en-us/azure/devops/boards/work-items/follow-work-items?view=azure-devops) - Track updates to work items and pull requests by following them to receive targeted notifications in...
+
+4. [Work across projects - Azure DevOps](https://learn.microsoft.com/en-us/azure/devops/project/navigation/work-across-projects?view=azure-devops) - How to access work items, pull requests, team projects, and more using your account home page in Azu...
+
+5. [Managing notifications from your inbox](https://docs.github.com/en/subscriptions-and-notifications/how-tos/viewing-and-triaging-notifications/managing-notifications-from-your-inbox) - By default, your inbox has filters for when you are assigned, participating in a thread, requested t...
+
+6. [Customizing a workflow for triaging your notifications](https://docs.github.com/en/enterprise-cloud@latest/subscriptions-and-notifications/tutorials/customizing-a-workflow-for-triaging-your-notifications) - Choose which type of notifications are quickest and easiest for you to triage and remove from your i...
+
+7. [What is an internal developer portal homepage?](https://www.port.io/blog/internal-developer-portal-homepage) - It provides developers with a daily snapshot of their activities, including PRs, tasks, and reviews,...
+
+8. [Start your day with the IDP Homepage](https://www.datadoghq.com/blog/datadog-idp-homepage/) - Internal Developer Portal Homepage showing a personalized view of GitHub pull requests awaiting revi...
+
+9. [Triaging a single notification](https://docs.github.com/en/subscriptions-and-notifications/how-tos/viewing-and-triaging-notifications/triaging-a-single-notification) - When you review and investigate a single notification, you have several triaging options that are op...
+
+10. [Implementing CQRS with Spring Modulith](https://www.baeldung.com/spring-modulith-cqrs) - In this article, we'll take a fresh look at the CQRS pattern, exploring its benefits and trade-offs ...
+
+11. [Spring Modulith Hands-On Walkthrough | Dan Vega posted ...](https://www.linkedin.com/posts/danvega_new-repo-with-a-video-on-the-way-a-hands-on-activity-7455632074331357185-eEsm) - New repo, with a video on the way: a hands-on Spring Modulith walkthrough. We build a small content ...
+
+12. [Integration Testing Application Modules :: Spring Modulith](https://docs.spring.io/spring-modulith/reference/testing.html)
+
+13. [Microservices Architecture Patterns: Communication and ...](https://en.paradigmadigital.com/dev/microservice-architecture-patterns-communication-coordination-cqrs-bff-outbox/) - The CQRS pattern is a valuable technique for improving performance, scalability, and flexibility by ...
+
+14. [Transactional Outbox pattern with Spring Boot](https://www.wimdeblauwe.com/blog/2024/06/25/transactional-outbox-pattern-with-spring-boot/) - The Transactional Outbox is a way to ensure that 2 systems are in sync without having to use a distr...
+
+15. [How to Use Java Virtual Threads for High-Concurrency ...](https://oneuptime.com/blog/post/2026-02-20-java-virtual-threads-loom/view) - Learn how to use Java virtual threads for building high-concurrency applications with simplified con...
+
+16. [Let's use OpenTelemetry with Spring](https://spring.io/blog/2024/10/28/lets-use-opentelemetry-with-spring) - Spring Boot applications can export logging, metrics, and tracing data in a standardized format, mak...
+
+17. [OpenTelemetry with Spring Boot](https://spring.io/blog/2025/11/18/opentelemetry-with-spring-boot) - The Spring ecosystem has strong observability support via Micrometer, and combining Spring Boot with...
+
+18. [Modularity Tests](https://www.makariev.com/blog/enhance-observability-spring-boot-microservices-with-micrometer-open-telemetry-and-spring-modulith-starter-insight/) - In the previous post, we explored the structure of a Spring Boot application using advanced modular ...
+
+19. [org.springframework.modulith:spring-modulith-observability:2.0.0](https://central.sonatype.com/artifact/org.springframework.modulith/spring-modulith-observability/2.0.0) - Discover spring-modulith-observability in the org.springframework.modulith namespace. Explore metada...
+
+20. [Generate client code from Spring Boot using Springdoc ...](https://codesoapbox.dev/generate-client-code-from-spring-boot-using-springdoc-openapi-and-maven/) - This article shows an easy and efficient way to generate Angular code from a Java Spring Boot projec...
+
+21. [How to generate client code using springdoc-openapi- ...](https://stackoverflow.com/questions/65783600/how-to-generate-client-code-using-springdoc-openapi-maven-plugin-and-swagger-cod) - My goal is to generate Spring Boot REST Client using OpenAPI 3.0.
+
+I would like to first generate th...
+
+22. [React Query: A solution for Frontend State Management ...](https://www.architecture-weekly.com/p/react-query-a-solution-for-frontend) - I teamed up again with Tomek Ducin for a hands-on look at front-end state management using React Que...
+
+23. [Writing unit tests of zustand state management store with vitest and testing-library](https://gist.github.com/mustafadalga/475769fcb77b08a813bf5dae0a145027) - Writing unit tests of zustand state management store with vitest and testing-library - usePostsStore...
+
+24. [How to Build a Bulletproof Frontend with Zod and React ...](https://joshkaramuth.com/blog/tanstack-zod-dto) - If you're building modern web apps with React, there's a good chance you're using Tanstack (React) Q...
+
+25. [Vitest | Next Generation testing framework](https://vitest.dev) - Vitest was created to make testing just work for Vite apps. By building on top of Vite, Vitest nativ...
+
+26. [Set up Vitest in a Vite + React + TypeScript App](https://javascript.plainenglish.io/set-up-vitest-in-a-vite-react-typescript-app-d7f582ef7132) - In this article, we're going to set up Vitest and other dependencies in a Vite + React + TypeScript ...
+
+27. [Feature-Based React Architecture That Actually Scales](https://dev.to/matkarimov099/feature-based-react-architecture-that-actually-scales-fe4) - A deep dive into building a scalable React 19 enterprise app using feature-based architecture, TanSt...
+
+28. [Generating TypeScript Types with OpenAPI for REST API ...](https://www.hackerone.com/blog/generating-typescript-types-openapi-rest-api-consumption) - Automating the generation of TypeScript types from OpenAPI specifications streamlines the developmen...
+
+29. [Type-safe API clients for web-frontends - Knappi coding](https://blog.knappi.org/0012-type-safe-api-clients/) - Many backend frameworks, independent of the language in use, can automatically generate OpenAPI spec...
+
+30. [Zustand + Vitest](https://stackblitz.com/edit/vitest-zustand) - This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules. ...
+
+31. [Testcontainers :: Spring Boot](https://docs.spring.io/spring-boot/reference/testing/testcontainers.html)
+
+32. [How to Structure a .NET + React Monorepo for Maintainability](https://www.joelj.ca/blog/view/how-to-structure-a-net-react-monorepo-for-maintainability) - Best Practice: Generate TypeScript Types Automatically ... This ensures the frontend always has up-t...
+
+33. [The power of the monorepo: Keep your fullstack app in sync!](https://launchdarkly.com/docs/tutorials/keeping-your-frontend-and-backend-in-sync-with-a-monorepo) - With a monorepo, we don't need to publish API types to a private NPM package anymore. We don't need ...
+
+34. [Copilot usage metrics now includes organization-level ...](https://github.blog/changelog/2026-03-17-copilot-usage-metrics-now-includes-organization-level-github-copilot-cli-activity/) - Use token usage breakdowns to monitor consumption trends and plan for expanded rollout. Visit our AP...
+
+35. [How to Check Token Usage in GitHub Copilot CLI【/context】](https://naonao-na.com/en/posts/github-copilot-cli-context/) - Use the /context command in GitHub Copilot CLI to visualize how much of the context window you've us...
+

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        Explicit changelog includes for JAR compatibility.
+        includeAll doesn't work well when packaged as JAR because it can't scan directories.
+        When adding new migrations, add them here in order.
+        Initial schema is created by Hibernate (via DatabaseInitializer) — no V1 changeset needed.
+    -->
+
+</databaseChangeLog>
