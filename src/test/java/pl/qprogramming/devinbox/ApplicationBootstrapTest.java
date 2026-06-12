@@ -1,5 +1,6 @@
 package pl.qprogramming.devinbox;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -16,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 class ApplicationBootstrapTest {
 
     @Test
+    @DisplayName("Spring application context loads successfully")
     void contextLoads() {
         // passes if the Spring context starts without throwing
     }
