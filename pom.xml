@@ -43,6 +43,9 @@
         <node.version>v22.15.0</node.version>
         <npm.version>10.9.2</npm.version>
 
+        <!-- Set -DskipFrontend=true to skip all frontend plugin executions -->
+        <skipFrontend>false</skipFrontend>
+
         <!-- Dependency versions -->
         <spring-modulith.version>2.1.0</spring-modulith.version>
         <lombok.version>1.18.38</lombok.version>
@@ -60,6 +63,10 @@
         <!-- Plugin versions -->
         <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
         <jacoco.version>0.8.13</jacoco.version>
+        <!-- Docker host for Testcontainers.
+             Override locally: -Ddocker.host=tcp://192.168.1.50:2375
+             CI default uses the unix socket available on ubuntu-latest. -->
+        <docker.host>unix:///var/run/docker.sock</docker.host>
     </properties>
 
     <dependencyManagement>
@@ -246,7 +253,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <environmentVariables>
-                        <DOCKER_HOST>unix:///var/run/docker.sock</DOCKER_HOST>
+                        <DOCKER_HOST>${docker.host}</DOCKER_HOST>
                     </environmentVariables>
                     <systemPropertyVariables>
                         <DOCKER_API_VERSION>1.47</DOCKER_API_VERSION>
@@ -536,6 +543,7 @@
                         <configuration>
                             <nodeVersion>${node.version}</nodeVersion>
                             <npmVersion>${npm.version}</npmVersion>
+                            <skip>${skipFrontend}</skip>
                         </configuration>
                     </execution>
                     <execution>
@@ -545,6 +553,7 @@
                         </goals>
                         <configuration>
                             <arguments>install</arguments>
+                            <skip>${skipFrontend}</skip>
                         </configuration>
                     </execution>
                     <execution>
@@ -555,7 +564,7 @@
                         <phase>test</phase>
                         <configuration>
                             <arguments>run test:ci</arguments>
-                            <skip>${skipTests}</skip>
+                            <skip>${skipFrontend}</skip>
                         </configuration>
                     </execution>
                     <execution>
@@ -566,6 +575,7 @@
                         <phase>prepare-package</phase>
                         <configuration>
                             <arguments>run build</arguments>
+                            <skip>${skipFrontend}</skip>
                         </configuration>
                     </execution>
                 </executions>
@@ -618,6 +628,31 @@
                 </configuration>
             </plugin>
 
+            <!-- ===== Build Helper: register generated sources for IntelliJ ===== -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-generated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/openapi-shared/src/main/java</source>
+                                <source>${project.build.directory}/generated-sources/openapi-inbox/src/main/java</source>
+                                <source>${project.build.directory}/generated-sources/openapi-notes/src/main/java</source>
+                                <source>${project.build.directory}/generated-sources/openapi-identity/src/main/java</source>
+                                <source>${project.build.directory}/generated-sources/openapi-sync/src/main/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- ===== JaCoCo Coverage ===== -->
             <plugin>
                 <groupId>org.jacoco</groupId>
@@ -636,6 +671,30 @@
                         <goals>
                             <goal>report</goal>
                         </goals>
+                        <configuration>
+                            <!-- Exclude OpenAPI-generated code from the coverage report.
+                                 JaCoCo matches these patterns against class FILE paths (including .class suffix).
+                                 - Patterns with a trailing wildcard (*) already absorb the .class extension.
+                                 - Patterns that match an exact class name must end with .class explicitly,
+                                   otherwise InboxApiDelegate.class would not match *ApiDelegate.
+                                 Lombok-generated code is handled by lombok.config
+                                 (lombok.addLombokGeneratedAnnotation=true). -->
+                            <excludes>
+                                <!-- Generated DTO/model classes — trailing * absorbs .class -->
+                                <exclude>pl/qprogramming/devinbox/*/dto/*</exclude>
+                                <!-- Generated API interfaces (exact names — must use .class suffix) -->
+                                <exclude>pl/qprogramming/devinbox/*/api/*Api.class</exclude>
+                                <!-- Anonymous inner classes of API interfaces -->
+                                <exclude>pl/qprogramming/devinbox/*/api/*Api$*</exclude>
+                                <!-- Generated delegate interfaces (exact names — must use .class suffix)
+                                     *ApiDelegateImpl ends in 'Impl', not 'ApiDelegate', so it is NOT excluded. -->
+                                <exclude>pl/qprogramming/devinbox/*/api/*ApiDelegate.class</exclude>
+                                <!-- Generated Spring MVC controller wrappers — trailing * absorbs .class -->
+                                <exclude>pl/qprogramming/devinbox/*/api/*ApiController*</exclude>
+                                <!-- Generated ApiUtil helper — trailing * absorbs .class -->
+                                <exclude>pl/qprogramming/devinbox/*/api/ApiUtil*</exclude>
+                            </excludes>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

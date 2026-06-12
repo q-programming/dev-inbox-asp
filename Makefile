@@ -38,7 +38,7 @@ test: test-backend test-frontend
 
 ## test-backend: Run Java tests only (uses Testcontainers — Docker required)
 test-backend:
-	./mvnw test -pl . -Dfrontend.skip=true
+	./mvnw test -DskipFrontend=true
 
 ## test-frontend: Run Vitest browser tests only
 test-frontend:

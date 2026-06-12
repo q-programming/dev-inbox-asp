@@ -47,7 +47,7 @@ export default defineConfig({
     reporters: ['default', ['junit', { outputFile: 'test-report.xml' }]],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'cobertura', 'lcov'],
+      reporter: ['text', 'cobertura', 'lcov', 'json-summary', 'json'],
       exclude: [
         '**/*.js',
         '**/*.mjs',
@@ -56,6 +56,12 @@ export default defineConfig({
         '**/main.tsx',
         'generated/**',
       ],
+      thresholds: {
+        lines: 70,
+        branches: 70,
+        functions: 70,
+        statements: 70,
+      },
     },
   },
 });

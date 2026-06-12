@@ -5,6 +5,7 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -27,6 +28,7 @@ class ArchitectureTest {
     }
 
     @Test
+    @DisplayName("Inbox module must not depend on GitHub internals")
     void inboxModuleMustNotDependOnGithubInternals() {
         ArchRule rule = noClasses()
                 .that().resideInAPackage("..inbox..")
@@ -36,6 +38,7 @@ class ArchitectureTest {
     }
 
     @Test
+    @DisplayName("Inbox module must not depend on ADO internals")
     void inboxModuleMustNotDependOnAdoInternals() {
         ArchRule rule = noClasses()
                 .that().resideInAPackage("..inbox..")
@@ -45,6 +48,7 @@ class ArchitectureTest {
     }
 
     @Test
+    @DisplayName("Config classes must not depend on module internals")
     void configClassesMustNotDependOnModuleInternals() {
         ArchRule rule = noClasses()
                 .that().resideInAPackage("..config..")
