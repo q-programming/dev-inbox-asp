@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import useAlertStore, { type Alert, AlertType } from '@/shared/store/alert.store';
+import useAlertStore, { type Alert, AlertType } from '@shared/store/alert.store';
 
 // ---------------------------------------------------------------------------
 // Individual alert item

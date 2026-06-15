@@ -2,9 +2,9 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import useAuthStore, { AuthStatus } from '@/shared/store/auth.store';
-import { useRegisterMutation } from '@/shared/hooks/useAuthQuery';
-import { AppRoute } from '@/app/routes';
+import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import { useRegisterMutation } from '@shared/hooks/useAuthQuery';
+import { AppRoute } from '@app/routes';
 
 const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),

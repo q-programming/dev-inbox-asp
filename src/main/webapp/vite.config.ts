@@ -7,7 +7,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@shared': path.resolve(__dirname, './src/shared'),
+      '@app': path.resolve(__dirname, './src/app'),
+      '@feature': path.resolve(__dirname, './src/features'),
+      '@test': path.resolve(__dirname, './src/test'),
       // Per-module generated API clients — one alias per modulith module.
       // When a module becomes a microservice its alias simply moves with it.
       '@api/auth': path.resolve(__dirname, './generated/auth-client/src'),

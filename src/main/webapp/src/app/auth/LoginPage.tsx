@@ -2,9 +2,9 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import useAuthStore, { AuthStatus } from '@/shared/store/auth.store';
-import { useLoginMutation } from '@/shared/hooks/useAuthQuery';
-import { AppRoute } from '@/app/routes';
+import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import { useLoginMutation } from '@shared/hooks/useAuthQuery';
+import { AppRoute } from '@app/routes';
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email'),

@@ -1,7 +1,7 @@
 import type { Mutation, Query } from '@tanstack/react-query';
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
-import useAlertStore, { AlertType } from '@/shared/store/alert.store';
-import { ApiError, NetworkError } from '@/shared/api/httpClient';
+import useAlertStore, { AlertType } from '@shared/store/alert.store';
+import { ApiError, NetworkError } from '@shared/api/httpClient';
 
 // ─── TanStack Query meta augmentation ────────────────────────────────────────
 

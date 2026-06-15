@@ -1,7 +1,7 @@
 import { Link, Navigate } from 'react-router-dom';
-import useAuthStore, { AuthStatus } from '@/shared/store/auth.store.ts';
-import { useMeQuery } from '@/shared/hooks/useAuthQuery.ts';
-import { AppRoute } from '@/app/routes';
+import useAuthStore, { AuthStatus } from '@shared/store/auth.store.ts';
+import { useMeQuery } from '@shared/hooks/useAuthQuery.ts';
+import { AppRoute } from '@app/routes';
 
 /**
  * Public landing page. Also acts as the OAuth callback landing point — calls /me

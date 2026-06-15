@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { ApiError, sharedConfigParams } from '@/shared/api/httpClient.ts';
+import { ApiError, sharedConfigParams } from '@shared/api/httpClient.ts';
 import { AuthApi, Configuration, LoginRequest, RegisterRequest, UserDto } from '@api/auth';
-import useAuthStore, { AuthStatus } from '@/shared/store/auth.store';
+import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
 
 export const authApi = new AuthApi(new Configuration(sharedConfigParams));
 

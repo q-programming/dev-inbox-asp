@@ -1,5 +1,5 @@
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
-import { ApiError, sharedConfigParams } from '@/shared/api/httpClient';
+import { ApiError, sharedConfigParams } from '@shared/api/httpClient';
 import { Configuration, HealthApi, HealthStatus } from '@api/shared';
 
 export const healthApi = new HealthApi(new Configuration(sharedConfigParams));

@@ -21,8 +21,17 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
+      "@shared/*": [
+        "./src/shared/*"
+      ],
+      "@app/*": [
+        "./src/app/*"
+      ],
+      "@feature/*": [
+        "./src/features/*"
+      ],
+      "@test/*": [
+        "./src/test/*"
       ],
       "@api/auth": [
         "./generated/auth-client/src/index.ts"

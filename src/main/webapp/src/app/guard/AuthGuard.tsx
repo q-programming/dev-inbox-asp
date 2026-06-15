@@ -1,7 +1,7 @@
-import useAuthStore, { AuthStatus } from '@/shared/store/auth.store.ts';
-import { useAuthBootstrap } from '@/shared/hooks/useAuthQuery.ts';
+import useAuthStore, { AuthStatus } from '@shared/store/auth.store.ts';
+import { useAuthBootstrap } from '@shared/hooks/useAuthQuery.ts';
 import { Navigate, Outlet } from 'react-router-dom';
-import { AppRoute } from '@/app/routes';
+import { AppRoute } from '@app/routes';
 
 /**
  * Route-level guard — used as a React Router route element wrapping protected routes.

@@ -1,17 +1,16 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useQuery, useMutation, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query';
 import React from 'react';
+import { createQueryClient } from './queryClient';
+import { ApiError, NetworkError } from './httpClient';
 
 const { mockAddAlert } = vi.hoisted(() => ({ mockAddAlert: vi.fn() }));
 
-vi.mock('@/shared/store/alert.store', () => ({
+vi.mock('@shared/store/alert.store', () => ({
   default: { getState: () => ({ addAlert: mockAddAlert }) },
   AlertType: { SUCCESS: 0, WARNING: 1, ERROR: 2 },
 }));
-
-import { createQueryClient } from './queryClient';
-import { ApiError, NetworkError } from './httpClient';
 
 function makeWrapper() {
   const client = createQueryClient();

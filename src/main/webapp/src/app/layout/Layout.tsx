@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import useAuthStore from '@/shared/store/auth.store.ts';
-import { useLogoutMutation } from '@/shared/hooks/useAuthQuery.ts';
-import { NAV_ITEMS } from '@/app/routes';
+import useAuthStore from '@shared/store/auth.store.ts';
+import { useLogoutMutation } from '@shared/hooks/useAuthQuery.ts';
+import { NAV_ITEMS } from '@app/routes';
 
 const AppLayout = () => {
   const { profile, identity } = useAuthStore();

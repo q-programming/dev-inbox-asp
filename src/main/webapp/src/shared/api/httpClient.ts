@@ -100,7 +100,7 @@ export function createApiConfigParams(
  * Usage in a generated-client file:
  * ```ts
  * import { Configuration } from '@api/some-client';
- * import { sharedConfigParams } from '@/shared/api/httpClient';
+ * import { sharedConfigParams } from '@shared/api/httpClient';
  * export const someApi = new SomeApi(new Configuration(sharedConfigParams));
  * ```
  */
