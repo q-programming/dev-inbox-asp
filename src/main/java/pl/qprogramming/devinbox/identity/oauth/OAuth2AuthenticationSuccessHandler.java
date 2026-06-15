@@ -1,4 +1,4 @@
-package pl.qprogramming.devinbox.security.oauth;
+package pl.qprogramming.devinbox.identity.oauth;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,10 +17,10 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
-import pl.qprogramming.devinbox.config.ApplicationProperties;
 import pl.qprogramming.devinbox.identity.domain.User;
 import pl.qprogramming.devinbox.identity.domain.UserRepository;
 import pl.qprogramming.devinbox.security.jwt.TokenProvider;
+import pl.qprogramming.devinbox.shared.ApplicationProperties;
 
 import java.io.IOException;
 import java.util.List;

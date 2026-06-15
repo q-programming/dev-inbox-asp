@@ -1,4 +1,4 @@
-package pl.qprogramming.devinbox.config;
+package pl.qprogramming.devinbox.shared;
 
 import lombok.Getter;
 import lombok.Setter;

@@ -17,7 +17,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
-import pl.qprogramming.devinbox.config.ApplicationProperties;
+import pl.qprogramming.devinbox.shared.ApplicationProperties;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

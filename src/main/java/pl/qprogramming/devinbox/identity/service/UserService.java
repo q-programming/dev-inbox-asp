@@ -9,24 +9,20 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import pl.qprogramming.devinbox.config.ApplicationProperties;
 import pl.qprogramming.devinbox.identity.domain.User;
 import pl.qprogramming.devinbox.identity.domain.UserRepository;
 import pl.qprogramming.devinbox.identity.dto.LoginRequest;
 import pl.qprogramming.devinbox.identity.dto.RegisterRequest;
 import pl.qprogramming.devinbox.identity.exception.UserAlreadyExists;
 import pl.qprogramming.devinbox.identity.exception.UserAuthFailed;
-import pl.qprogramming.devinbox.security.jwt.TokenProvider;
 import pl.qprogramming.devinbox.shared.utils.SecurityUtils;
 
 import java.util.Locale;
 import java.util.Optional;
 
-import static pl.qprogramming.devinbox.shared.utils.CookieUtils.clearJwtCookie;
-import static pl.qprogramming.devinbox.shared.utils.CookieUtils.setJwtCookie;
-
 /**
- * Service class for managing user-related operations, including registration, login, and user retrieval.
+ * Manages user-related operations: registration, authentication and retrieval.
+ * JWT creation and cookie lifecycle are intentionally left to the API delegate layer.
  */
 @RequiredArgsConstructor
 @Slf4j
@@ -35,16 +31,14 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final TokenProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
-    private final ApplicationProperties applicationProperties;
 
     /**
-     * Register a new user with details provided in request.
+     * Registers a new user.
      *
-     * @param request the registration request
-     * @return the registered user
-     * @throws UserAlreadyExists if a user with the given email already exists
+     * @param request registration details
+     * @return the persisted user
+     * @throws UserAlreadyExists if the email is already taken
      */
     public User register(RegisterRequest request) {
         val email = normalizeEmail(request.getEmail());
@@ -63,22 +57,23 @@ public class UserService {
     }
 
     /**
-     * Authenticates a user and generates a JWT token.
+     * Authenticates a user against the configured {@link AuthenticationManager}.
      *
-     * @param request the login request containing user credentials
-     * @return the authenticated user
-     * @throws UserAuthFailed if authentication fails
+     * <p>Returns a {@link LoginResult} containing both the domain {@link User} and the
+     * Spring Security {@link Authentication} so the caller can issue a JWT without
+     * this service knowing anything about tokens or cookies.
+     *
+     * @param request login credentials
+     * @return authenticated user + authentication context
+     * @throws UserAuthFailed if credentials are invalid
      */
-    public User login(LoginRequest request) {
-        String email = normalizeEmail(request.getEmail());
+    public LoginResult login(LoginRequest request) {
+        val email = normalizeEmail(request.getEmail());
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email, request.getPassword())
-            );
+                    new UsernamePasswordAuthenticationToken(email, request.getPassword()));
             val user = userRepository.findByEmailIgnoreCase(email).orElseThrow();
-            String jwt = tokenProvider.createToken(authentication, user.getId());
-            setJwtCookie(jwt, (int) applicationProperties.getJwt().getExpirationMs());
-            return user;
+            return new LoginResult(user, authentication);
         } catch (AuthenticationException ex) {
             log.debug("Authentication failed for {}", email);
             throw new UserAuthFailed("Authentication failed");
@@ -86,31 +81,17 @@ public class UserService {
     }
 
     /**
-     * Clears the JWT cookie, effectively logging out the current user.
-     */
-    public void logout() {
-        clearJwtCookie();
-    }
-
-    /**
-     * Retrieves the currently authenticated user.
+     * Retrieves the currently authenticated user from the security context.
      *
-     * @return an Optional containing the current user if authenticated, otherwise empty
+     * @return an Optional containing the current user, or empty if unauthenticated
      */
     public Optional<User> currentUser() {
         return SecurityUtils.getCurrentUserEmail()
                 .flatMap(userRepository::findByEmailIgnoreCase);
-
     }
 
-    /**
-     * Normalizes an email address by trimming whitespace and converting it to lowercase.
-     *
-     * @param email the email address to normalize
-     * @return the normalized email address, or null if the input email is null
-     */
     private String normalizeEmail(String email) {
         return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
-
 }
+

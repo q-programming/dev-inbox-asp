@@ -2,6 +2,7 @@ package pl.qprogramming.devinbox.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -12,21 +13,22 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import pl.qprogramming.devinbox.security.UserDetailsService;
+import pl.qprogramming.devinbox.identity.oauth.OAuth2AuthenticationSuccessHandler;
+import pl.qprogramming.devinbox.identity.service.UserDetailsServiceImpl;
 import pl.qprogramming.devinbox.security.jwt.JwtFilter;
 import pl.qprogramming.devinbox.security.jwt.TokenProvider;
-import pl.qprogramming.devinbox.security.oauth.OAuth2AuthenticationSuccessHandler;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final UserDetailsService userDetailsService;
+    private final UserDetailsServiceImpl userDetailsService;
     private final TokenProvider tokenProvider;
     private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
 
-    public SecurityConfig(UserDetailsService userDetailsService,
+    public SecurityConfig(UserDetailsServiceImpl userDetailsService,
                           TokenProvider tokenProvider,
                           OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler) {
         this.userDetailsService = userDetailsService;
@@ -72,6 +74,9 @@ public class SecurityConfig {
                     .anyRequest().authenticated()
             )
                 .oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler))
+                .exceptionHandling(ex -> ex.defaultAuthenticationEntryPointFor(
+                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                        request -> request.getRequestURI().startsWith("/api/")))
                 .addFilterBefore(new JwtFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class)
                 .authenticationProvider(authenticationProvider());
 
