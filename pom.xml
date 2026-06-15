@@ -104,6 +104,10 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
         <dependency>
@@ -314,7 +318,7 @@
 
                     <!-- ── Java: shared (health) ─────────────────────────────── -->
                     <execution>
-                        <id>generate-shared-stubs</id>
+                        <id>generate-shared-api</id>
                         <goals><goal>generate</goal></goals>
                         <configuration>
                             <inputSpec>${project.basedir}/src/main/resources/swagger/shared/health.yml</inputSpec>
@@ -337,7 +341,7 @@
 
                     <!-- ── Java: inbox + saved-views ─────────────────────────── -->
                     <execution>
-                        <id>generate-inbox-stubs</id>
+                        <id>generate-inbox-api</id>
                         <goals><goal>generate</goal></goals>
                         <configuration>
                             <inputSpec>${project.basedir}/src/main/resources/swagger/inbox/inbox.yml</inputSpec>
@@ -360,7 +364,7 @@
 
                     <!-- ── Java: notes ───────────────────────────────────────── -->
                     <execution>
-                        <id>generate-notes-stubs</id>
+                        <id>generate-notes-api</id>
                         <goals><goal>generate</goal></goals>
                         <configuration>
                             <inputSpec>${project.basedir}/src/main/resources/swagger/notes/notes.yml</inputSpec>
@@ -383,7 +387,7 @@
 
                     <!-- ── Java: identity (settings) ─────────────────────────── -->
                     <execution>
-                        <id>generate-identity-stubs</id>
+                        <id>generate-identity-api</id>
                         <goals><goal>generate</goal></goals>
                         <configuration>
                             <inputSpec>${project.basedir}/src/main/resources/swagger/identity/settings.yml</inputSpec>
@@ -391,7 +395,7 @@
                             <output>${project.build.directory}/generated-sources/openapi-identity</output>
                             <apiPackage>pl.qprogramming.devinbox.identity.api</apiPackage>
                             <modelPackage>pl.qprogramming.devinbox.identity.dto</modelPackage>
-                            <supportingFilesToGenerate>ApiUtil.java</supportingFilesToGenerate>
+                            <generateSupportingFiles>false</generateSupportingFiles>
                             <skipValidateSpec>true</skipValidateSpec>
                             <configOptions>
                                 <useSpringBoot3>true</useSpringBoot3>
@@ -404,9 +408,34 @@
                         </configuration>
                     </execution>
 
+                    <!-- ── Java: auth (register + login) ─────────────────────────── -->
+                    <execution>
+                        <id>generate-auth-api</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/src/main/resources/swagger/identity/auth.yml</inputSpec>
+                            <generatorName>spring</generatorName>
+                            <output>${project.build.directory}/generated-sources/openapi-auth</output>
+                            <apiPackage>pl.qprogramming.devinbox.identity.api</apiPackage>
+                            <modelPackage>pl.qprogramming.devinbox.identity.dto</modelPackage>
+                            <supportingFilesToGenerate>ApiUtil.java</supportingFilesToGenerate>
+                            <skipValidateSpec>true</skipValidateSpec>
+                            <configOptions>
+                                <useSpringBoot3>true</useSpringBoot3>
+                                <useJakartaEe>true</useJakartaEe>
+                                <delegatePattern>true</delegatePattern>
+                                <title>Auth</title>
+                                <serializableModel>true</serializableModel>
+                                <useTags>true</useTags>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+
                     <!-- ── Java: sync ────────────────────────────────────────── -->
                     <execution>
-                        <id>generate-sync-stubs</id>
+                        <id>generate-sync-api</id>
                         <goals><goal>generate</goal></goals>
                         <configuration>
                             <inputSpec>${project.basedir}/src/main/resources/swagger/sync/sync.yml</inputSpec>
@@ -521,9 +550,30 @@
                             </configOptions>
                         </configuration>
                     </execution>
+                    <!-- ── TypeScript: auth-client ────────────────────────── -->
+                    <execution>
+                        <id>generate-auth-ts-client</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/src/main/resources/swagger/identity/auth.yml</inputSpec>
+                            <generatorName>typescript-fetch</generatorName>
+                            <output>${project.basedir}/src/main/webapp/generated/auth-client</output>
+                            <generateApis>true</generateApis>
+                            <configOptions>
+                                <npmName>@devinbox/auth-client</npmName>
+                                <npmVersion>${project.version}</npmVersion>
+                                <modelPropertyNaming>original</modelPropertyNaming>
+                                <typescriptThreePlus>true</typescriptThreePlus>
+                                <supportsES6>true</supportsES6>
+                            </configOptions>
+                        </configuration>
+                    </execution>
 
                 </executions>
             </plugin>
+
 
             <!-- ===== Frontend Build (Node + npm via Maven) ===== -->
             <plugin>
@@ -646,6 +696,7 @@
                                 <source>${project.build.directory}/generated-sources/openapi-inbox/src/main/java</source>
                                 <source>${project.build.directory}/generated-sources/openapi-notes/src/main/java</source>
                                 <source>${project.build.directory}/generated-sources/openapi-identity/src/main/java</source>
+                                <source>${project.build.directory}/generated-sources/openapi-auth/src/main/java</source>
                                 <source>${project.build.directory}/generated-sources/openapi-sync/src/main/java</source>
                             </sources>
                         </configuration>

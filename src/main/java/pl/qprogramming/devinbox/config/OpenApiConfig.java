@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Registers one Springdoc group per modulith module so each module gets its own
  * Swagger UI tab and its own /v3/api-docs/{group} endpoint.
- *
  * When a module is extracted into a microservice the matching group simply moves
  * with it — no Swagger config changes needed.
  */
@@ -43,6 +42,16 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("identity")
                 .packagesToScan("pl.qprogramming.devinbox.identity.api")
+                .pathsToMatch("/api/settings/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi authApi() {
+        return GroupedOpenApi.builder()
+                .group("auth")
+                .packagesToScan("pl.qprogramming.devinbox.identity.api")
+                .pathsToMatch("/api/auth/**")
                 .build();
     }
 
@@ -54,4 +63,3 @@ public class OpenApiConfig {
                 .build();
     }
 }
-

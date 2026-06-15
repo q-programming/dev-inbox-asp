@@ -10,11 +10,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       // Per-module generated API clients — one alias per modulith module.
       // When a module becomes a microservice its alias simply moves with it.
-      '@api/shared':   path.resolve(__dirname, './generated/shared-client/src'),
-      '@api/inbox':    path.resolve(__dirname, './generated/inbox-client/src'),
-      '@api/notes':    path.resolve(__dirname, './generated/notes-client/src'),
+      '@api/auth': path.resolve(__dirname, './generated/auth-client/src'),
+      '@api/shared': path.resolve(__dirname, './generated/shared-client/src'),
+      '@api/inbox': path.resolve(__dirname, './generated/inbox-client/src'),
+      '@api/notes': path.resolve(__dirname, './generated/notes-client/src'),
       '@api/identity': path.resolve(__dirname, './generated/identity-client/src'),
-      '@api/sync':     path.resolve(__dirname, './generated/sync-client/src'),
+      '@api/sync': path.resolve(__dirname, './generated/sync-client/src'),
     },
   },
   build: {
@@ -39,9 +40,7 @@ export default defineConfig({
       headless: true,
       provider: 'playwright',
       screenshotFailures: false,
-      instances: [
-        { browser: 'chromium' },
-      ],
+      instances: [{ browser: 'chromium' }],
     },
     include: ['src/**/*.spec.{ts,tsx}'],
     reporters: ['default', ['junit', { outputFile: 'test-report.xml' }]],

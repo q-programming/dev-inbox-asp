@@ -48,3 +48,4 @@ docker/*.local.yml
 .env
 .env.local
 .env.*.local
+src/main/resources/application-local.yml

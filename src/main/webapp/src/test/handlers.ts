@@ -1,9 +1,7 @@
 import { http, HttpResponse } from 'msw';
 
 export const handlers = [
-  http.get('/api/healthz', () =>
-    HttpResponse.json({ status: 'UP' }),
-  ),
+  http.get('/api/healthz', () => HttpResponse.json({ status: 'UP' })),
 
   http.get('/api/inbox', () =>
     HttpResponse.json({
@@ -13,4 +11,6 @@ export const handlers = [
       size: 50,
     }),
   ),
+
+  http.post('/api/auth/logout', () => new HttpResponse(null, { status: 200 })),
 ];
