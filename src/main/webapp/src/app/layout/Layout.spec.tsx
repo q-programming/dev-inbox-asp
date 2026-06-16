@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { createQueryClient } from '@shared/api/queryClient';
+import { Route, Routes } from 'react-router-dom';
+import { renderWithProviders } from '@test/renderWithProviders';
 import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import { Theme } from '@shared/theme/theme';
 import { AppRoute, NAV_ITEMS } from '@app/routes';
 import AppLayout from './Layout';
 
@@ -17,25 +17,27 @@ vi.mock('@shared/hooks/useAuthQuery', () => ({
   }),
 }));
 
+const emptyProfile = { firstName: '', lastName: '', theme: Theme.LIGHT };
+
 function renderLayout() {
-  const client = createQueryClient();
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[AppRoute.INBOX]}>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path={AppRoute.INBOX} element={<div>Inbox content</div>} />
-            <Route path={AppRoute.SETTINGS} element={<div>Settings content</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route path={AppRoute.INBOX} element={<div>Inbox content</div>} />
+        <Route path={AppRoute.SETTINGS} element={<div>Settings content</div>} />
+      </Route>
+    </Routes>,
+    { initialEntries: [AppRoute.INBOX] },
   );
 }
 
 beforeEach(() => {
   mockLogoutMutate.mockClear();
-  useAuthStore.setState({ status: AuthStatus.AUTHENTICATED, profile: null, identity: null });
+  useAuthStore.setState({
+    status: AuthStatus.AUTHENTICATED,
+    profile: emptyProfile,
+    identity: null,
+  });
 });
 
 describe('AppLayout', () => {
@@ -70,10 +72,10 @@ describe('AppLayout', () => {
   });
 
   describe('user profile', () => {
-    it('should show full name when profile is present', () => {
+    it('should show full name when profile has a name', () => {
       useAuthStore.setState({
         status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'Jane', lastName: 'Doe' },
+        profile: { firstName: 'Jane', lastName: 'Doe', theme: Theme.LIGHT },
         identity: null,
       });
 
@@ -85,7 +87,7 @@ describe('AppLayout', () => {
     it('should show email alongside name when identity is present', () => {
       useAuthStore.setState({
         status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'Jane', lastName: 'Doe' },
+        profile: { firstName: 'Jane', lastName: 'Doe', theme: Theme.LIGHT },
         identity: { id: 1, email: 'jane@example.com', accountType: 'REGULAR' },
       });
 
@@ -94,8 +96,12 @@ describe('AppLayout', () => {
       expect(screen.getByText('(jane@example.com)')).toBeTruthy();
     });
 
-    it('should not render user info section when profile is null', () => {
-      useAuthStore.setState({ status: AuthStatus.AUTHENTICATED, profile: null, identity: null });
+    it('should not render sign out button when profile has no name (anonymous)', () => {
+      useAuthStore.setState({
+        status: AuthStatus.AUTHENTICATED,
+        profile: emptyProfile,
+        identity: null,
+      });
 
       renderLayout();
 
@@ -104,10 +110,10 @@ describe('AppLayout', () => {
   });
 
   describe('sign out', () => {
-    it('should render the Sign out button when profile is present', () => {
+    it('should render the Sign out button when profile has a name', () => {
       useAuthStore.setState({
         status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'Jane', lastName: 'Doe' },
+        profile: { firstName: 'Jane', lastName: 'Doe', theme: Theme.LIGHT },
         identity: null,
       });
 
@@ -120,7 +126,7 @@ describe('AppLayout', () => {
       const user = userEvent.setup();
       useAuthStore.setState({
         status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'Jane', lastName: 'Doe' },
+        profile: { firstName: 'Jane', lastName: 'Doe', theme: Theme.LIGHT },
         identity: null,
       });
 

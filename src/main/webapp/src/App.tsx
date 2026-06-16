@@ -1,6 +1,5 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import Alert from '@app/ui/Alert';
 import AuthGuard from '@app/guard/AuthGuard';
 import { AppRoute } from '@app/routes';
 
@@ -20,7 +19,6 @@ const Spinner = () => (
 export default function App() {
   return (
     <BrowserRouter>
-      <Alert />
       <Suspense fallback={<Spinner />}>
         <Routes>
           {/* Public */}

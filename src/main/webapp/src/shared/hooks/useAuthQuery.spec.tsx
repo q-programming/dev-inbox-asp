@@ -88,7 +88,9 @@ describe('useAuthBootstrap', () => {
     renderHook(() => useAuthBootstrap(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(useAuthStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED));
-    expect(useAuthStore.getState().profile).toBeNull();
+    // profile is never null — clearUser resets to the empty default for theme persistence
+    expect(useAuthStore.getState().profile.firstName).toBe('');
+    expect(useAuthStore.getState().profile.lastName).toBe('');
   });
 
   it('should call clearUser and set UNAUTHENTICATED when /me errors', async () => {

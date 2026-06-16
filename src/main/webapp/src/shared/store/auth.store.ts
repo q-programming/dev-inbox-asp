@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { AccountType, UserDto } from '@api/auth';
+import { Theme } from '@shared/theme/theme.ts';
 
 // ─── Storage keys ─────────────────────────────────────────────────────────────
 
@@ -27,6 +28,7 @@ export const STORAGE_KEYS = {
 export interface AuthProfile {
   firstName: string;
   lastName: string;
+  theme: Theme;
 }
 
 /**
@@ -61,10 +63,11 @@ export enum AuthStatus {
 
 interface AuthState {
   status: AuthStatus;
-  profile: AuthProfile | null;
+  profile: AuthProfile;
   identity: AuthIdentity | null;
   setUser: (user: UserDto) => void;
   clearUser: () => void;
+  toggleTheme: () => void;
 }
 
 // ─── Session storage helpers (identity only) ──────────────────────────────────
@@ -90,6 +93,16 @@ const writeIdentity = (identity: AuthIdentity | null) => {
   } else {
     sessionStorage.removeItem(STORAGE_KEYS.identity);
   }
+};
+
+function getSystemMode(): Theme {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? Theme.DARK : Theme.LIGHT;
+}
+
+const defaultProfile: AuthProfile = {
+  firstName: '',
+  lastName: '',
+  theme: getSystemMode(),
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -130,7 +143,7 @@ const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       status: AuthStatus.LOADING,
-      profile: null,
+      profile: defaultProfile,
       // identity is initialised manually because it lives in sessionStorage,
       // not in the localStorage slice that `persist` manages.
       identity: readIdentity(),
@@ -142,16 +155,29 @@ const useAuthStore = create<AuthState>()(
           accountType: user.accountType as AccountType,
         };
         writeIdentity(identity);
-        set({
+        set((state) => ({
           status: AuthStatus.AUTHENTICATED,
-          profile: { firstName: user.firstName ?? '', lastName: user.lastName ?? '' },
+          profile: {
+            firstName: user.firstName ?? '',
+            lastName: user.lastName ?? '',
+            theme: state.profile?.theme ?? Theme.LIGHT, // preserve or default
+          },
           identity,
+        }));
+      },
+      toggleTheme: () => {
+        set((state) => {
+          const theme = state.profile.theme === Theme.LIGHT ? Theme.DARK : Theme.LIGHT;
+          return {
+            profile: state.profile
+              ? { ...state.profile, theme }
+              : { firstName: '', lastName: '', theme },
+          };
         });
       },
-
       clearUser: () => {
         writeIdentity(null);
-        set({ status: AuthStatus.UNAUTHENTICATED, profile: null, identity: null });
+        set({ status: AuthStatus.UNAUTHENTICATED, profile: defaultProfile, identity: null });
       },
     }),
     {

@@ -16,7 +16,7 @@ const AuthGuard = () => {
   const { status, profile } = useAuthStore();
   useAuthBootstrap();
 
-  if (status === AuthStatus.LOADING && !profile) {
+  if (status === AuthStatus.LOADING && !profile.firstName && !profile.lastName) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-500 text-sm animate-pulse">Loading…</div>

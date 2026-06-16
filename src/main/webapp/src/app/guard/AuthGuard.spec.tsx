@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { createQueryClient } from '@shared/api/queryClient';
+import { screen } from '@testing-library/react';
+import { Route, Routes } from 'react-router-dom';
+import { renderWithProviders } from '@test/renderWithProviders';
 import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import { Theme } from '@shared/theme/theme';
 import AuthGuard from './AuthGuard';
 import { AppRoute } from '@app/routes';
 
@@ -13,32 +13,30 @@ vi.mock('@shared/hooks/useAuthQuery', () => ({
   useAuthBootstrap: vi.fn(),
 }));
 
+const emptyProfile = { firstName: '', lastName: '', theme: Theme.LIGHT };
+
 function renderGuard(initialPath = '/protected') {
-  const client = createQueryClient();
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[initialPath]}>
-        <Routes>
-          <Route element={<AuthGuard />}>
-            <Route path="/protected" element={<div>Protected content</div>} />
-          </Route>
-          <Route path={AppRoute.LOGIN} element={<div>Login page</div>} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route element={<AuthGuard />}>
+        <Route path="/protected" element={<div>Protected content</div>} />
+      </Route>
+      <Route path={AppRoute.LOGIN} element={<div>Login page</div>} />
+    </Routes>,
+    { initialEntries: [initialPath] },
   );
 }
 
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
-  useAuthStore.setState({ status: AuthStatus.LOADING, profile: null, identity: null });
+  useAuthStore.setState({ status: AuthStatus.LOADING, profile: emptyProfile, identity: null });
 });
 
 describe('AuthGuard', () => {
   describe('when status is LOADING', () => {
     it('should show a spinner when there is no cached profile', () => {
-      useAuthStore.setState({ status: AuthStatus.LOADING, profile: null, identity: null });
+      useAuthStore.setState({ status: AuthStatus.LOADING, profile: emptyProfile, identity: null });
 
       renderGuard();
 
@@ -48,7 +46,7 @@ describe('AuthGuard', () => {
     it('should render the protected route immediately when a cached profile exists (optimistic render)', () => {
       useAuthStore.setState({
         status: AuthStatus.LOADING,
-        profile: { firstName: 'John', lastName: 'Doe' },
+        profile: { firstName: 'John', lastName: 'Doe', theme: Theme.LIGHT },
         identity: null,
       });
 
@@ -60,7 +58,11 @@ describe('AuthGuard', () => {
 
   describe('when status is UNAUTHENTICATED', () => {
     it('should redirect to /login', () => {
-      useAuthStore.setState({ status: AuthStatus.UNAUTHENTICATED, profile: null, identity: null });
+      useAuthStore.setState({
+        status: AuthStatus.UNAUTHENTICATED,
+        profile: emptyProfile,
+        identity: null,
+      });
 
       renderGuard();
 
@@ -73,7 +75,7 @@ describe('AuthGuard', () => {
     it('should render the protected child route (Outlet)', () => {
       useAuthStore.setState({
         status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'John', lastName: 'Doe' },
+        profile: { firstName: 'John', lastName: 'Doe', theme: Theme.LIGHT },
         identity: { id: 1, email: 'test@example.com', accountType: 'REGULAR' },
       });
 

@@ -106,6 +106,13 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String jwt = tokenProvider.createToken(springAuth, user.getId());
         setJwtCookie(jwt, (int) applicationProperties.getJwt().getExpirationMs());
         log.debug("OAuth2 login succeeded for {}, github token captured: {}", EmailUtils.maskEmail(user.getEmail()), resolvedToken != null);
+        // JWT is now set — the server-side session that Spring created for the OAuth2 state/nonce
+        // is no longer needed. Invalidating it prevents JSESSIONID from being used as a back-door
+        // to re-authenticate after the JWT cookie is cleared (e.g. on logout).
+        var oauthSession = request.getSession(false);
+        if (oauthSession != null) {
+            oauthSession.invalidate();
+        }
         // In production the frontend is served from the same origin, so "/" is correct.
         // In local development the Vite dev server runs on a different port; frontendUrl
         // is configured to point there so the browser lands on the React app after OAuth.

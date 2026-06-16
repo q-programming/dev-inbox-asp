@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import useAuthStore, { AuthStatus, STORAGE_KEYS } from './auth.store';
 import type { UserDto } from '@api/auth';
 import { AccountType } from '@api/auth';
+import { Theme } from '@shared/theme/theme';
 
 const mockUserDto: UserDto = {
   id: 42,
@@ -11,12 +12,15 @@ const mockUserDto: UserDto = {
   accountType: AccountType.Regular,
 };
 
+/** Default empty profile the store uses when no user is logged in. */
+const emptyProfile = { firstName: '', lastName: '', theme: Theme.LIGHT };
+
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   useAuthStore.setState({
     status: AuthStatus.LOADING,
-    profile: null,
+    profile: emptyProfile,
     identity: null,
   });
 });
@@ -27,9 +31,10 @@ describe('useAuthStore', () => {
       expect(useAuthStore.getState().status).toBe(AuthStatus.LOADING);
     });
 
-    it('should start with null profile and identity after clearing storage', () => {
+    it('should start with empty profile (non-null) and null identity after reset', () => {
       const { profile, identity } = useAuthStore.getState();
-      expect(profile).toBeNull();
+      expect(profile.firstName).toBe('');
+      expect(profile.lastName).toBe('');
       expect(identity).toBeNull();
     });
   });
@@ -40,12 +45,13 @@ describe('useAuthStore', () => {
       expect(useAuthStore.getState().status).toBe(AuthStatus.AUTHENTICATED);
     });
 
-    it('should populate profile with first and last name', () => {
+    it('should populate profile with first and last name and preserve theme', () => {
       useAuthStore.getState().setUser(mockUserDto);
-      expect(useAuthStore.getState().profile).toEqual({
-        firstName: 'John',
-        lastName: 'Doe',
-      });
+      const { profile } = useAuthStore.getState();
+      expect(profile.firstName).toBe('John');
+      expect(profile.lastName).toBe('Doe');
+      // theme is preserved from previous state
+      expect(profile.theme).toBe(emptyProfile.theme);
     });
 
     it('should populate identity with id, email and accountType', () => {
@@ -62,7 +68,8 @@ describe('useAuthStore', () => {
       const raw = localStorage.getItem(STORAGE_KEYS.profile);
       expect(raw).not.toBeNull();
       const parsed = JSON.parse(raw!);
-      expect(parsed.state.profile).toEqual({ firstName: 'John', lastName: 'Doe' });
+      expect(parsed.state.profile.firstName).toBe('John');
+      expect(parsed.state.profile.lastName).toBe('Doe');
     });
 
     it('should persist identity to sessionStorage', () => {
@@ -77,7 +84,8 @@ describe('useAuthStore', () => {
     it('should handle missing optional fields gracefully', () => {
       useAuthStore.getState().setUser({});
       const { profile, identity } = useAuthStore.getState();
-      expect(profile).toEqual({ firstName: '', lastName: '' });
+      expect(profile.firstName).toBe('');
+      expect(profile.lastName).toBe('');
       expect(identity?.id).toBe(0);
       expect(identity?.email).toBe('');
     });
@@ -90,21 +98,24 @@ describe('useAuthStore', () => {
       expect(useAuthStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED);
     });
 
-    it('should null out profile and identity', () => {
+    it('should reset profile to empty default (non-null) and clear identity', () => {
       useAuthStore.getState().setUser(mockUserDto);
       useAuthStore.getState().clearUser();
-      expect(useAuthStore.getState().profile).toBeNull();
-      expect(useAuthStore.getState().identity).toBeNull();
+      const { profile, identity } = useAuthStore.getState();
+      // profile is never null — store keeps a default profile for theme persistence
+      expect(profile.firstName).toBe('');
+      expect(profile.lastName).toBe('');
+      expect(identity).toBeNull();
     });
 
-    it('should remove profile from localStorage', () => {
+    it('should persist empty profile to localStorage after clear', () => {
       useAuthStore.getState().setUser(mockUserDto);
       useAuthStore.getState().clearUser();
       const raw = localStorage.getItem(STORAGE_KEYS.profile);
-      // persist middleware writes null profile
       if (raw) {
         const parsed = JSON.parse(raw);
-        expect(parsed.state.profile).toBeNull();
+        expect(parsed.state.profile.firstName).toBe('');
+        expect(parsed.state.profile.lastName).toBe('');
       }
     });
 
@@ -115,19 +126,28 @@ describe('useAuthStore', () => {
     });
   });
 
+  describe('toggleTheme', () => {
+    it('should toggle from LIGHT to DARK', () => {
+      useAuthStore.setState({ profile: { ...emptyProfile, theme: Theme.LIGHT } });
+      useAuthStore.getState().toggleTheme();
+      expect(useAuthStore.getState().profile.theme).toBe(Theme.DARK);
+    });
+
+    it('should toggle from DARK to LIGHT', () => {
+      useAuthStore.setState({ profile: { ...emptyProfile, theme: Theme.DARK } });
+      useAuthStore.getState().toggleTheme();
+      expect(useAuthStore.getState().profile.theme).toBe(Theme.LIGHT);
+    });
+  });
+
   describe('profile rehydration from localStorage', () => {
     it('should rehydrate profile when localStorage has valid data', () => {
-      // Write profile directly to localStorage as persist middleware would
       const persistedState = {
-        state: { profile: { firstName: 'Cached', lastName: 'User' } },
+        state: { profile: { firstName: 'Cached', lastName: 'User', theme: Theme.LIGHT } },
         version: 0,
       };
       localStorage.setItem(STORAGE_KEYS.profile, JSON.stringify(persistedState));
 
-      // Import the store after setting localStorage — simulate a page reload
-      // We can verify by using setState to mimic rehydration
-      // The store itself is a singleton; testing true rehydration requires a fresh module load,
-      // so here we verify the persist key contract instead.
       const raw = localStorage.getItem(STORAGE_KEYS.profile);
       expect(raw).not.toBeNull();
       const parsed = JSON.parse(raw!);

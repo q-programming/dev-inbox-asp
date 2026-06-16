@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { createQueryClient } from '@shared/api/queryClient';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '@test/renderWithProviders';
 import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
 import { AppRoute } from '@app/routes';
+import { Theme } from '@shared/theme/theme';
 import LandingPage from './LandingPage';
 
 const mockUseMeQuery = vi.hoisted(() => vi.fn());
@@ -21,45 +20,44 @@ const mockUser = {
   accountType: 'REGULAR',
 };
 
-function renderLandingPage() {
-  return render(
-    <QueryClientProvider client={createQueryClient()}>
-      <MemoryRouter initialEntries={[AppRoute.HOME]}>
-        <LandingPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-}
+const emptyProfile = { firstName: '', lastName: '', theme: Theme.LIGHT };
+
+const renderLandingPage = () =>
+  renderWithProviders(<LandingPage />, { initialEntries: [AppRoute.HOME] });
 
 beforeEach(() => {
-  useAuthStore.setState({ status: AuthStatus.UNAUTHENTICATED, profile: null, identity: null });
+  useAuthStore.setState({
+    status: AuthStatus.UNAUTHENTICATED,
+    profile: emptyProfile,
+    identity: null,
+  });
   mockUseMeQuery.mockReturnValue({ data: undefined, isSuccess: false });
 });
 
 describe('LandingPage', () => {
   describe('redirect when authenticated via store', () => {
-    it('should not render landing content when profile is present and status is not UNAUTHENTICATED', () => {
+    it('should not render landing content when status is AUTHENTICATED', () => {
       useAuthStore.setState({
         status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'Jane', lastName: 'Doe' },
+        profile: { firstName: 'Jane', lastName: 'Doe', theme: Theme.LIGHT },
         identity: null,
       });
 
       renderLandingPage();
 
-      expect(screen.queryByRole('link', { name: /sign in/i })).toBeFalsy();
+      expect(screen.queryByTestId('header-login')).toBeFalsy();
     });
 
-    it('should render landing content when profile is present but status is UNAUTHENTICATED', () => {
+    it('should render landing content when status is UNAUTHENTICATED', () => {
       useAuthStore.setState({
         status: AuthStatus.UNAUTHENTICATED,
-        profile: { firstName: 'Jane', lastName: 'Doe' },
+        profile: emptyProfile,
         identity: null,
       });
 
       renderLandingPage();
 
-      expect(screen.getByRole('link', { name: /sign in/i })).toBeTruthy();
+      expect(screen.getByTestId('header-login')).toBeTruthy();
     });
   });
 
@@ -69,7 +67,7 @@ describe('LandingPage', () => {
 
       renderLandingPage();
 
-      expect(screen.queryByRole('link', { name: /sign in/i })).toBeFalsy();
+      expect(screen.queryByTestId('header-login')).toBeFalsy();
     });
 
     it('should render landing content when /me returns null', () => {
@@ -77,30 +75,24 @@ describe('LandingPage', () => {
 
       renderLandingPage();
 
-      expect(screen.getByRole('link', { name: /sign in/i })).toBeTruthy();
+      expect(screen.getByTestId('header-login')).toBeTruthy();
     });
   });
 
   describe('navigation links', () => {
-    it('should point Sign in link to the login route', () => {
+    it('should point Login link to the login route', () => {
       renderLandingPage();
-      expect(screen.getByRole('link', { name: /sign in/i }).getAttribute('href')).toBe(
-        AppRoute.LOGIN,
-      );
+      expect(screen.getByTestId('header-login').getAttribute('href')).toBe(AppRoute.LOGIN);
     });
 
-    it('should point Sign up link to the register route', () => {
+    it('should point Get Started header link to the register route', () => {
       renderLandingPage();
-      expect(screen.getByRole('link', { name: /sign up/i }).getAttribute('href')).toBe(
-        AppRoute.REGISTER,
-      );
+      expect(screen.getByTestId('header-get-started').getAttribute('href')).toBe(AppRoute.REGISTER);
     });
 
-    it('should point Get started link to the register route', () => {
+    it('should point hero CTA link to the register route', () => {
       renderLandingPage();
-      expect(screen.getByRole('link', { name: /get started/i }).getAttribute('href')).toBe(
-        AppRoute.REGISTER,
-      );
+      expect(screen.getByTestId('hero-get-started').getAttribute('href')).toBe(AppRoute.REGISTER);
     });
   });
 });

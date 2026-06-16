@@ -12,7 +12,7 @@ const AppLayout = () => {
       {/* Header */}
       <header className="flex justify-between items-center px-6 py-3 border-b bg-white">
         <span className="font-bold text-lg">Dev Inbox</span>
-        {profile && (
+        {profile.firstName && (
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">
               {profile.firstName} {profile.lastName}

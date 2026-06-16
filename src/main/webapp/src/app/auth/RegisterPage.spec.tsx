@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '@test/setupBrowserTests';
-import { createQueryClient } from '@shared/api/queryClient';
+import { renderWithProviders } from '@test/renderWithProviders';
 import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import { Theme } from '@shared/theme/theme';
 import { AppRoute } from '@app/routes';
 import RegisterPage from './RegisterPage';
 
@@ -26,22 +25,20 @@ const mockUser = {
   accountType: 'REGULAR',
 };
 
-function renderRegisterPage() {
-  const client = createQueryClient();
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[AppRoute.REGISTER]}>
-        <RegisterPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-}
+const emptyProfile = { firstName: '', lastName: '', theme: Theme.LIGHT };
+
+const renderRegisterPage = () =>
+  renderWithProviders(<RegisterPage />, { initialEntries: [AppRoute.REGISTER] });
 
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   mockNavigate.mockClear();
-  useAuthStore.setState({ status: AuthStatus.UNAUTHENTICATED, profile: null, identity: null });
+  useAuthStore.setState({
+    status: AuthStatus.UNAUTHENTICATED,
+    profile: emptyProfile,
+    identity: null,
+  });
 });
 
 describe('RegisterPage', () => {
@@ -49,7 +46,7 @@ describe('RegisterPage', () => {
     it('should not render the register form when user is already authenticated', () => {
       useAuthStore.setState({
         status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'John', lastName: 'Doe' },
+        profile: { firstName: 'John', lastName: 'Doe', theme: Theme.LIGHT },
         identity: { id: 1, email: 'test@example.com', accountType: 'REGULAR' },
       });
 
@@ -135,11 +132,37 @@ describe('RegisterPage', () => {
       await user.type(screen.getByLabelText(/password/i), 'SecretPass1!');
       await user.click(screen.getByRole('button', { name: /create account/i }));
 
-      // Wait for mutation to settle — label returns from "Creating account…" to "Create account"
       await waitFor(() =>
         expect(screen.getByRole('button', { name: /^create account$/i })).not.toBeDisabled(),
       );
       expect(mockNavigate).not.toHaveBeenCalledWith(AppRoute.LOGIN);
+    });
+
+    it('should show error message when registration fails', async () => {
+      server.use(http.post('/api/auth/register', () => HttpResponse.json({}, { status: 409 })));
+      const user = userEvent.setup();
+      renderRegisterPage();
+
+      await user.type(screen.getByLabelText(/first name/i), 'John');
+      await user.type(screen.getByLabelText(/last name/i), 'Doe');
+      await user.type(screen.getByLabelText(/email/i), 'existing@example.com');
+      await user.type(screen.getByLabelText(/password/i), 'SecretPass1!');
+      await user.click(screen.getByRole('button', { name: /create account/i }));
+
+      expect(await screen.findByTestId('register-error')).toBeTruthy();
+    });
+  });
+
+  describe('GitHub OAuth link', () => {
+    it('should render the Continue with GitHub link', () => {
+      renderRegisterPage();
+      expect(screen.getByText(/continue with github/i)).toBeTruthy();
+    });
+
+    it('should point to the GitHub OAuth authorization URL', () => {
+      renderRegisterPage();
+      const link = screen.getByRole('link', { name: /continue with github/i });
+      expect(link.getAttribute('href')).toContain('/oauth2/authorization/github');
     });
   });
 });

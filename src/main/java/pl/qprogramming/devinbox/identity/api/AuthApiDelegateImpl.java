@@ -1,5 +1,7 @@
 package pl.qprogramming.devinbox.identity.api;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.val;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,7 @@ public class AuthApiDelegateImpl implements AuthApiDelegate {
     private final UserService userService;
     private final TokenProvider tokenProvider;
     private final ApplicationProperties applicationProperties;
+    private final HttpServletRequest httpServletRequest;
 
     @Override
     public ResponseEntity<UserDto> register(RegisterRequest request) {
@@ -43,6 +46,12 @@ public class AuthApiDelegateImpl implements AuthApiDelegate {
     @Override
     public ResponseEntity<Void> logout() {
         clearJwtCookie();
+        // Invalidate the server-side session so the JSESSIONID cannot be used to re-authenticate
+        // after the JWT cookie has been cleared (e.g. after OAuth2 login creates a session).
+        HttpSession session = httpServletRequest.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
         return ResponseEntity.noContent().build();
     }
 
