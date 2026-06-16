@@ -6,6 +6,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -18,9 +19,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 import pl.qprogramming.devinbox.identity.domain.User;
-import pl.qprogramming.devinbox.identity.domain.UserRepository;
+import pl.qprogramming.devinbox.identity.event.UserAuthenticated;
+import pl.qprogramming.devinbox.identity.event.UserCreated;
+import pl.qprogramming.devinbox.identity.repository.UserRepository;
+import pl.qprogramming.devinbox.security.EncryptionService;
 import pl.qprogramming.devinbox.security.jwt.TokenProvider;
 import pl.qprogramming.devinbox.shared.ApplicationProperties;
+import pl.qprogramming.devinbox.shared.utils.EmailUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,6 +45,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final UserRepository userRepository;
     private final ApplicationProperties applicationProperties;
     private final OAuth2AuthorizedClientService authorizedClientService;
+    private final ApplicationEventPublisher events;
+    private final EncryptionService encryptionService;
 
     @Override
     @Transactional
@@ -66,17 +73,21 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 ? name.split(" ", 2)
                 : new String[]{login != null ? login : "", ""};
 
-        final String resolvedToken = githubAccessToken;
+        val resolvedToken = githubAccessToken;
+        val encryptedToken = encryptionService.encrypt(resolvedToken);
         User user = userRepository.findByEmailIgnoreCase(resolvedEmail)
                 .map(existing -> {
                     // Refresh the token on every login so it stays current.
                     if (resolvedToken != null) {
                         existing.setGithubToken(resolvedToken);
                     }
-                    return userRepository.save(existing);
+                    existing = userRepository.save(existing);
+                    //events are stored in db we have to encrypt it otherwise it will be saved as plain text
+                    events.publishEvent(UserAuthenticated.from(existing, encryptedToken));
+                    return existing;
                 })
                 .orElseGet(() -> {
-                    val newUser = User.builder()
+                    var newUser = User.builder()
                             .firstName(nameParts[0])
                             .lastName(nameParts.length > 1 ? nameParts[1] : "")
                             .email(resolvedEmail)
@@ -84,7 +95,9 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                             .activated(true)
                             .githubToken(resolvedToken)
                             .build();
-                    return userRepository.save(newUser);
+                    newUser = userRepository.save(newUser);
+                    events.publishEvent(UserCreated.from(newUser, encryptedToken));
+                    return newUser;
                 });
         var userDetails = new org.springframework.security.core.userdetails.User(
                 user.getEmail(), "", List.of(new SimpleGrantedAuthority("ROLE_USER")));
@@ -92,7 +105,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 userDetails, null, userDetails.getAuthorities());
         String jwt = tokenProvider.createToken(springAuth, user.getId());
         setJwtCookie(jwt, (int) applicationProperties.getJwt().getExpirationMs());
-        log.debug("OAuth2 login succeeded for {}, github token captured: {}", user.getEmail(), resolvedToken != null);
+        log.debug("OAuth2 login succeeded for {}, github token captured: {}", EmailUtils.maskEmail(user.getEmail()), resolvedToken != null);
         // In production the frontend is served from the same origin, so "/" is correct.
         // In local development the Vite dev server runs on a different port; frontendUrl
         // is configured to point there so the browser lands on the React app after OAuth.

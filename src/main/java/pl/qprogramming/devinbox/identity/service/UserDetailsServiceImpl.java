@@ -12,7 +12,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import pl.qprogramming.devinbox.identity.domain.User;
-import pl.qprogramming.devinbox.identity.domain.UserRepository;
+import pl.qprogramming.devinbox.identity.repository.UserRepository;
 
 import java.util.List;
 

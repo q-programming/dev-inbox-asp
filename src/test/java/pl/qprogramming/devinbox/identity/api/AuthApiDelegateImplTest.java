@@ -20,8 +20,8 @@ import pl.qprogramming.devinbox.identity.dto.AccountType;
 import pl.qprogramming.devinbox.identity.dto.LoginRequest;
 import pl.qprogramming.devinbox.identity.dto.RegisterRequest;
 import pl.qprogramming.devinbox.identity.dto.UserDto;
-import pl.qprogramming.devinbox.identity.exception.UserAlreadyExists;
-import pl.qprogramming.devinbox.identity.exception.UserAuthFailed;
+import pl.qprogramming.devinbox.identity.exception.UserAlreadyExistsException;
+import pl.qprogramming.devinbox.identity.exception.UserAuthFailedException;
 import pl.qprogramming.devinbox.identity.mapper.AccountMapper;
 import pl.qprogramming.devinbox.identity.service.LoginResult;
 import pl.qprogramming.devinbox.identity.service.UserService;
@@ -99,7 +99,7 @@ class AuthApiDelegateImplTest extends AbstractSpringTest {
         @DisplayName("Should return 409 when email is already registered")
         void shouldReturn409WhenEmailTaken() throws Exception {
             val body = TestFixtures.readJson("data/auth/register-request-duplicate.json");
-            when(userService.register(any())).thenThrow(new UserAlreadyExists("duplicate@example.com"));
+            when(userService.register(any())).thenThrow(new UserAlreadyExistsException("duplicate@example.com"));
 
             mockMvc.perform(post("/api/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -134,7 +134,7 @@ class AuthApiDelegateImplTest extends AbstractSpringTest {
         @DisplayName("Should return 401 on wrong credentials")
         void shouldReturn401OnBadCredentials() throws Exception {
             val body = TestFixtures.readJson("data/auth/login-request-wrong-password.json");
-            when(userService.login(any())).thenThrow(new UserAuthFailed("bad credentials"));
+            when(userService.login(any())).thenThrow(new UserAuthFailedException("bad credentials"));
 
             mockMvc.perform(post("/api/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)

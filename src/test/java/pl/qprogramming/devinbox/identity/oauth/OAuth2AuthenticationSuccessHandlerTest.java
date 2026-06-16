@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,7 +21,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import pl.qprogramming.devinbox.AbstractSpringTest;
 import pl.qprogramming.devinbox.identity.domain.User;
-import pl.qprogramming.devinbox.identity.domain.UserRepository;
+import pl.qprogramming.devinbox.identity.repository.UserRepository;
+import pl.qprogramming.devinbox.security.EncryptionService;
 import pl.qprogramming.devinbox.security.jwt.TokenProvider;
 
 import java.io.IOException;
@@ -57,6 +59,10 @@ class OAuth2AuthenticationSuccessHandlerTest extends AbstractSpringTest {
     private UserRepository userRepository;
     @Mock
     private OAuth2AuthorizedClientService authorizedClientService;
+    @Mock
+    private ApplicationEventPublisher events;
+    @Mock
+    private EncryptionService encryptionService;
 
     private OAuth2AuthenticationSuccessHandler handler;
     private MockHttpServletRequest request;
@@ -66,7 +72,7 @@ class OAuth2AuthenticationSuccessHandlerTest extends AbstractSpringTest {
     void setup() {
         applicationProperties.setFrontendUrl("");
         handler = new OAuth2AuthenticationSuccessHandler(
-                tokenProvider, userRepository, applicationProperties, authorizedClientService);
+                tokenProvider, userRepository, applicationProperties, authorizedClientService,events,encryptionService);
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request, response));
@@ -106,6 +112,15 @@ class OAuth2AuthenticationSuccessHandlerTest extends AbstractSpringTest {
                 .build();
     }
 
+    /** Returns the argument as-is after assigning id=1 so event publishing doesn't NPE. */
+    private <T extends User> org.mockito.stubbing.Answer<T> withId() {
+        return inv -> {
+            T u = inv.getArgument(0);
+            u.setId(1L);
+            return u;
+        };
+    }
+
     // ── new user provisioning ─────────────────────────────────────────────────
 
     @Nested
@@ -131,6 +146,26 @@ class OAuth2AuthenticationSuccessHandlerTest extends AbstractSpringTest {
         }
 
         @Test
+        @DisplayName("Should encrypt GitHub token and publish UserCreated event for new user")
+        void shouldPublishUserCreatedEventForNewUser() throws IOException {
+            val attrs = Map.<String, Object>of(
+                    LOGIN, FIRST_NAME, EMAIL, TEST_USER, NAME, FULL_NAME);
+            stubAuthorizedClient(GH_ACCESS_TOKEN);
+            when(encryptionService.encrypt(GH_ACCESS_TOKEN)).thenReturn("encrypted-new-token");
+            when(userRepository.findByEmailIgnoreCase(TEST_USER)).thenReturn(Optional.empty());
+            when(userRepository.save(any())).thenReturn(savedUser(TEST_USER));
+
+            handler.onAuthenticationSuccess(request, response, oauthToken(attrs));
+
+            verify(encryptionService).encrypt(GH_ACCESS_TOKEN);
+            ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+            verify(events).publishEvent(captor.capture());
+            assertThat(captor.getValue()).isInstanceOf(pl.qprogramming.devinbox.identity.event.UserCreated.class);
+            val event = (pl.qprogramming.devinbox.identity.event.UserCreated) captor.getValue();
+            assertThat(event.githubToken()).isEqualTo("encrypted-new-token");
+        }
+
+        @Test
         @DisplayName("Should use login+@github.invalid as email when GitHub email is null")
         void shouldFallbackToGithubInvalidEmail() throws IOException {
             val attrs = Map.<String, Object>of(LOGIN, FIRST_NAME, NAME, FULL_NAME);
@@ -152,7 +187,7 @@ class OAuth2AuthenticationSuccessHandlerTest extends AbstractSpringTest {
                     LOGIN, FIRST_NAME, EMAIL, TEST_USER, NAME, FULL_NAME);
             stubAuthorizedClient(GH_TOKEN);
             when(userRepository.findByEmailIgnoreCase(any())).thenReturn(Optional.empty());
-            when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(userRepository.save(any())).thenAnswer(withId());
 
             handler.onAuthenticationSuccess(request, response, oauthToken(attrs));
 
@@ -184,6 +219,27 @@ class OAuth2AuthenticationSuccessHandlerTest extends AbstractSpringTest {
 
             assertThat(existing.getGithubToken()).isEqualTo("new-gh-token");
             verify(userRepository).save(existing);
+        }
+
+        @Test
+        @DisplayName("Should encrypt token and publish UserAuthenticated event for existing user")
+        void shouldPublishUserAuthenticatedEventForExistingUser() throws IOException {
+            val attrs = Map.<String, Object>of(
+                    LOGIN, FIRST_NAME, EMAIL, TEST_USER, NAME, FULL_NAME);
+            stubAuthorizedClient("new-gh-token");
+            when(encryptionService.encrypt("new-gh-token")).thenReturn("encrypted-existing-token");
+            val existing = savedUser(TEST_USER);
+            when(userRepository.findByEmailIgnoreCase(TEST_USER)).thenReturn(Optional.of(existing));
+            when(userRepository.save(any())).thenReturn(existing);
+
+            handler.onAuthenticationSuccess(request, response, oauthToken(attrs));
+
+            verify(encryptionService).encrypt("new-gh-token");
+            ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+            verify(events).publishEvent(captor.capture());
+            assertThat(captor.getValue()).isInstanceOf(pl.qprogramming.devinbox.identity.event.UserAuthenticated.class);
+            val event = (pl.qprogramming.devinbox.identity.event.UserAuthenticated) captor.getValue();
+            assertThat(event.githubToken()).isEqualTo("encrypted-existing-token");
         }
     }
 
@@ -239,6 +295,58 @@ class OAuth2AuthenticationSuccessHandlerTest extends AbstractSpringTest {
             handler.onAuthenticationSuccess(request, response, plainAuth);
 
             verify(authorizedClientService, never()).loadAuthorizedClient(any(), any());
+        }
+    }
+
+    // ── GitHub token extraction edge cases ────────────────────────────────────
+
+    @Nested
+    @DisplayName("GitHub token extraction edge cases")
+    class GithubTokenExtraction {
+
+        @Test
+        @DisplayName("Should not save githubToken when authorized client is null")
+        void shouldHandleNullAuthorizedClient() throws IOException {
+            val attrs = Map.<String, Object>of(LOGIN, FIRST_NAME, EMAIL, TEST_USER, NAME, FULL_NAME);
+            when(authorizedClientService.loadAuthorizedClient(anyString(), anyString())).thenReturn(null);
+            when(userRepository.findByEmailIgnoreCase(any())).thenReturn(Optional.empty());
+            when(userRepository.save(any())).thenAnswer(withId());
+
+            handler.onAuthenticationSuccess(request, response, oauthToken(attrs));
+
+            ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(captor.capture());
+            assertThat(captor.getValue().getGithubToken()).isNull();
+        }
+
+        @Test
+        @DisplayName("Should not update githubToken on existing user when token is null")
+        void shouldNotUpdateTokenOnExistingUserWhenTokenNull() throws IOException {
+            val attrs = Map.<String, Object>of(LOGIN, FIRST_NAME, EMAIL, TEST_USER, NAME, FULL_NAME);
+            when(authorizedClientService.loadAuthorizedClient(anyString(), anyString())).thenReturn(null);
+            val existing = savedUser(TEST_USER);
+            when(userRepository.findByEmailIgnoreCase(TEST_USER)).thenReturn(Optional.of(existing));
+            when(userRepository.save(any())).thenReturn(existing);
+
+            handler.onAuthenticationSuccess(request, response, oauthToken(attrs));
+
+            assertThat(existing.getGithubToken()).isNull();
+        }
+
+        @Test
+        @DisplayName("Should use login as firstName and empty lastName when name attribute is null")
+        void shouldUseLoginAsFirstNameWhenNameNull() throws IOException {
+            val attrs = Map.<String, Object>of(LOGIN, FIRST_NAME, EMAIL, TEST_USER);
+            stubAuthorizedClient(GH_TOKEN);
+            when(userRepository.findByEmailIgnoreCase(any())).thenReturn(Optional.empty());
+            when(userRepository.save(any())).thenAnswer(withId());
+
+            handler.onAuthenticationSuccess(request, response, oauthToken(attrs));
+
+            ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(captor.capture());
+            assertThat(captor.getValue().getFirstName()).isEqualTo(FIRST_NAME);
+            assertThat(captor.getValue().getLastName()).isEqualTo("");
         }
     }
 }

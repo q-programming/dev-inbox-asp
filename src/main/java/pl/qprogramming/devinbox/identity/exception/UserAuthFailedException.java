@@ -3,9 +3,9 @@ package pl.qprogramming.devinbox.identity.exception;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
-@ResponseStatus(HttpStatus.CONFLICT)
-public class UserAlreadyExists extends RuntimeException {
-    public UserAlreadyExists(String message) {
+@ResponseStatus(HttpStatus.UNAUTHORIZED)
+public class UserAuthFailedException extends RuntimeException {
+    public UserAuthFailedException(String message) {
         super(message);
     }
 }

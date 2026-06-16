@@ -77,7 +77,9 @@ public class EncryptionService {
      * @return Base64-encoded {@code IV || ciphertext+tag}, or {@code null}
      */
     public String encrypt(String stringToEncrypt) {
-        if (ObjectUtils.isEmpty(stringToEncrypt)) return null;
+        if (ObjectUtils.isEmpty(stringToEncrypt)) {
+            return null;
+        }
         try {
             byte[] iv = new byte[GCM_IV_BYTES];
             new SecureRandom().nextBytes(iv);

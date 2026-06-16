@@ -1,4 +1,4 @@
-package pl.qprogramming.devinbox.identity.domain;
+package pl.qprogramming.devinbox.identity.repository;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

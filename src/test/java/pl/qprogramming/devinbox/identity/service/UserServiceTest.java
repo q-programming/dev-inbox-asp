@@ -9,17 +9,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import pl.qprogramming.devinbox.identity.domain.UserRepository;
 import pl.qprogramming.devinbox.identity.dto.LoginRequest;
 import pl.qprogramming.devinbox.identity.dto.RegisterRequest;
-import pl.qprogramming.devinbox.identity.exception.UserAlreadyExists;
-import pl.qprogramming.devinbox.identity.exception.UserAuthFailed;
+import pl.qprogramming.devinbox.identity.event.AuthenticationFailure;
+import pl.qprogramming.devinbox.identity.event.UserAuthenticated;
+import pl.qprogramming.devinbox.identity.event.UserCreated;
+import pl.qprogramming.devinbox.identity.exception.UserAlreadyExistsException;
+import pl.qprogramming.devinbox.identity.exception.UserAuthFailedException;
+import pl.qprogramming.devinbox.identity.repository.UserRepository;
+import pl.qprogramming.devinbox.security.EncryptionService;
 import pl.qprogramming.devinbox.utils.TestFixtures;
 
 import java.util.List;
@@ -44,12 +49,16 @@ class UserServiceTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private AuthenticationManager authenticationManager;
+    @Mock
+    private ApplicationEventPublisher events;
+    @Mock
+    private EncryptionService encryptionService;
 
     private UserService userService;
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userRepository, passwordEncoder, authenticationManager);
+        userService = new UserService(userRepository, passwordEncoder, authenticationManager, events, encryptionService);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -105,12 +114,12 @@ class UserServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw UserAlreadyExists when email is already taken")
+        @DisplayName("Should throw UserAlreadyExistsException when email is already taken")
         void shouldThrowWhenEmailTaken() throws Exception {
             when(userRepository.existsByEmailIgnoreCase("john.doe@example.com")).thenReturn(true);
 
             assertThatThrownBy(() -> userService.register(registerRequest()))
-                    .isInstanceOf(UserAlreadyExists.class);
+                    .isInstanceOf(UserAlreadyExistsException.class);
             verify(userRepository, never()).save(any());
         }
 
@@ -130,17 +139,35 @@ class UserServiceTest {
         }
 
         @Test
-        @DisplayName("Should set accountType REGULAR and activated=true for new user")
-        void shouldSetAccountTypeAndActivated() throws Exception {
+        @DisplayName("Should publish UserCreated event after successful registration")
+        void shouldPublishUserCreatedEvent() throws Exception {
             when(userRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
             when(passwordEncoder.encode(any())).thenReturn("hashed");
-            when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(userRepository.save(any())).thenAnswer(inv -> {
+                pl.qprogramming.devinbox.identity.domain.User u = inv.getArgument(0);
+                u.setId(1L);
+                return u;
+            });
 
-            val result = userService.register(registerRequest());
+            userService.register(registerRequest());
 
-            assertThat(result.getAccountType())
-                    .isEqualTo(pl.qprogramming.devinbox.identity.domain.User.AccountType.REGULAR);
-            assertThat(result.isActivated()).isTrue();
+            ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+            verify(events).publishEvent(captor.capture());
+            assertThat(captor.getValue()).isInstanceOf(UserCreated.class);
+            val event = (UserCreated) captor.getValue();
+            assertThat(event.email()).isEqualTo("john.doe@example.com");
+            assertThat(event.accountType()).isEqualTo("REGULAR");
+            assertThat(event.githubToken()).isNull();
+        }
+
+        @Test
+        @DisplayName("Should not publish any event when registration fails due to duplicate email")
+        void shouldNotPublishEventOnDuplicateEmail() throws Exception {
+            when(userRepository.existsByEmailIgnoreCase("john.doe@example.com")).thenReturn(true);
+
+            assertThatThrownBy(() -> userService.register(registerRequest()))
+                    .isInstanceOf(UserAlreadyExistsException.class);
+            verifyNoInteractions(events);
         }
     }
 
@@ -173,9 +200,9 @@ class UserServiceTest {
             req.setEmail("  JOHN.DOE@EXAMPLE.COM  ");
             val auth = new UsernamePasswordAuthenticationToken(
                     "john.doe@example.com", null, List.of());
-            when(authenticationManager.authenticate(any())).thenReturn(auth);
             when(userRepository.findByEmailIgnoreCase("john.doe@example.com"))
                     .thenReturn(Optional.of(storedUser()));
+            when(authenticationManager.authenticate(any())).thenReturn(auth);
 
             userService.login(req);
 
@@ -186,13 +213,79 @@ class UserServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw UserAuthFailed when credentials are wrong")
+        @DisplayName("Should throw UserAuthFailedException when user is not found in the database")
+        void shouldThrowWhenUserNotFound() throws Exception {
+            when(userRepository.findByEmailIgnoreCase("john.doe@example.com")).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.login(loginRequest()))
+                    .isInstanceOf(UserAuthFailedException.class);
+            verifyNoInteractions(authenticationManager, events, encryptionService);
+        }
+
+        @Test
+        @DisplayName("Should throw UserAuthFailedException when credentials are wrong")
         void shouldThrowOnBadCredentials() throws Exception {
+            when(userRepository.findByEmailIgnoreCase("john.doe@example.com"))
+                    .thenReturn(Optional.of(storedUser()));
             when(authenticationManager.authenticate(any()))
                     .thenThrow(new BadCredentialsException("bad"));
 
             assertThatThrownBy(() -> userService.login(loginRequest()))
-                    .isInstanceOf(UserAuthFailed.class);
+                    .isInstanceOf(UserAuthFailedException.class);
+        }
+
+        @Test
+        @DisplayName("Should call encryptionService.encrypt with the user's GitHub token during login")
+        void shouldEncryptGithubTokenDuringLogin() throws Exception {
+            val user = storedUser();
+            val auth = new UsernamePasswordAuthenticationToken(
+                    "john.doe@example.com", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+            when(userRepository.findByEmailIgnoreCase("john.doe@example.com")).thenReturn(Optional.of(user));
+            when(authenticationManager.authenticate(any())).thenReturn(auth);
+            when(encryptionService.encrypt(any())).thenReturn("encrypted-token");
+
+            userService.login(loginRequest());
+
+            verify(encryptionService).encrypt(user.getGithubToken());
+        }
+
+        @Test
+        @DisplayName("Should publish UserAuthenticated event with encrypted token after successful login")
+        void shouldPublishUserAuthenticatedEvent() throws Exception {
+            val user = storedUser();
+            val auth = new UsernamePasswordAuthenticationToken(
+                    "john.doe@example.com", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+            when(userRepository.findByEmailIgnoreCase("john.doe@example.com")).thenReturn(Optional.of(user));
+            when(authenticationManager.authenticate(any())).thenReturn(auth);
+            when(encryptionService.encrypt(any())).thenReturn("encrypted-token");
+
+            userService.login(loginRequest());
+
+            ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+            verify(events).publishEvent(captor.capture());
+            assertThat(captor.getValue()).isInstanceOf(UserAuthenticated.class);
+            val event = (UserAuthenticated) captor.getValue();
+            assertThat(event.email()).isEqualTo("john.doe@example.com");
+            assertThat(event.githubToken()).isEqualTo("encrypted-token");
+        }
+
+        @Test
+        @DisplayName("Should publish AuthenticationFailure event on bad credentials")
+        void shouldPublishAuthenticationFailureEvent() throws Exception {
+            when(userRepository.findByEmailIgnoreCase("john.doe@example.com"))
+                    .thenReturn(Optional.of(storedUser()));
+            when(authenticationManager.authenticate(any()))
+                    .thenThrow(new BadCredentialsException("Bad credentials"));
+
+            assertThatThrownBy(() -> userService.login(loginRequest()))
+                    .isInstanceOf(UserAuthFailedException.class);
+
+            ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+            verify(events).publishEvent(captor.capture());
+            assertThat(captor.getValue()).isInstanceOf(AuthenticationFailure.class);
+            val event = (AuthenticationFailure) captor.getValue();
+            assertThat(event.email()).isEqualTo("john.doe@example.com");
+            assertThat(event.cause()).isEqualTo("Bad credentials");
         }
     }
 

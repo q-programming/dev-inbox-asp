@@ -3,18 +3,25 @@ package pl.qprogramming.devinbox.identity.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import pl.qprogramming.devinbox.identity.domain.User;
-import pl.qprogramming.devinbox.identity.domain.UserRepository;
 import pl.qprogramming.devinbox.identity.dto.LoginRequest;
 import pl.qprogramming.devinbox.identity.dto.RegisterRequest;
-import pl.qprogramming.devinbox.identity.exception.UserAlreadyExists;
-import pl.qprogramming.devinbox.identity.exception.UserAuthFailed;
+import pl.qprogramming.devinbox.identity.event.AuthenticationFailure;
+import pl.qprogramming.devinbox.identity.event.UserAuthenticated;
+import pl.qprogramming.devinbox.identity.event.UserCreated;
+import pl.qprogramming.devinbox.identity.exception.UserAlreadyExistsException;
+import pl.qprogramming.devinbox.identity.exception.UserAuthFailedException;
+import pl.qprogramming.devinbox.identity.repository.UserRepository;
+import pl.qprogramming.devinbox.security.EncryptionService;
+import pl.qprogramming.devinbox.shared.utils.EmailUtils;
 import pl.qprogramming.devinbox.shared.utils.SecurityUtils;
 
 import java.util.Locale;
@@ -32,20 +39,23 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final ApplicationEventPublisher events;
+    private final EncryptionService encryptionService;
 
     /**
      * Registers a new user.
      *
      * @param request registration details
      * @return the persisted user
-     * @throws UserAlreadyExists if the email is already taken
+     * @throws UserAlreadyExistsException if the email is already taken
      */
+    @Transactional
     public User register(RegisterRequest request) {
         val email = normalizeEmail(request.getEmail());
         if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new UserAlreadyExists(email);
+            throw new UserAlreadyExistsException(email);
         }
-        val user = User.builder()
+        var newUser = User.builder()
                 .email(email)
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -53,7 +63,9 @@ public class UserService {
                 .accountType(User.AccountType.REGULAR)
                 .activated(true)
                 .build();
-        return userRepository.save(user);
+        newUser = userRepository.save(newUser);
+        events.publishEvent(UserCreated.from(newUser));
+        return newUser;
     }
 
     /**
@@ -65,18 +77,23 @@ public class UserService {
      *
      * @param request login credentials
      * @return authenticated user + authentication context
-     * @throws UserAuthFailed if credentials are invalid
+     * @throws UserAuthFailedException if credentials are invalid
      */
+    @Transactional(noRollbackFor = UserAuthFailedException.class)
     public LoginResult login(LoginRequest request) {
         val email = normalizeEmail(request.getEmail());
+        val user = userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new UserAuthFailedException("Authentication failed"));
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, request.getPassword()));
-            val user = userRepository.findByEmailIgnoreCase(email).orElseThrow();
+            val encryptedToken = encryptionService.encrypt(user.getGithubToken());
+            events.publishEvent(UserAuthenticated.from(user, encryptedToken));
             return new LoginResult(user, authentication);
         } catch (AuthenticationException ex) {
-            log.debug("Authentication failed for {}", email);
-            throw new UserAuthFailed("Authentication failed");
+            log.debug("Authentication failed for {}", EmailUtils.maskEmail(email));
+            events.publishEvent(AuthenticationFailure.from(user, ex.getMessage()));
+            throw new UserAuthFailedException("Authentication failed");
         }
     }
 
