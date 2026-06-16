@@ -25,6 +25,22 @@ spring:
   modulith:
     events:
       republish-outstanding-events-on-restart: true
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID:}
+            client-secret: ${GITHUB_CLIENT_SECRET:}
+            # read:user + user:email → identity; repo → list repos, read PRs/issues/comments
+            # (use public_repo instead of repo if only public repositories are needed)
+            scope: read:user,user:email,repo
+        provider:
+          github:
+            authorization-uri: https://github.com/login/oauth/authorize
+            token-uri: https://github.com/login/oauth/access_token
+            user-info-uri: https://api.github.com/user
+            user-name-attribute: login
 
 server:
   port: ${SERVER_PORT:8080}
@@ -45,9 +61,9 @@ management:
   otlp:
     tracing:
       endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
-  metrics:
-    export:
-      prometheus:
+  prometheus:
+    metrics:
+      export:
         enabled: true
 
 springdoc:
@@ -66,6 +82,8 @@ springdoc:
         url: /v3/api-docs/notes
       - name: identity
         url: /v3/api-docs/identity
+      - name: auth
+        url: /v3/api-docs/auth
       - name: sync
         url: /v3/api-docs/sync
 
@@ -73,3 +91,13 @@ logging:
   level:
     pl.qprogramming.devinbox: DEBUG
     org.springframework.modulith: INFO
+
+application:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-key-change-in-production-must-be-very-long-256bits}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  # Override through properties or docker env
+  encryption:
+    salt: my-salt
+    password: my-password
+

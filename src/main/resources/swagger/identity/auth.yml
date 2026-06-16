@@ -1,0 +1,128 @@
+openapi: 3.0.3
+info:
+  title: Auth API
+  version: 0.1.0
+  description: Registration and authentication
+
+servers:
+  - url: /api
+    description: Base API path
+
+tags:
+  - name: auth
+    description: Authentication operations
+
+paths:
+  /auth/register:
+    post:
+      operationId: register
+      tags: [ auth ]
+      summary: Register a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "409":
+          description: Email already in use
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [ auth ]
+      summary: Authenticate with email and password — sets HttpOnly jwt cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authentication successful; jwt cookie is set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [ auth ]
+      summary: Clear the jwt session cookie
+      responses:
+        "204":
+          description: Logged out successfully
+  /auth/me:
+    post:
+      operationId: me
+      tags: [ auth ]
+      summary: Returns current user
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "204":
+          description: No user found
+
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [ email, password, firstName, lastName ]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        firstName:
+          type: string
+        lastName:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [ email, password ]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        accountType:
+          $ref: "#/components/schemas/AccountType"
+
+    AccountType:
+      type: string
+      enum:
+        - REGULAR
+        - OAUTH_GITHUB
+

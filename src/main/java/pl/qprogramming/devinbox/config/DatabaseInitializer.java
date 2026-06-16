@@ -7,7 +7,6 @@ import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -36,18 +35,21 @@ import java.util.Properties;
  * Disable via {@code application.database-initializer.enabled=false} (e.g. in integration tests
  * that manage their own schema lifecycle).
  */
-@Slf4j
 @Component
 @Order(Integer.MIN_VALUE)
-@RequiredArgsConstructor
 @ConditionalOnProperty(
         name = "application.database-initializer.enabled",
         havingValue = "true",
         matchIfMissing = true
 )
+@Slf4j
 public class DatabaseInitializer implements InitializingBean {
 
     private final DataSource dataSource;
+
+    public DatabaseInitializer(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -83,7 +85,7 @@ public class DatabaseInitializer implements InitializingBean {
         return true;
     }
 
-    private void createSchemaWithHibernate() throws Exception {
+    private void createSchemaWithHibernate() {
         LocalContainerEntityManagerFactoryBean emfBean = new LocalContainerEntityManagerFactoryBean();
         emfBean.setDataSource(dataSource);
         emfBean.setPackagesToScan(

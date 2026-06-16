@@ -1,7 +1,7 @@
-import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
-import type { Query, Mutation } from '@tanstack/react-query';
-import useAlertStore, { AlertType } from '@/shared/store/alert.store';
-import { ApiError, NetworkError } from '@/shared/api/httpClient';
+import type { Mutation, Query } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import useAlertStore, { AlertType } from '@shared/store/alert.store';
+import { ApiError, NetworkError } from '@shared/api/httpClient';
 
 // ─── TanStack Query meta augmentation ────────────────────────────────────────
 
@@ -48,8 +48,12 @@ declare module '@tanstack/react-query' {
 // ─── Error → message ─────────────────────────────────────────────────────────
 
 function toAlertMessage(error: Error, override?: string | ErrorMessageResolver): string {
-  if (typeof override === 'function') {return override(error);}
-  if (typeof override === 'string') {return override;}
+  if (typeof override === 'function') {
+    return override(error);
+  }
+  if (typeof override === 'string') {
+    return override;
+  }
   if (error instanceof ApiError) {
     const detail =
       error.body && typeof error.body === 'object' && 'message' in error.body
@@ -74,7 +78,9 @@ const dispatchErrorAlert = (error: Error, override?: string | ErrorMessageResolv
 // ─── Cache error handlers ─────────────────────────────────────────────────────
 
 const onQueryError = (error: Error, query: Query<unknown, unknown, unknown>): void => {
-  if (query.meta?.silent) {return;}
+  if (query.meta?.silent) {
+    return;
+  }
   dispatchErrorAlert(error, query.meta?.errorMessage);
 };
 
@@ -84,7 +90,9 @@ const onMutationError = (
   _context: unknown,
   mutation: Mutation<unknown, unknown, unknown, unknown>,
 ): void => {
-  if (mutation.meta?.silent) {return;}
+  if (mutation.meta?.silent) {
+    return;
+  }
   dispatchErrorAlert(error, mutation.meta?.errorMessage);
 };
 

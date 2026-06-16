@@ -1,20 +1,25 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { playwright } from '@vitest/browser-playwright';
 import path from 'path';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@shared': path.resolve(__dirname, './src/shared'),
+      '@app': path.resolve(__dirname, './src/app'),
+      '@feature': path.resolve(__dirname, './src/features'),
+      '@test': path.resolve(__dirname, './src/test'),
       // Per-module generated API clients — one alias per modulith module.
       // When a module becomes a microservice its alias simply moves with it.
-      '@api/shared':   path.resolve(__dirname, './generated/shared-client/src'),
-      '@api/inbox':    path.resolve(__dirname, './generated/inbox-client/src'),
-      '@api/notes':    path.resolve(__dirname, './generated/notes-client/src'),
+      '@api/auth': path.resolve(__dirname, './generated/auth-client/src'),
+      '@api/shared': path.resolve(__dirname, './generated/shared-client/src'),
+      '@api/inbox': path.resolve(__dirname, './generated/inbox-client/src'),
+      '@api/notes': path.resolve(__dirname, './generated/notes-client/src'),
       '@api/identity': path.resolve(__dirname, './generated/identity-client/src'),
-      '@api/sync':     path.resolve(__dirname, './generated/sync-client/src'),
+      '@api/sync': path.resolve(__dirname, './generated/sync-client/src'),
     },
   },
   build: {
@@ -37,11 +42,9 @@ export default defineConfig({
     browser: {
       enabled: true,
       headless: true,
-      provider: 'playwright',
+      provider: playwright(),
       screenshotFailures: false,
-      instances: [
-        { browser: 'chromium' },
-      ],
+      instances: [{ browser: 'chromium' }],
     },
     include: ['src/**/*.spec.{ts,tsx}'],
     reporters: ['default', ['junit', { outputFile: 'test-report.xml' }]],

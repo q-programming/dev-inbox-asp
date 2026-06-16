@@ -39,7 +39,9 @@ export class NetworkError extends Error {
 
 const errorMiddleware: Middleware = {
   post: async ({ response }) => {
-    if (response.ok) {return response;}
+    if (response.ok) {
+      return response;
+    }
 
     let body: unknown;
     try {
@@ -52,7 +54,9 @@ const errorMiddleware: Middleware = {
   },
 
   onError: async ({ error }) => {
-    if (error instanceof ApiError) {throw error;}
+    if (error instanceof ApiError) {
+      throw error;
+    }
     throw new NetworkError(error);
   },
 };
@@ -65,25 +69,50 @@ export interface ApiConfigOptions {
 }
 
 /**
- * Creates a typed `Configuration` for the generated OpenAPI client.
+ * Builds the raw `ConfigurationParameters` object shared across all generated
+ * OpenAPI clients.
  *
- * Every instance includes:
+ * Returning the plain params (not a `Configuration` instance) lets every
+ * generated client construct its own `Configuration` with its own private field,
+ * avoiding the nominal-typing mismatch that occurs when two generated
+ * `Configuration` classes both declare `private configuration`.
+ *
+ * Every call includes:
  * - `credentials: 'include'` — session cookies sent on every request.
  * - Error normalisation — non-2xx responses throw `ApiError`; network failures
  *   throw `NetworkError`.
- *
- * Whether those errors are surfaced as UI alerts is controlled at the
- * TanStack Query level via `meta.errorMessage` on individual queries/mutations.
  */
-export function createApiConfig(opts: ApiConfigOptions = {}): Configuration {
-  return new Configuration({
+export function createApiConfigParams(
+  opts: ApiConfigOptions = {},
+): ConstructorParameters<typeof Configuration>[0] {
+  return {
     basePath: opts.basePath,
     credentials: 'include',
     middleware: [errorMiddleware],
-  });
+  };
 }
 
 // ─── Shared singleton ─────────────────────────────────────────────────────────
 
-/** App-wide API configuration. Use when instantiating any generated API class. */
+/**
+ * Raw configuration parameters reusable by any generated client.
+ *
+ * Usage in a generated-client file:
+ * ```ts
+ * import { Configuration } from '@api/some-client';
+ * import { sharedConfigParams } from '@shared/api/httpClient';
+ * export const someApi = new SomeApi(new Configuration(sharedConfigParams));
+ * ```
+ */
+export const sharedConfigParams = createApiConfigParams();
+
+/**
+ * App-wide `Configuration` instance for the shared-client.
+ * For other generated clients use `sharedConfigParams` directly.
+ */
+export function createApiConfig(opts: ApiConfigOptions = {}): Configuration {
+  return new Configuration(createApiConfigParams(opts));
+}
+
+/** @deprecated Prefer `sharedConfigParams` for non-shared-client APIs to avoid nominal type mismatch. */
 export const apiConfig = createApiConfig();

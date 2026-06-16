@@ -62,8 +62,14 @@ dev-inbox/
 │   ├── sync/           # Scheduler, sync orchestration
 │   └── shared/         # Shared value objects, domain events
 ├── src/main/resources/
-│   ├── db/migration/   # Flyway versioned SQL migrations
-│   └── swagger/api.yml # OpenAPI specification (source of truth)
+│   ├── config/liquibase/  # Liquibase versioned SQL migrations
+│   └── swagger/           # OpenAPI specs — one file per module (source of truth)
+│       ├── shared/health.yml
+│       ├── inbox/inbox.yml
+│       ├── notes/notes.yml
+│       ├── identity/auth.yml
+│       ├── identity/settings.yml
+│       └── sync/sync.yml
 ├── src/main/webapp/    # React frontend (Vite + TypeScript)
 │   ├── src/features/   # Feature-based component structure
 │   ├── src/shared/     # API facade, UI primitives, hooks, utils

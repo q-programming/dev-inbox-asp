@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { http, HttpResponse } from 'msw';
-import { server } from '@/test/setupBrowserTests';
-import useAlertStore, { AlertType } from '@/shared/store/alert.store';
-import { createQueryClient } from '@/shared/api/queryClient';
-import { useHealthQuery, useOkHealthQuery, healthKeys } from './useHealthQuery';
+import { server } from '@test/setupBrowserTests';
+import useAlertStore, { AlertType } from '@shared/store/alert.store';
+import { createQueryClient } from '@shared/api/queryClient';
+import { healthKeys, useHealthQuery, useOkHealthQuery } from './useHealthQuery';
 
 const HEALTH_UP = { status: 'UP' };
 

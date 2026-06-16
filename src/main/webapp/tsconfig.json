@@ -2,7 +2,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
@@ -17,14 +21,44 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@api/shared":   ["./generated/shared-client/src/index.ts"],
-      "@api/inbox":    ["./generated/inbox-client/src/index.ts"],
-      "@api/notes":    ["./generated/notes-client/src/index.ts"],
-      "@api/identity": ["./generated/identity-client/src/index.ts"],
-      "@api/sync":     ["./generated/sync-client/src/index.ts"]
+      "@shared/*": [
+        "./src/shared/*"
+      ],
+      "@app/*": [
+        "./src/app/*"
+      ],
+      "@feature/*": [
+        "./src/features/*"
+      ],
+      "@test/*": [
+        "./src/test/*"
+      ],
+      "@api/auth": [
+        "./generated/auth-client/src/index.ts"
+      ],
+      "@api/shared": [
+        "./generated/shared-client/src/index.ts"
+      ],
+      "@api/inbox": [
+        "./generated/inbox-client/src/index.ts"
+      ],
+      "@api/notes": [
+        "./generated/notes-client/src/index.ts"
+      ],
+      "@api/identity": [
+        "./generated/identity-client/src/index.ts"
+      ],
+      "@api/sync": [
+        "./generated/sync-client/src/index.ts"
+      ]
     }
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
 }
