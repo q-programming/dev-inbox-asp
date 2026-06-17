@@ -12,7 +12,7 @@ import {
   FILTER_ITEMS,
   INTEGRATION_FOCUS_ITEMS,
 } from '../navConfig.tsx';
-import useUserStore from '@shared/store/user.store.ts';
+import useSettingsStore from '@feature/settings/store/settings.store';
 import NavRow from './NavRow.tsx';
 import SectionLabel from './SectionLabel.tsx';
 import { useLocation } from 'react-router-dom';
@@ -31,8 +31,8 @@ export const SIDEBAR_COLLAPSED_WIDTH = 56;
  */
 const AppSidebar = memo(() => {
   const { pathname } = useLocation();
-  const collapsed = useUserStore((state) => state.profile.sideBarCollapsed) ?? false;
-  const { toggleSideBar } = useUserStore();
+  const collapsed = useSettingsStore((state) => state.sideBarCollapsed);
+  const { toggleSideBar } = useSettingsStore();
 
   const activeId = useMemo(() => pathname.split('/').filter(Boolean)[0] ?? '', [pathname]);
 

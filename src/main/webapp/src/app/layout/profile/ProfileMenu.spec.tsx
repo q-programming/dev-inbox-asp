@@ -3,7 +3,6 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@test/renderWithProviders.tsx';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
-import { Theme } from '@shared/theme/theme.ts';
 import ProfileMenu from './ProfileMenu.tsx';
 
 const mockMutate = vi.fn();
@@ -11,8 +10,6 @@ const mockMutate = vi.fn();
 vi.mock('@shared/hooks/useAuthQuery', () => ({
   useLogoutMutation: () => ({ mutate: mockMutate, isPending: false }),
 }));
-
-const baseProfile = { firstName: 'Jane', lastName: 'Smith', theme: Theme.LIGHT };
 
 function renderMenu() {
   return renderWithProviders(<ProfileMenu />);
@@ -22,7 +19,8 @@ beforeEach(() => {
   mockMutate.mockClear();
   useUserStore.setState({
     status: AuthStatus.AUTHENTICATED,
-    profile: baseProfile,
+    firstName: 'Jane',
+    lastName: 'Smith',
     identity: { id: 1, email: 'jane@example.com', accountType: 'REGULAR' as never },
   });
 });
@@ -55,7 +53,7 @@ describe('ProfileMenu', () => {
   });
 
   it('should show "?" initials when both first and last name are empty', async () => {
-    useUserStore.setState({ profile: { firstName: '', lastName: '', theme: Theme.LIGHT } });
+    useUserStore.setState({ firstName: '', lastName: '' });
     const user = userEvent.setup();
     renderMenu();
     await user.click(screen.getByRole('button', { name: /user profile/i }));

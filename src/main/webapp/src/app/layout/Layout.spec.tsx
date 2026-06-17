@@ -4,15 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { renderWithProviders } from '@test/renderWithProviders';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
-import { Theme } from '@shared/theme/theme';
 import { AppRoute } from '@app/routes';
 import AppLayout from './Layout';
 
 vi.mock('@shared/hooks/useAuthQuery', () => ({
   useLogoutMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
-
-const emptyProfile = { firstName: '', lastName: '', theme: Theme.LIGHT, sideBarCollapsed: false };
 
 function renderLayout(initialEntry = AppRoute.INBOX) {
   return renderWithProviders(
@@ -29,7 +26,6 @@ function renderLayout(initialEntry = AppRoute.INBOX) {
 beforeEach(() => {
   useUserStore.setState({
     status: AuthStatus.AUTHENTICATED,
-    profile: emptyProfile,
     identity: null,
   });
 });

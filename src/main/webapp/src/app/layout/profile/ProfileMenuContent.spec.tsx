@@ -3,7 +3,6 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@test/renderWithProviders.tsx';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
-import { Theme } from '@shared/theme/theme.ts';
 import ProfileMenuContent from './ProfileMenuContent.tsx';
 
 const mockMutate = vi.fn();
@@ -25,7 +24,8 @@ beforeEach(() => {
   mockMutate.mockClear();
   useUserStore.setState({
     status: AuthStatus.AUTHENTICATED,
-    profile: { firstName: 'Jane', lastName: 'Smith', theme: Theme.LIGHT },
+    firstName: 'Jane',
+    lastName: 'Smith',
     identity: { id: 1, email: 'jane@example.com', accountType: 'REGULAR' as never },
   });
 });
@@ -51,7 +51,8 @@ describe('ProfileMenuContent', () => {
 
     it('should show "?" initials when name is empty', async () => {
       useUserStore.setState({
-        profile: { firstName: '', lastName: '', theme: Theme.LIGHT },
+        firstName: '',
+        lastName: '',
       });
       renderContent();
       expect((await screen.findByTestId('profile-avatar')).textContent).toBe('?');

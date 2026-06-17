@@ -3,7 +3,6 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@test/renderWithProviders';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { AppRoute } from '@app/routes';
-import { Theme } from '@shared/theme/theme';
 import LandingPage from './LandingPage';
 
 const mockUseMeQuery = vi.hoisted(() => vi.fn());
@@ -20,15 +19,12 @@ const mockUser = {
   accountType: 'REGULAR',
 };
 
-const emptyProfile = { firstName: '', lastName: '', theme: Theme.LIGHT };
-
 const renderLandingPage = () =>
   renderWithProviders(<LandingPage />, { initialEntries: [AppRoute.HOME] });
 
 beforeEach(() => {
   useUserStore.setState({
     status: AuthStatus.UNAUTHENTICATED,
-    profile: emptyProfile,
     identity: null,
   });
   mockUseMeQuery.mockReturnValue({ data: undefined, isSuccess: false });
@@ -39,7 +35,8 @@ describe('LandingPage', () => {
     it('should not render landing content when status is AUTHENTICATED', () => {
       useUserStore.setState({
         status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'Jane', lastName: 'Doe', theme: Theme.LIGHT },
+        firstName: 'Jane',
+        lastName: 'Doe',
         identity: null,
       });
 
@@ -51,7 +48,6 @@ describe('LandingPage', () => {
     it('should render landing content when status is UNAUTHENTICATED', () => {
       useUserStore.setState({
         status: AuthStatus.UNAUTHENTICATED,
-        profile: emptyProfile,
         identity: null,
       });
 

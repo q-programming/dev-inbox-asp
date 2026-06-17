@@ -1,46 +1,18 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { AccountType, UserDto } from '@api/auth';
-import { DEFAULT_FONT_SIZE, Density, Theme } from '@shared/theme/theme.ts';
 import { IntegrationDto } from '@api/shared';
 
-// ─── Storage keys ─────────────────────────────────────────────────────────────
+// ─── Storage key ──────────────────────────────────────────────────────────────
 
-/**
- * Centralised storage key constants.
- * Useful for clearing specific slices in tests (sessionStorage.removeItem(STORAGE_KEYS.identity))
- * and for inspecting state in browser DevTools without guessing key names.
- */
-export const STORAGE_KEYS = {
-  profile: 'devInbox.profile',
-  identity: 'devInbox.identity',
-} as const;
+export const USER_STORAGE_KEY = 'devInbox.user';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /**
- * Non-sensitive display data — persisted to **localStorage**.
- *
- * Kept deliberately minimal (first/last name only) so that:
- * - It is safe to leave in localStorage indefinitely (no PII that requires tab-lifetime scoping).
- * - The app can render "Hello John" instantly on page load without waiting for a network call,
- *   enabling the optimistic-render pattern in AuthGuard / LandingPage.
- */
-export interface UserProfile {
-  firstName: string;
-  lastName: string;
-  theme: Theme;
-  density?: Density;
-  sideBarCollapsed?: boolean;
-  fontSize?: number;
-}
-
-/**
- * Identifying details — persisted to **sessionStorage**.
- *
- * More sensitive than a display name (email, internal id, account type), so it is scoped to the
- * browser session: sessionStorage is cleared automatically when all tabs for the origin are
- * closed, limiting the exposure window compared to localStorage.
+ * All user session data in one place — persisted to **sessionStorage**.
+ * sessionStorage is cleared automatically when all tabs for the origin are closed,
+ * limiting exposure of PII (email, id) to the active browser session.
  */
 export interface AuthIdentity {
   id: number;
@@ -52,13 +24,12 @@ export interface AuthIdentity {
 /**
  * The three states the auth flow can be in:
  *
- * - `LOADING`         — app just started; /me has not resolved yet. The UI may still render
- *                       optimistically if a cached `profile` exists in localStorage.
+ * - `LOADING`         — app just started; /me has not resolved yet.
  * - `AUTHENTICATED`   — /me confirmed the JWT cookie is valid.
  * - `UNAUTHENTICATED` — /me failed (no cookie, expired, revoked). User must log in.
  *
- * `status` is intentionally **not persisted** — it always resets to LOADING on page load so
- * that every session is verified against the backend, even if the profile is cached.
+ * `status` is **not persisted** — it always resets to LOADING on page load so
+ * every session is re-verified against the backend.
  */
 export enum AuthStatus {
   LOADING = 'loading',
@@ -68,52 +39,12 @@ export enum AuthStatus {
 
 interface UserState {
   status: AuthStatus;
-  profile: UserProfile;
+  firstName: string;
+  lastName: string;
   identity: AuthIdentity | null;
   setUser: (user: UserDto) => void;
   clearUser: () => void;
-  toggleTheme: () => void;
-  toggleSideBar: () => void;
-  switchDensity: (density: Density) => void;
-  changeFontSize: (fontSize: number) => void;
 }
-
-// ─── Session storage helpers (identity only) ──────────────────────────────────
-
-/**
- * Why manual helpers instead of a second `persist` middleware?
- * `identity` is only written in two places — `setUser` and `clearUser` — so thin read/write
- * helpers are simpler and fully explicit, with no hidden middleware magic.
- */
-
-const readIdentity = (): AuthIdentity | null => {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEYS.identity);
-    return raw ? (JSON.parse(raw) as AuthIdentity) : null;
-  } catch {
-    return null;
-  }
-};
-
-const writeIdentity = (identity: AuthIdentity | null) => {
-  if (identity) {
-    sessionStorage.setItem(STORAGE_KEYS.identity, JSON.stringify(identity));
-  } else {
-    sessionStorage.removeItem(STORAGE_KEYS.identity);
-  }
-};
-
-function getSystemMode(): Theme {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? Theme.DARK : Theme.LIGHT;
-}
-
-const defaultProfile: UserProfile = {
-  firstName: '',
-  lastName: '',
-  theme: getSystemMode(),
-  density: Density.RELAXED,
-  fontSize: 14, //TODO get from default theme ?
-};
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
@@ -122,41 +53,21 @@ const defaultProfile: UserProfile = {
  *
  * ## Storage strategy
  *
- * | Slice      | Storage        | Key                   | Why                                      |
- * |------------|----------------|-----------------------|------------------------------------------|
- * | `profile`  | localStorage   | `devInbox.profile`    | Survives tab close; safe (display only)  |
- * | `identity` | sessionStorage | `devInbox.identity`   | Cleared on tab close; more sensitive     |
- * | `status`   | —              | —                     | Never persisted; always re-verified      |
+ * | Slice                         | Storage        | Key              |
+ * |-------------------------------|----------------|------------------|
+ * | `firstName`, `lastName`, `identity` | sessionStorage | `devInbox.user`  |
+ * | `status`                      | —              | never persisted  |
  *
- * ## How `persist` works here
- *
- * `persist(creator, options)` wraps the Zustand state creator and intercepts every `set()` call.
- * After each state update it reads `options.partialize(state)` — the slice you want saved — and
- * serialises it to `options.storage` under `options.name`.
- *
- * On store initialisation, `persist` rehydrates the persisted slice back into the initial state
- * synchronously (localStorage reads are synchronous), so `profile` is available on the very first
- * render without any async wait or flicker.
- *
- * `partialize: (state) => ({ profile: state.profile })` limits what is written to localStorage —
- * `identity`, `status`, and action functions are excluded.
- *
- * ## Optimistic render flow
- *
- * 1. Page loads → `status = LOADING`, `profile` rehydrated from localStorage (may be non-null).
- * 2. `AuthGuard` renders children immediately if `profile` is present (fast "Hello John").
- * 3. `/me` resolves in the background:
- *    - Success → `setUser()` → `status = AUTHENTICATED`.
- *    - Failure → `clearUser()` → `status = UNAUTHENTICATED` → redirect to /login.
+ * UI preferences (theme, density, fontSize, sidebar) live in `useSettingsStore`
+ * (localStorage) and are intentionally decoupled from authentication.
  */
 const useUserStore = create<UserState>()(
   persist(
     (set) => ({
       status: AuthStatus.LOADING,
-      profile: defaultProfile,
-      // identity is initialised manually because it lives in sessionStorage,
-      // not in the localStorage slice that `persist` manages.
-      identity: readIdentity(),
+      firstName: '',
+      lastName: '',
+      identity: null,
 
       setUser: (user: UserDto) => {
         const identity: AuthIdentity = {
@@ -165,58 +76,26 @@ const useUserStore = create<UserState>()(
           accountType: user.accountType as AccountType,
           integrations: user.integrations,
         };
-        writeIdentity(identity);
-        set((state) => ({
+        set({
           status: AuthStatus.AUTHENTICATED,
-          profile: {
-            firstName: user.firstName ?? '',
-            lastName: user.lastName ?? '',
-            theme: state.profile?.theme ?? Theme.LIGHT, // preserve or default
-            sideBarCollapsed: state.profile?.sideBarCollapsed ?? false,
-            density: state.profile?.density ?? Density.RELAXED,
-            fontSize: state.profile?.fontSize ?? DEFAULT_FONT_SIZE,
-          },
+          firstName: user.firstName ?? '',
+          lastName: user.lastName ?? '',
           identity,
-        }));
-      },
-      toggleTheme: () => {
-        set((state) => {
-          const theme = state.profile.theme === Theme.LIGHT ? Theme.DARK : Theme.LIGHT;
-          return {
-            profile: state.profile
-              ? { ...state.profile, theme }
-              : { firstName: '', lastName: '', theme },
-          };
         });
       },
-      toggleSideBar: () => {
-        set((state) => {
-          const sideBarCollapsed = !state.profile.sideBarCollapsed;
-          return {
-            profile: { ...state.profile, sideBarCollapsed },
-          };
-        });
-      },
-      switchDensity: (density: Density) => {
-        set((state) => ({
-          profile: { ...state.profile, density },
-        }));
-      },
-      changeFontSize: (fontSize: number) => {
-        set((state) => ({
-          profile: { ...state.profile, fontSize },
-        }));
-      },
-      clearUser: () => {
-        writeIdentity(null);
-        set({ status: AuthStatus.UNAUTHENTICATED, profile: defaultProfile, identity: null });
-      },
+
+      clearUser: () =>
+        set({ status: AuthStatus.UNAUTHENTICATED, firstName: '', lastName: '', identity: null }),
     }),
     {
-      name: STORAGE_KEYS.profile,
-      storage: createJSONStorage(() => localStorage),
-      // Only persist the display profile — status and identity are excluded intentionally.
-      partialize: (state) => ({ profile: state.profile }),
+      name: USER_STORAGE_KEY,
+      storage: createJSONStorage(() => sessionStorage),
+      // status is excluded — it must always re-verify on page load.
+      partialize: (state) => ({
+        firstName: state.firstName,
+        lastName: state.lastName,
+        identity: state.identity,
+      }),
     },
   ),
 );

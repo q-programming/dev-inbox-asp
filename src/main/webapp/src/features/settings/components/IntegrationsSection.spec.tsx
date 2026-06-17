@@ -3,21 +3,13 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@test/renderWithProviders';
 import IntegrationsSection from './IntegrationsSection';
 import useUserStore, { AuthStatus } from '@shared/store/user.store';
-import { Density, Theme } from '@shared/theme/theme';
 import { IntegrationStatus, IntegrationType } from '@api/shared';
-
-const baseProfile = {
-  firstName: 'Jane',
-  lastName: 'Dev',
-  theme: Theme.LIGHT,
-  density: Density.RELAXED,
-  fontSize: 14,
-};
 
 beforeEach(() => {
   useUserStore.setState({
     status: AuthStatus.AUTHENTICATED,
-    profile: baseProfile,
+    firstName: 'Jane',
+    lastName: 'Dev',
     identity: {
       id: 1,
       email: 'jane@dev.com',

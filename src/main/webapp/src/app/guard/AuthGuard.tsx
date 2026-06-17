@@ -13,10 +13,10 @@ import { AppRoute } from '@app/routes';
  * 4. Once /me resolves: authenticated → keep rendering; unauthenticated → redirect to /login.
  */
 const AuthGuard = () => {
-  const { status, profile } = useUserStore();
+  const { status, firstName, lastName } = useUserStore();
   useAuthBootstrap();
 
-  if (status === AuthStatus.LOADING && !profile.firstName && !profile.lastName) {
+  if (status === AuthStatus.LOADING && !firstName && !lastName) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-500 text-sm animate-pulse">Loading…</div>

@@ -6,7 +6,6 @@ import { http, HttpResponse } from 'msw';
 import { server } from '@test/setupBrowserTests';
 import { createQueryClient } from '@shared/api/queryClient';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
-import { Theme } from '@shared/theme/theme';
 import {
   authKeys,
   useAuthBootstrap,
@@ -36,7 +35,6 @@ beforeEach(() => {
   sessionStorage.clear();
   useUserStore.setState({
     status: AuthStatus.LOADING,
-    profile: { firstName: '', lastName: '', theme: Theme.LIGHT },
     identity: null,
   });
 });
@@ -80,7 +78,7 @@ describe('useAuthBootstrap', () => {
     renderHook(() => useAuthBootstrap(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(useUserStore.getState().status).toBe(AuthStatus.AUTHENTICATED));
-    expect(useUserStore.getState().profile?.firstName).toBe('John');
+    expect(useUserStore.getState().firstName).toBe('John');
   });
 
   it('should call clearUser and set UNAUTHENTICATED when /me returns null (204)', async () => {
@@ -89,9 +87,9 @@ describe('useAuthBootstrap', () => {
     renderHook(() => useAuthBootstrap(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(useUserStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED));
-    // profile is never null — clearUser resets to the empty default for theme persistence
-    expect(useUserStore.getState().profile.firstName).toBe('');
-    expect(useUserStore.getState().profile.lastName).toBe('');
+    // clearUser resets names to empty
+    expect(useUserStore.getState().firstName).toBe('');
+    expect(useUserStore.getState().lastName).toBe('');
   });
 
   it('should call clearUser and set UNAUTHENTICATED when /me errors', async () => {
@@ -125,7 +123,7 @@ describe('useLoginMutation', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(useUserStore.getState().status).toBe(AuthStatus.AUTHENTICATED);
-    expect(useUserStore.getState().profile?.firstName).toBe('John');
+    expect(useUserStore.getState().firstName).toBe('John');
   });
 
   it('should set isError on 401 invalid credentials', async () => {

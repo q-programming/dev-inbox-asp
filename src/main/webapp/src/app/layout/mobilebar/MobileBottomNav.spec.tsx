@@ -3,7 +3,6 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@test/renderWithProviders.tsx';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
-import { Theme } from '@shared/theme/theme.ts';
 import { AppRoute } from '@app/routes.ts';
 import MobileBottomNav from './MobileBottomNav.tsx';
 
@@ -21,7 +20,8 @@ beforeEach(() => {
   mockMutate.mockClear();
   useUserStore.setState({
     status: AuthStatus.AUTHENTICATED,
-    profile: { firstName: 'Jane', lastName: 'Smith', theme: Theme.LIGHT },
+    firstName: 'Jane',
+    lastName: 'Smith',
     identity: { id: 1, email: 'jane@example.com', accountType: 'REGULAR' as never },
   });
 });

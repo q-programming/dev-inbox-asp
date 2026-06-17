@@ -7,7 +7,7 @@ import AppHeader from './header/AppHeader.tsx';
 import AppSidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './sidebar/AppSidebar.tsx';
 import MobileBottomNav from '@app/layout/mobilebar/MobileBottomNav.tsx';
 import Footer from '@app/common/footer/Footer.tsx';
-import useUserStore from '@shared/store/user.store';
+import useSettingsStore from '@feature/settings/store/settings.store';
 import { useGlobalShortcuts } from '@shared/hooks/useGlobalShortcuts.ts';
 import { useLeaderKey } from '@shared/hooks/useLeaderKey.ts';
 
@@ -17,12 +17,12 @@ const TRANSITION = 'width 200ms ease, margin-left 200ms ease';
  * Authenticated app shell.
  * Fixed header at top, collapsible sidebar + scrollable main content, shared footer at bottom.
  * Sidebar width and main margin-left animate in sync via CSS transitions keyed to
- * profile.sideBarCollapsed from the user store.
+ * sideBarCollapsed from the settings store.
  */
 const AppLayout = () => {
   useGlobalShortcuts();
   useLeaderKey();
-  const { sideBarCollapsed } = useUserStore((state) => state.profile);
+  const sideBarCollapsed = useSettingsStore((state) => state.sideBarCollapsed);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const sidebarWidth = sideBarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
   const handleMenuOpen = useCallback(() => setMobileDrawerOpen((prev) => !prev), []);

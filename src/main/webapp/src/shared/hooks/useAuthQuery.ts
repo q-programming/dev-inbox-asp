@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { ApiError, sharedConfigParams } from '@shared/api/httpClient.ts';
 import { AuthApi, Configuration, LoginRequest, RegisterRequest, UserDto } from '@api/auth';
 import useUserStore from '@shared/store/user.store.ts';
+import useSettingsStore from '@feature/settings/store/settings.store';
 
 export const authApi = new AuthApi(new Configuration(sharedConfigParams));
 
@@ -44,6 +45,7 @@ export const useMeQuery = () =>
 export const useAuthBootstrap = () => {
   const { data, isSuccess, isError } = useMeQuery();
   const { setUser, clearUser } = useUserStore();
+  const { applyServerProfile } = useSettingsStore();
 
   useEffect(() => {
     if (!isSuccess) {
@@ -51,10 +53,11 @@ export const useAuthBootstrap = () => {
     }
     if (data) {
       setUser(data);
+      applyServerProfile({}); //TODO update with actual user  values
     } else {
       clearUser();
     }
-  }, [isSuccess, data, setUser, clearUser]);
+  }, [isSuccess, data, setUser, clearUser, applyServerProfile]);
 
   useEffect(() => {
     if (isError) {

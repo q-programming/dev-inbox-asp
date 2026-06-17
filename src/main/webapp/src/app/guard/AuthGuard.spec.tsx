@@ -3,7 +3,6 @@ import { screen } from '@testing-library/react';
 import { Route, Routes } from 'react-router-dom';
 import { renderWithProviders } from '@test/renderWithProviders';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
-import { Theme } from '@shared/theme/theme';
 import AuthGuard from './AuthGuard';
 import { AppRoute } from '@app/routes';
 
@@ -12,8 +11,6 @@ import { AppRoute } from '@app/routes';
 vi.mock('@shared/hooks/useAuthQuery', () => ({
   useAuthBootstrap: vi.fn(),
 }));
-
-const emptyProfile = { firstName: '', lastName: '', theme: Theme.LIGHT };
 
 function renderGuard(initialPath = '/protected') {
   return renderWithProviders(
@@ -30,13 +27,23 @@ function renderGuard(initialPath = '/protected') {
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
-  useUserStore.setState({ status: AuthStatus.LOADING, profile: emptyProfile, identity: null });
+  useUserStore.setState({
+    status: AuthStatus.LOADING,
+    firstName: '',
+    lastName: '',
+    identity: null,
+  });
 });
 
 describe('AuthGuard', () => {
   describe('when status is LOADING', () => {
     it('should show a spinner when there is no cached profile', () => {
-      useUserStore.setState({ status: AuthStatus.LOADING, profile: emptyProfile, identity: null });
+      useUserStore.setState({
+        status: AuthStatus.LOADING,
+        firstName: '',
+        lastName: '',
+        identity: null,
+      });
 
       renderGuard();
 
@@ -46,7 +53,8 @@ describe('AuthGuard', () => {
     it('should render the protected route immediately when a cached profile exists (optimistic render)', () => {
       useUserStore.setState({
         status: AuthStatus.LOADING,
-        profile: { firstName: 'John', lastName: 'Doe', theme: Theme.LIGHT },
+        firstName: 'John',
+        lastName: 'Doe',
         identity: null,
       });
 
@@ -60,7 +68,6 @@ describe('AuthGuard', () => {
     it('should redirect to /login', () => {
       useUserStore.setState({
         status: AuthStatus.UNAUTHENTICATED,
-        profile: emptyProfile,
         identity: null,
       });
 
@@ -75,7 +82,8 @@ describe('AuthGuard', () => {
     it('should render the protected child route (Outlet)', () => {
       useUserStore.setState({
         status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'John', lastName: 'Doe', theme: Theme.LIGHT },
+        firstName: 'John',
+        lastName: 'Doe',
         identity: { id: 1, email: 'test@example.com', accountType: 'REGULAR' },
       });
 

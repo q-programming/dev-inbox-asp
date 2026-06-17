@@ -19,7 +19,7 @@ const SettingsTips = memo(() => (
     <Paper
       variant="outlined"
       sx={{
-        paragraph: 2,
+        padding: 2,
         bgcolor: (theme) => (theme.palette.mode === 'light' ? '#eef4fb' : 'rgba(44,90,160,0.12)'),
         borderColor: 'primary.light',
       }}
@@ -52,7 +52,7 @@ const SettingsTips = memo(() => (
     </Paper>
 
     {/* Need help? */}
-    <Box>
+    <Box sx={{ padding: 2 }}>
       <Typography variant="overline" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
         Need help?
       </Typography>

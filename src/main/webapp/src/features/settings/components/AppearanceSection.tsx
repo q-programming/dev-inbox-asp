@@ -12,14 +12,8 @@ import ViewHeadlineIcon from '@mui/icons-material/ViewHeadline';
 import ThemeCard from './ThemeCard';
 import DensityCard from './DensityCard';
 import { DENSITY_LABELS } from '@feature/settings/types/settings.types';
-import useUserStore from '@shared/store/user.store';
-import {
-  DEFAULT_FONT_SIZE,
-  Density,
-  FONT_SIZE_MAX,
-  FONT_SIZE_MIN,
-  Theme,
-} from '@shared/theme/theme';
+import useSettingsStore from '@feature/settings/store/settings.store';
+import { Density, FONT_SIZE_MAX, FONT_SIZE_MIN, Theme } from '@shared/theme/theme';
 
 const ALL_DENSITIES = [Density.RELAXED, Density.TIGHT, Density.SUPER_TIGHT] as const;
 
@@ -28,10 +22,10 @@ const ALL_DENSITIES = [Density.RELAXED, Density.TIGHT, Density.SUPER_TIGHT] as c
  * All values are persisted via the user store so they survive page reload.
  */
 const AppearanceSection = memo(() => {
-  const theme = useUserStore((state) => state.profile.theme);
-  const fontSize = useUserStore((state) => state.profile.fontSize ?? DEFAULT_FONT_SIZE);
-  const density = useUserStore((state) => state.profile.density ?? Density.RELAXED);
-  const { toggleTheme, switchDensity, changeFontSize } = useUserStore();
+  const theme = useSettingsStore((state) => state.theme);
+  const fontSize = useSettingsStore((state) => state.fontSize);
+  const density = useSettingsStore((state) => state.density);
+  const { toggleTheme, switchDensity, changeFontSize } = useSettingsStore();
 
   const handleThemeSelect = useCallback(
     (mode: Theme) => {

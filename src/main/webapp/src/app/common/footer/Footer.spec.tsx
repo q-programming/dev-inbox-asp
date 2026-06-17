@@ -2,32 +2,22 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@test/renderWithProviders.tsx';
-import useUserStore, { AuthStatus, UserProfile } from '@shared/store/user.store.ts';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
+import useSettingsStore from '@feature/settings/store/settings.store';
 import { Theme } from '@shared/theme/theme.ts';
 import { AppRoute } from '@app/routes.ts';
 import Footer from './Footer.tsx';
-
-const lightProfile: UserProfile = {
-  firstName: '',
-  lastName: '',
-  theme: Theme.LIGHT,
-  sideBarCollapsed: false,
-};
-const darkProfile: UserProfile = {
-  firstName: '',
-  lastName: '',
-  theme: Theme.DARK,
-  sideBarCollapsed: false,
-};
 
 const renderFooter = () => renderWithProviders(<Footer />);
 
 beforeEach(() => {
   useUserStore.setState({
     status: AuthStatus.UNAUTHENTICATED,
-    profile: lightProfile,
+    firstName: '',
+    lastName: '',
     identity: null,
   });
+  useSettingsStore.setState({ theme: Theme.LIGHT });
 });
 
 describe('Footer', () => {
@@ -41,15 +31,14 @@ describe('Footer', () => {
 
   describe('theme toggle', () => {
     it('should show the light mode button selected when theme is LIGHT', () => {
-      useUserStore.setState({ profile: lightProfile });
+      useSettingsStore.setState({ theme: Theme.LIGHT });
       renderFooter();
-      // Two instances rendered (mobile + desktop), both should be present
       expect(screen.getAllByTestId('theme-toggle').length).toBeGreaterThan(0);
       expect(screen.getAllByRole('button', { name: /light mode/i }).length).toBeGreaterThan(0);
     });
 
     it('should show the dark mode button selected when theme is DARK', () => {
-      useUserStore.setState({ profile: darkProfile });
+      useSettingsStore.setState({ theme: Theme.DARK });
       renderFooter();
       expect(screen.getAllByRole('button', { name: /dark mode/i }).length).toBeGreaterThan(0);
     });
@@ -60,21 +49,21 @@ describe('Footer', () => {
 
       await user.click(screen.getAllByRole('button', { name: /dark mode/i })[0]);
 
-      expect(useUserStore.getState().profile.theme).toBe(Theme.DARK);
+      expect(useSettingsStore.getState().theme).toBe(Theme.DARK);
     });
 
     it('should toggle back from DARK to LIGHT when light mode button is clicked', async () => {
-      useUserStore.setState({ profile: darkProfile });
+      useSettingsStore.setState({ theme: Theme.DARK });
       const user = userEvent.setup();
       renderFooter();
 
       await user.click(screen.getAllByRole('button', { name: /light mode/i })[0]);
 
-      expect(useUserStore.getState().profile.theme).toBe(Theme.LIGHT);
+      expect(useSettingsStore.getState().theme).toBe(Theme.LIGHT);
     });
 
     it('should not be visible for authenticated users', () => {
-      useUserStore.setState({ profile: darkProfile, status: AuthStatus.AUTHENTICATED });
+      useUserStore.setState({ status: AuthStatus.AUTHENTICATED });
       renderFooter();
       expect(screen.queryByTestId('theme-toggle')).toBeNull();
     });

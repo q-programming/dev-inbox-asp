@@ -43,16 +43,16 @@ const ProfileMenuContent = ({
   anchorOrigin = { horizontal: 'right', vertical: 'bottom' },
   transformOrigin = { horizontal: 'right', vertical: 'top' },
 }: ProfileMenuContentProps) => {
-  const { profile, identity } = useUserStore();
+  const { firstName, lastName, identity } = useUserStore();
   const logoutMutation = useLogoutMutation();
 
   const initials = useMemo(
     () =>
-      [profile.firstName, profile.lastName]
+      [firstName, lastName]
         .filter(Boolean)
         .map((name) => name[0].toUpperCase())
         .join('') || '?',
-    [profile],
+    [firstName, lastName],
   );
 
   const handleLogout = useCallback(
@@ -91,7 +91,7 @@ const ProfileMenuContent = ({
             data-testid="profile-name"
             sx={{ fontWeight: 600, lineHeight: 1.2 }}
           >
-            {profile.firstName} {profile.lastName}
+            {firstName} {lastName}
           </Typography>
           {identity?.email && (
             <Typography variant="caption" color="text.secondary" data-testid="profile-email">

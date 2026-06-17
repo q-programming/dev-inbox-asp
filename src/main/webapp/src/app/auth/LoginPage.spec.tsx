@@ -5,7 +5,6 @@ import { http, HttpResponse } from 'msw';
 import { server } from '@test/setupBrowserTests';
 import { renderWithProviders } from '@test/renderWithProviders';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
-import { Theme } from '@shared/theme/theme';
 import { AppRoute } from '@app/routes';
 import LoginPage from './LoginPage';
 
@@ -25,8 +24,6 @@ const mockUser = {
   accountType: 'REGULAR',
 };
 
-const emptyProfile = { firstName: '', lastName: '', theme: Theme.LIGHT };
-
 const renderLoginPage = () =>
   renderWithProviders(<LoginPage />, { initialEntries: [AppRoute.LOGIN] });
 
@@ -36,7 +33,6 @@ beforeEach(() => {
   mockNavigate.mockClear();
   useUserStore.setState({
     status: AuthStatus.UNAUTHENTICATED,
-    profile: emptyProfile,
     identity: null,
   });
 });
@@ -46,7 +42,8 @@ describe('LoginPage', () => {
     it('should not render the login form when user is already authenticated', () => {
       useUserStore.setState({
         status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'John', lastName: 'Doe', theme: Theme.LIGHT },
+        firstName: 'John',
+        lastName: 'Doe',
         identity: { id: 1, email: 'test@example.com', accountType: 'REGULAR' },
       });
 

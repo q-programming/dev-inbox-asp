@@ -1,11 +1,11 @@
 import { type ReactNode, useMemo } from 'react';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { buildTheme } from './theme';
-import useUserStore from '@shared/store/user.store.ts';
+import useSettingsStore from '@feature/settings/store/settings.store';
 
 export const AppThemeProvider = ({ children }: { children: ReactNode }) => {
-  const theme = useUserStore((state) => state.profile.theme);
-  const fontSize = useUserStore((state) => state.profile.fontSize);
+  const theme = useSettingsStore((state) => state.theme);
+  const fontSize = useSettingsStore((state) => state.fontSize);
   const builtTheme = useMemo(() => buildTheme(theme, fontSize), [theme, fontSize]);
   return (
     <ThemeProvider theme={builtTheme}>

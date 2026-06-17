@@ -13,7 +13,6 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@test/renderWithProviders.tsx';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
-import { Theme } from '@shared/theme/theme.ts';
 import AppHeader from './AppHeader.tsx';
 
 const mockMutate = vi.fn();
@@ -21,8 +20,6 @@ const mockMutate = vi.fn();
 vi.mock('@shared/hooks/useAuthQuery', () => ({
   useLogoutMutation: () => ({ mutate: mockMutate, isPending: false }),
 }));
-
-const baseProfile = { firstName: 'Jane', lastName: 'Smith', theme: Theme.LIGHT };
 
 function renderHeader(onMenuOpen = vi.fn()) {
   return renderWithProviders(<AppHeader onMenuOpen={onMenuOpen} />);
@@ -32,7 +29,8 @@ beforeEach(() => {
   mockMutate.mockClear();
   useUserStore.setState({
     status: AuthStatus.AUTHENTICATED,
-    profile: baseProfile,
+    firstName: 'Jane',
+    lastName: 'Smith',
     identity: { id: 1, email: 'jane@example.com', accountType: 'REGULAR' as never },
   });
 });

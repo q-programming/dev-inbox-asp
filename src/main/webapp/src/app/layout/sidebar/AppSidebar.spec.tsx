@@ -7,21 +7,8 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@test/renderWithProviders.tsx';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
-import { Theme } from '@shared/theme/theme.ts';
+import useSettingsStore from '@feature/settings/store/settings.store';
 import AppSidebar from './AppSidebar.tsx';
-
-const expandedProfile = {
-  firstName: '',
-  lastName: '',
-  theme: Theme.LIGHT,
-  sideBarCollapsed: false,
-};
-const collapsedProfile = {
-  firstName: '',
-  lastName: '',
-  theme: Theme.LIGHT,
-  sideBarCollapsed: true,
-};
 
 function renderSidebar() {
   return renderWithProviders(<AppSidebar />);
@@ -30,9 +17,11 @@ function renderSidebar() {
 beforeEach(() => {
   useUserStore.setState({
     status: AuthStatus.AUTHENTICATED,
-    profile: expandedProfile,
+    firstName: '',
+    lastName: '',
     identity: null,
   });
+  useSettingsStore.setState({ sideBarCollapsed: false });
 });
 
 describe('AppSidebar', () => {
@@ -65,7 +54,7 @@ describe('AppSidebar', () => {
     });
 
     it('should show expand button when sidebar is collapsed', () => {
-      useUserStore.setState({ profile: collapsedProfile });
+      useSettingsStore.setState({ sideBarCollapsed: true });
       renderSidebar();
       expect(screen.getByRole('button', { name: /expand sidebar/i })).toBeTruthy();
     });
@@ -76,23 +65,23 @@ describe('AppSidebar', () => {
 
       await user.click(screen.getByRole('button', { name: /collapse sidebar/i }));
 
-      expect(useUserStore.getState().profile.sideBarCollapsed).toBe(true);
+      expect(useSettingsStore.getState().sideBarCollapsed).toBe(true);
     });
 
     it('should call toggleSideBar when expand button is clicked', async () => {
-      useUserStore.setState({ profile: collapsedProfile });
+      useSettingsStore.setState({ sideBarCollapsed: true });
       const user = userEvent.setup();
       renderSidebar();
 
       await user.click(screen.getByRole('button', { name: /expand sidebar/i }));
 
-      expect(useUserStore.getState().profile.sideBarCollapsed).toBe(false);
+      expect(useSettingsStore.getState().sideBarCollapsed).toBe(false);
     });
   });
 
   describe('collapsed mode', () => {
     it('should hide item labels when sidebar is collapsed', () => {
-      useUserStore.setState({ profile: collapsedProfile });
+      useSettingsStore.setState({ sideBarCollapsed: true });
       renderSidebar();
       // Labels should not be visible as text nodes (Tooltip replaces them)
       expect(screen.queryByText('Review requests')).toBeNull();

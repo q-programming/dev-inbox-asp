@@ -4,18 +4,17 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@test/renderWithProviders';
 import AppearanceSection from './AppearanceSection';
 import useUserStore, { AuthStatus } from '@shared/store/user.store';
+import useSettingsStore from '@feature/settings/store/settings.store';
 import { Density, Theme } from '@shared/theme/theme';
 
-const baseProfile = {
-  firstName: 'Jane',
-  lastName: 'Dev',
-  theme: Theme.LIGHT,
-  density: Density.RELAXED,
-  fontSize: 14,
-};
-
 beforeEach(() => {
-  useUserStore.setState({ status: AuthStatus.AUTHENTICATED, profile: baseProfile, identity: null });
+  useUserStore.setState({
+    status: AuthStatus.AUTHENTICATED,
+    firstName: 'Jane',
+    lastName: 'Dev',
+    identity: null,
+  });
+  useSettingsStore.setState({ theme: Theme.LIGHT, density: Density.RELAXED, fontSize: 14 });
 });
 
 describe('AppearanceSection', () => {
@@ -23,7 +22,7 @@ describe('AppearanceSection', () => {
     it('calls toggleTheme when the non-active theme card is clicked', async () => {
       const user = userEvent.setup();
       const mockToggleTheme = vi.fn();
-      useUserStore.setState({ toggleTheme: mockToggleTheme });
+      useSettingsStore.setState({ toggleTheme: mockToggleTheme });
       renderWithProviders(<AppearanceSection />);
       await user.click(screen.getByTestId('theme-card-dark'));
       expect(mockToggleTheme).toHaveBeenCalledOnce();
@@ -32,7 +31,7 @@ describe('AppearanceSection', () => {
     it('does not call toggleTheme when the already-active theme card is clicked', async () => {
       const user = userEvent.setup();
       const mockToggleTheme = vi.fn();
-      useUserStore.setState({ toggleTheme: mockToggleTheme });
+      useSettingsStore.setState({ toggleTheme: mockToggleTheme });
       renderWithProviders(<AppearanceSection />);
       await user.click(screen.getByTestId('theme-card-light'));
       expect(mockToggleTheme).not.toHaveBeenCalled();
@@ -49,7 +48,7 @@ describe('AppearanceSection', () => {
     it('calls switchDensity with the correct value when a density card is clicked', async () => {
       const user = userEvent.setup();
       const mockSwitchDensity = vi.fn();
-      useUserStore.setState({ switchDensity: mockSwitchDensity });
+      useSettingsStore.setState({ switchDensity: mockSwitchDensity });
       renderWithProviders(<AppearanceSection />);
       await user.click(screen.getByTestId(`density-card-${Density.TIGHT}`));
       expect(mockSwitchDensity).toHaveBeenCalledWith(Density.TIGHT);
@@ -71,7 +70,7 @@ describe('AppearanceSection', () => {
   describe('font size slider', () => {
     it('calls changeFontSize when the slider value changes', () => {
       const mockChangeFontSize = vi.fn();
-      useUserStore.setState({ changeFontSize: mockChangeFontSize });
+      useSettingsStore.setState({ changeFontSize: mockChangeFontSize });
       renderWithProviders(<AppearanceSection />);
       fireEvent.change(screen.getByRole('slider', { name: /ui font size/i }), {
         target: { value: '16' },
@@ -80,7 +79,7 @@ describe('AppearanceSection', () => {
     });
 
     it('initialises the slider with the stored font size', () => {
-      useUserStore.setState({ profile: { ...baseProfile, fontSize: 17 } });
+      useSettingsStore.setState({ fontSize: 17 });
       renderWithProviders(<AppearanceSection />);
       expect(screen.getByRole('slider', { name: /ui font size/i })).toHaveAttribute(
         'aria-valuenow',

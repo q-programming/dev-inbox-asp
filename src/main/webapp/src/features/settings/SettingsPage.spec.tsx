@@ -3,18 +3,14 @@ import { waitFor } from '@testing-library/react';
 import { renderWithProviders } from '@test/renderWithProviders';
 import SettingsPage from './SettingsPage';
 import useUserStore, { AuthStatus } from '@shared/store/user.store';
-import { Density, Theme } from '@shared/theme/theme';
-
-const baseProfile = {
-  firstName: 'Jane',
-  lastName: 'Dev',
-  theme: Theme.LIGHT,
-  density: Density.RELAXED,
-  fontSize: 14,
-};
 
 beforeEach(() => {
-  useUserStore.setState({ status: AuthStatus.AUTHENTICATED, profile: baseProfile, identity: null });
+  useUserStore.setState({
+    status: AuthStatus.AUTHENTICATED,
+    firstName: 'Jane',
+    lastName: 'Dev',
+    identity: null,
+  });
 });
 
 describe('SettingsPage', () => {
