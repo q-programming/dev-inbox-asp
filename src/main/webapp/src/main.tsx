@@ -6,7 +6,7 @@ import { AppThemeProvider } from '@shared/theme/AppThemeProvider';
 import { SnackbarProvider } from 'notistack';
 import App from './App';
 import './index.css';
-import AlertBridge from '@app/ui/AlertBridge.tsx';
+import AlertBridge from '@app/common/AlertBridge.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

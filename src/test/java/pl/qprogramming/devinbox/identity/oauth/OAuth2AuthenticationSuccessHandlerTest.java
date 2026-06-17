@@ -250,7 +250,7 @@ class OAuth2AuthenticationSuccessHandlerTest extends AbstractSpringTest {
     class Redirect {
 
         @Test
-        @DisplayName("Should redirect to / when frontendUrl is blank")
+        @DisplayName("Should redirect to /inbox when frontendUrl is blank")
         void shouldRedirectToRootWhenNoFrontendUrl() throws IOException {
             val attrs = Map.<String, Object>of(LOGIN, FIRST_NAME, EMAIL, TEST_USER);
             stubAuthorizedClient(GH_TOKEN);
@@ -259,11 +259,11 @@ class OAuth2AuthenticationSuccessHandlerTest extends AbstractSpringTest {
 
             handler.onAuthenticationSuccess(request, response, oauthToken(attrs));
 
-            assertThat(response.getRedirectedUrl()).isEqualTo("/");
+            assertThat(response.getRedirectedUrl()).isEqualTo("/inbox");
         }
 
         @Test
-        @DisplayName("Should redirect to frontendUrl/ when frontendUrl is configured")
+        @DisplayName("Should redirect to frontendUrl/inbox when frontendUrl is configured")
         void shouldRedirectToFrontendUrl() throws IOException {
             applicationProperties.setFrontendUrl("http://localhost:5173");
             val attrs = Map.<String, Object>of(LOGIN, FIRST_NAME, EMAIL, TEST_USER);
@@ -273,7 +273,7 @@ class OAuth2AuthenticationSuccessHandlerTest extends AbstractSpringTest {
 
             handler.onAuthenticationSuccess(request, response, oauthToken(attrs));
 
-            assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:5173/");
+            assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:5173/inbox");
         }
     }
 

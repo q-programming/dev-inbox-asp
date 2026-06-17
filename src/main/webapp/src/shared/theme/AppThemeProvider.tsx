@@ -4,10 +4,11 @@ import { buildTheme } from './theme';
 import useUserStore from '@shared/store/user.store.ts';
 
 export const AppThemeProvider = ({ children }: { children: ReactNode }) => {
-  const { profile } = useUserStore();
-  const theme = useMemo(() => buildTheme(profile.theme), [profile.theme]);
+  const theme = useUserStore((state) => state.profile.theme);
+  const fontSize = useUserStore((state) => state.profile.fontSize);
+  const builtTheme = useMemo(() => buildTheme(theme, fontSize), [theme, fontSize]);
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={builtTheme}>
       <CssBaseline />
       {children}
     </ThemeProvider>

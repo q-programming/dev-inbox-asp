@@ -55,8 +55,11 @@ describe('AppLayout', () => {
 
     it('should render the Add note button', () => {
       renderLayout();
-      // Split button — at least one button with "add note" accessible name
-      expect(screen.getAllByRole('button', { name: /add note/i }).length).toBeGreaterThan(0);
+      // The split button is hidden on xs viewports via CSS — query with hidden:true
+      // to confirm it is present in the markup (responsive visibility is a CSS concern).
+      expect(
+        screen.getAllByRole('button', { name: /add note/i, hidden: true }).length,
+      ).toBeGreaterThan(0);
     });
 
     it('should render the mobile search button in the header', () => {

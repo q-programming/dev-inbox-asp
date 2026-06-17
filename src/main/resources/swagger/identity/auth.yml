@@ -119,6 +119,10 @@ components:
           type: string
         accountType:
           $ref: "#/components/schemas/AccountType"
+        integrations:
+          type: array
+          items:
+            $ref: "../shared/shared.yml#/components/schemas/IntegrationDto"
 
     AccountType:
       type: string

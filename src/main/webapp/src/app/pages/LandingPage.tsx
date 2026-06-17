@@ -7,7 +7,7 @@ import LandingHeader from './landing/LandingHeader';
 import HeroSection from './landing/HeroSection';
 import FeaturesSection from './landing/FeaturesSection';
 import CtaSection from './landing/CtaSection';
-import Footer from '@shared/components/Footer';
+import Footer from '@app/common/footer/Footer.tsx';
 
 /**
  * Public landing page. Also acts as the OAuth callback landing point — calls /me

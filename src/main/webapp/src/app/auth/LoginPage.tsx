@@ -11,7 +11,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import LoginIcon from '@mui/icons-material/Login';
 import GitHubIcon from '@mui/icons-material/GitHub';
-import Footer from '@shared/components/Footer';
+import Footer from '@app/common/footer/Footer.tsx';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { useLoginMutation } from '@shared/hooks/useAuthQuery';
 import { AppRoute } from '@app/routes';
@@ -25,7 +25,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { status } = useUserStore();
+  const status = useUserStore((state) => state.status);
   const loginMutation = useLoginMutation();
   const {
     register,

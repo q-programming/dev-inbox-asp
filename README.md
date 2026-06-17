@@ -64,7 +64,7 @@ dev-inbox/
 ├── src/main/resources/
 │   ├── config/liquibase/  # Liquibase versioned SQL migrations
 │   └── swagger/           # OpenAPI specs — one file per module (source of truth)
-│       ├── shared/health.yml
+│       ├── shared/shared.yml
 │       ├── inbox/inbox.yml
 │       ├── notes/notes.yml
 │       ├── identity/auth.yml

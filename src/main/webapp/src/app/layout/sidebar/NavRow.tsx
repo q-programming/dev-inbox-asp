@@ -1,5 +1,4 @@
 import { memo } from 'react';
-import Box from '@mui/material/Box';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
@@ -8,28 +7,8 @@ import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { NavLink } from 'react-router-dom';
-import { useTheme } from '@mui/material/styles';
 import { type SidebarNavItem } from '../navConfig.tsx';
-
-// ── Icon for SVG-based integration items ──────────────────────────────────────
-
-const IntegrationIcon = memo(({ name }: { name: string }) => {
-  const theme = useTheme();
-  return (
-    <Box
-      component="img"
-      src={`/${name}.svg`}
-      alt={name}
-      sx={{
-        width: 16,
-        height: 16,
-        objectFit: 'contain',
-        filter: theme.palette.mode === 'dark' ? 'invert(1) brightness(2)' : 'none',
-        opacity: 0.75,
-      }}
-    />
-  );
-});
+import IntegrationIcon from '@shared/components/integrationIcon/IntegrationIcon.tsx';
 
 export interface NavRowProps {
   item: SidebarNavItem;
@@ -47,7 +26,12 @@ export interface NavRowProps {
  */
 const NavRow = memo(({ item, activeId, collapsed }: NavRowProps) => {
   const isActive = item.id === activeId;
-  const icon = typeof item.icon === 'string' ? <IntegrationIcon name={item.icon} /> : item.icon;
+  const icon =
+    typeof item.icon === 'string' ? (
+      <IntegrationIcon integration={item.icon} size={20} />
+    ) : (
+      item.icon
+    );
 
   const button = (
     <ListItemButton

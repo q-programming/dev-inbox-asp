@@ -39,11 +39,6 @@ describe('MobileBottomNav', () => {
       renderNav();
       expect(screen.queryByText('Settings')).toBeNull();
     });
-
-    it('should render the FAB add-note button', () => {
-      renderNav();
-      expect(screen.getByRole('button', { name: /add note/i })).toBeTruthy();
-    });
   });
 
   describe('profile menu', () => {

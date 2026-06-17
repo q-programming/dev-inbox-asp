@@ -12,11 +12,12 @@ import GroupIcon from '@mui/icons-material/Group';
 import LabelIcon from '@mui/icons-material/Label';
 import TuneIcon from '@mui/icons-material/Tune';
 import { AppRoute } from '@app/routes';
+import { IntegrationType } from '@api/shared';
 
 export interface SidebarNavItem {
   id: string;
   label: string;
-  icon: ReactNode;
+  icon: ReactNode | IntegrationType;
   /** Route to navigate to. Omit for non-routed items (filters). */
   route?: AppRoute;
   /** Optional static badge count — will be replaced with live data later. */
@@ -63,7 +64,13 @@ export const CORE_FOCUS_ITEMS: SidebarNavItem[] = [
  */
 export const INTEGRATION_FOCUS_ITEMS: SidebarNavItem[] = [
   { id: 'my-prs', label: 'My PRs', icon: 'git-pull-request', route: AppRoute.INBOX, count: 7 },
-  { id: 'ado-items', label: 'ADO items', icon: 'azure-devops', route: AppRoute.INBOX, count: 4 },
+  {
+    id: 'ado-items',
+    label: 'ADO items',
+    icon: IntegrationType.Ado,
+    route: AppRoute.INBOX,
+    count: 4,
+  },
 ];
 
 export const BOTTOM_FOCUS_ITEMS: SidebarNavItem[] = [

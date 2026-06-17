@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { AccountType, UserDto } from '@api/auth';
-import { Theme } from '@shared/theme/theme.ts';
+import { DEFAULT_FONT_SIZE, Density, Theme } from '@shared/theme/theme.ts';
+import { IntegrationDto } from '@api/shared';
 
 // ─── Storage keys ─────────────────────────────────────────────────────────────
 
@@ -29,7 +30,9 @@ export interface UserProfile {
   firstName: string;
   lastName: string;
   theme: Theme;
+  density?: Density;
   sideBarCollapsed?: boolean;
+  fontSize?: number;
 }
 
 /**
@@ -43,6 +46,7 @@ export interface AuthIdentity {
   id: number;
   email: string;
   accountType: AccountType;
+  integrations?: IntegrationDto[];
 }
 
 /**
@@ -70,6 +74,8 @@ interface UserState {
   clearUser: () => void;
   toggleTheme: () => void;
   toggleSideBar: () => void;
+  switchDensity: (density: Density) => void;
+  changeFontSize: (fontSize: number) => void;
 }
 
 // ─── Session storage helpers (identity only) ──────────────────────────────────
@@ -105,6 +111,8 @@ const defaultProfile: UserProfile = {
   firstName: '',
   lastName: '',
   theme: getSystemMode(),
+  density: Density.RELAXED,
+  fontSize: 14, //TODO get from default theme ?
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -155,6 +163,7 @@ const useUserStore = create<UserState>()(
           id: user.id ?? 0,
           email: user.email ?? '',
           accountType: user.accountType as AccountType,
+          integrations: user.integrations,
         };
         writeIdentity(identity);
         set((state) => ({
@@ -164,6 +173,8 @@ const useUserStore = create<UserState>()(
             lastName: user.lastName ?? '',
             theme: state.profile?.theme ?? Theme.LIGHT, // preserve or default
             sideBarCollapsed: state.profile?.sideBarCollapsed ?? false,
+            density: state.profile?.density ?? Density.RELAXED,
+            fontSize: state.profile?.fontSize ?? DEFAULT_FONT_SIZE,
           },
           identity,
         }));
@@ -185,6 +196,16 @@ const useUserStore = create<UserState>()(
             profile: { ...state.profile, sideBarCollapsed },
           };
         });
+      },
+      switchDensity: (density: Density) => {
+        set((state) => ({
+          profile: { ...state.profile, density },
+        }));
+      },
+      changeFontSize: (fontSize: number) => {
+        set((state) => ({
+          profile: { ...state.profile, fontSize },
+        }));
       },
       clearUser: () => {
         writeIdentity(null);

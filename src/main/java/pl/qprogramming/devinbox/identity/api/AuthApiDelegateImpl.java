@@ -7,13 +7,13 @@ import lombok.val;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import pl.qprogramming.devinbox.identity.dto.LoginRequest;
-import pl.qprogramming.devinbox.identity.dto.RegisterRequest;
-import pl.qprogramming.devinbox.identity.dto.UserDto;
+import pl.qprogramming.devinbox.identity.dto.*;
 import pl.qprogramming.devinbox.identity.mapper.AccountMapper;
 import pl.qprogramming.devinbox.identity.service.UserService;
 import pl.qprogramming.devinbox.security.jwt.TokenProvider;
 import pl.qprogramming.devinbox.shared.ApplicationProperties;
+
+import java.util.List;
 
 import static pl.qprogramming.devinbox.shared.utils.CookieUtils.clearJwtCookie;
 import static pl.qprogramming.devinbox.shared.utils.CookieUtils.setJwtCookie;
@@ -59,6 +59,16 @@ public class AuthApiDelegateImpl implements AuthApiDelegate {
     public ResponseEntity<UserDto> me() {
         return userService.currentUser()
                 .map(accountMapper::userToUserDto)
+                .map(userDto -> {
+                    //TODO temporary
+                    val ghiIntegration = new IntegrationDto().type(IntegrationType.GITHUB).status(IntegrationStatus.INACTIVE);
+                    val adoIntegration = new IntegrationDto().type(IntegrationType.ADO).status(IntegrationStatus.INACTIVE);
+                    if (userDto.getAccountType() == AccountType.OAUTH_GITHUB) {
+                        ghiIntegration.status(IntegrationStatus.ACTIVE);
+                    }
+                    userDto.setIntegrations(List.of(ghiIntegration, adoIntegration));
+                    return userDto;
+                })
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.noContent().build());
     }

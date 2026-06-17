@@ -118,8 +118,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         // is configured to point there so the browser lands on the React app after OAuth.
         String frontendUrl = applicationProperties.getFrontendUrl();
         String redirectTarget = (frontendUrl != null && !frontendUrl.isBlank())
-                ? frontendUrl + "/"
-                : "/";
+                ? frontendUrl + "/inbox"
+                : "/inbox";
         getRedirectStrategy().sendRedirect(request, response, redirectTarget);
     }
 

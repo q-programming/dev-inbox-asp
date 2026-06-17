@@ -31,10 +31,10 @@ export const SIDEBAR_COLLAPSED_WIDTH = 56;
  */
 const AppSidebar = memo(() => {
   const { pathname } = useLocation();
-  const { profile, toggleSideBar } = useUserStore();
+  const collapsed = useUserStore((state) => state.profile.sideBarCollapsed) ?? false;
+  const { toggleSideBar } = useUserStore();
 
   const activeId = useMemo(() => pathname.split('/').filter(Boolean)[0] ?? '', [pathname]);
-  const collapsed = profile.sideBarCollapsed ?? false;
 
   return (
     <Box

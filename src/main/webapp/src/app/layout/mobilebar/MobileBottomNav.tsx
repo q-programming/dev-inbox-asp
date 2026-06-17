@@ -2,8 +2,6 @@ import React, { memo, useCallback, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
-import Fab from '@mui/material/Fab';
-import AddIcon from '@mui/icons-material/Add';
 import InboxIcon from '@mui/icons-material/Inbox';
 import StickyNote2Icon from '@mui/icons-material/StickyNote2';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
@@ -33,19 +31,6 @@ const MobileBottomNav = memo(() => {
 
   return (
     <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-      <Fab
-        color="primary"
-        aria-label="add note"
-        sx={{
-          position: 'fixed',
-          bottom: '72px',
-          right: 2,
-          zIndex: (theme) => theme.zIndex.appBar + 1,
-        }}
-      >
-        <AddIcon />
-      </Fab>
-
       <BottomNavigation
         showLabels
         value={pathname}

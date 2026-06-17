@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { ApiError, sharedConfigParams } from '@shared/api/httpClient.ts';
 import { AuthApi, Configuration, LoginRequest, RegisterRequest, UserDto } from '@api/auth';
-import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
+import useUserStore from '@shared/store/user.store.ts';
 
 export const authApi = new AuthApi(new Configuration(sharedConfigParams));
 
@@ -23,6 +23,9 @@ export const useMeQuery = () =>
     queryKey: authKeys.me,
     queryFn: () => authApi.me(),
     staleTime: 5 * 60_000,
+    // Always re-verify on mount — covers OAuth callbacks where the cookie
+    // has changed since the last cached /me response.
+    refetchOnMount: 'always',
     retry: false,
     meta: { silent: true },
   });
@@ -40,22 +43,18 @@ export const useMeQuery = () =>
  */
 export const useAuthBootstrap = () => {
   const { data, isSuccess, isError } = useMeQuery();
-  const { status, setUser, clearUser } = useUserStore();
+  const { setUser, clearUser } = useUserStore();
 
   useEffect(() => {
     if (!isSuccess) {
       return;
     }
     if (data) {
-      // Only hydrate the store on initial bootstrap — skip redundant cache hits on navigation
-      if (status === AuthStatus.LOADING) {
-        setUser(data);
-      }
+      setUser(data);
     } else {
-      // Always clear: covers initial "no session" AND stale re-fetch detecting expiry
       clearUser();
     }
-  }, [isSuccess, data, status, setUser, clearUser]);
+  }, [isSuccess, data, setUser, clearUser]);
 
   useEffect(() => {
     if (isError) {

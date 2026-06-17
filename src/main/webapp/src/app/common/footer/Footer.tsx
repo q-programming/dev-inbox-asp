@@ -9,14 +9,16 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import { Link as RouterLink } from 'react-router-dom';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
-import { AppRoute } from '@app/routes';
+import { AppRoute } from '@app/routes.ts';
 
 /**
  * Shared footer — logo + wordmark left, copyright + nav links centre, icon right.
  * Used on the landing page and inside the authenticated shell.
  */
 const Footer = memo(() => {
-  const { status, profile, toggleTheme } = useUserStore();
+  const status = useUserStore((state) => state.status);
+  const profile = useUserStore((state) => state.profile);
+  const { toggleTheme } = useUserStore();
 
   const handleThemeChange = useCallback(
     (_event: MouseEvent<HTMLElement>, val: string | null) => {

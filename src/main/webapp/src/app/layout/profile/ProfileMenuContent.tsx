@@ -110,7 +110,7 @@ const ProfileMenuContent = ({
         Profile Settings
       </MenuItem>
 
-      <MenuItem dense disabled>
+      <MenuItem component={RouterLink} to={`${AppRoute.SETTINGS}#integrations`} dense>
         <ListItemIcon>
           <HubIcon fontSize="small" />
         </ListItemIcon>
@@ -124,7 +124,7 @@ const ProfileMenuContent = ({
         Security
       </MenuItem>
 
-      <MenuItem component={RouterLink} to={AppRoute.SETTINGS} dense>
+      <MenuItem component={RouterLink} to={`${AppRoute.SETTINGS}#appearance`} dense>
         <ListItemIcon>
           <PaletteIcon fontSize="small" />
         </ListItemIcon>

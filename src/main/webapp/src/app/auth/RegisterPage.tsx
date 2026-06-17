@@ -15,7 +15,7 @@ import Divider from '@mui/material/Divider';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { useRegisterMutation } from '@shared/hooks/useAuthQuery';
 import { AppRoute } from '@app/routes';
-import Footer from '@shared/components/Footer';
+import Footer from '@app/common/footer/Footer.tsx';
 
 const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -28,7 +28,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { status } = useUserStore();
+  const status = useUserStore((state) => state.status);
   const registerMutation = useRegisterMutation();
 
   const {

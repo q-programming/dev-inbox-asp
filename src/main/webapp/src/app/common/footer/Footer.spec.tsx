@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithProviders } from '@test/renderWithProviders';
+import { renderWithProviders } from '@test/renderWithProviders.tsx';
 import useUserStore, { AuthStatus, UserProfile } from '@shared/store/user.store.ts';
-import { Theme } from '@shared/theme/theme';
-import { AppRoute } from '@app/routes';
-import Footer from './Footer';
+import { Theme } from '@shared/theme/theme.ts';
+import { AppRoute } from '@app/routes.ts';
+import Footer from './Footer.tsx';
 
 const lightProfile: UserProfile = {
   firstName: '',
