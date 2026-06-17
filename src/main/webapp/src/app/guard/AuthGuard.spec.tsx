@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { Route, Routes } from 'react-router-dom';
 import { renderWithProviders } from '@test/renderWithProviders';
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { Theme } from '@shared/theme/theme';
 import AuthGuard from './AuthGuard';
 import { AppRoute } from '@app/routes';
@@ -30,13 +30,13 @@ function renderGuard(initialPath = '/protected') {
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
-  useAuthStore.setState({ status: AuthStatus.LOADING, profile: emptyProfile, identity: null });
+  useUserStore.setState({ status: AuthStatus.LOADING, profile: emptyProfile, identity: null });
 });
 
 describe('AuthGuard', () => {
   describe('when status is LOADING', () => {
     it('should show a spinner when there is no cached profile', () => {
-      useAuthStore.setState({ status: AuthStatus.LOADING, profile: emptyProfile, identity: null });
+      useUserStore.setState({ status: AuthStatus.LOADING, profile: emptyProfile, identity: null });
 
       renderGuard();
 
@@ -44,7 +44,7 @@ describe('AuthGuard', () => {
     });
 
     it('should render the protected route immediately when a cached profile exists (optimistic render)', () => {
-      useAuthStore.setState({
+      useUserStore.setState({
         status: AuthStatus.LOADING,
         profile: { firstName: 'John', lastName: 'Doe', theme: Theme.LIGHT },
         identity: null,
@@ -58,7 +58,7 @@ describe('AuthGuard', () => {
 
   describe('when status is UNAUTHENTICATED', () => {
     it('should redirect to /login', () => {
-      useAuthStore.setState({
+      useUserStore.setState({
         status: AuthStatus.UNAUTHENTICATED,
         profile: emptyProfile,
         identity: null,
@@ -73,7 +73,7 @@ describe('AuthGuard', () => {
 
   describe('when status is AUTHENTICATED', () => {
     it('should render the protected child route (Outlet)', () => {
-      useAuthStore.setState({
+      useUserStore.setState({
         status: AuthStatus.AUTHENTICATED,
         profile: { firstName: 'John', lastName: 'Doe', theme: Theme.LIGHT },
         identity: { id: 1, email: 'test@example.com', accountType: 'REGULAR' },

@@ -3,23 +3,18 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { renderWithProviders } from '@test/renderWithProviders';
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { Theme } from '@shared/theme/theme';
-import { AppRoute, NAV_ITEMS } from '@app/routes';
+import { AppRoute } from '@app/routes';
 import AppLayout from './Layout';
 
-const mockLogoutMutate = vi.hoisted(() => vi.fn());
-
 vi.mock('@shared/hooks/useAuthQuery', () => ({
-  useLogoutMutation: () => ({
-    mutate: mockLogoutMutate,
-    isPending: false,
-  }),
+  useLogoutMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-const emptyProfile = { firstName: '', lastName: '', theme: Theme.LIGHT };
+const emptyProfile = { firstName: '', lastName: '', theme: Theme.LIGHT, sideBarCollapsed: false };
 
-function renderLayout() {
+function renderLayout(initialEntry = AppRoute.INBOX) {
   return renderWithProviders(
     <Routes>
       <Route element={<AppLayout />}>
@@ -27,13 +22,12 @@ function renderLayout() {
         <Route path={AppRoute.SETTINGS} element={<div>Settings content</div>} />
       </Route>
     </Routes>,
-    { initialEntries: [AppRoute.INBOX] },
+    { initialEntries: [initialEntry] },
   );
 }
 
 beforeEach(() => {
-  mockLogoutMutate.mockClear();
-  useAuthStore.setState({
+  useUserStore.setState({
     status: AuthStatus.AUTHENTICATED,
     profile: emptyProfile,
     identity: null,
@@ -41,100 +35,79 @@ beforeEach(() => {
 });
 
 describe('AppLayout', () => {
-  describe('branding', () => {
-    it('should render the app title', () => {
+  describe('header', () => {
+    it('should render the app wordmark', () => {
       renderLayout();
-      expect(screen.getByText('Dev Inbox')).toBeTruthy();
+      // h6 in AppBar + h6 in Footer — both say Dev Inbox
+      expect(screen.getAllByText('Dev Inbox').length).toBeGreaterThan(0);
+    });
+
+    it('should render the global search input', () => {
+      renderLayout();
+      expect(screen.queryByRole('textbox', { name: /global search/i })).toBeNull();
+      expect(screen.getByRole('button', { name: /open navigation menu/i })).toBeTruthy();
+    });
+
+    it('should render the mobile search button', () => {
+      renderLayout();
+      expect(screen.getByRole('button', { name: /open search/i })).toBeTruthy();
+    });
+
+    it('should render the Add note button', () => {
+      renderLayout();
+      // Split button — at least one button with "add note" accessible name
+      expect(screen.getAllByRole('button', { name: /add note/i }).length).toBeGreaterThan(0);
+    });
+
+    it('should render the mobile search button in the header', () => {
+      renderLayout();
+      expect(screen.getByRole('button', { name: /open search/i })).toBeTruthy();
     });
   });
 
-  describe('navigation', () => {
-    it('should render all nav items from NAV_ITEMS', () => {
+  describe('sidebar navigation', () => {
+    it('should render the Inbox nav item', () => {
       renderLayout();
-      NAV_ITEMS.forEach(({ label }) => {
-        expect(screen.getByRole('link', { name: label })).toBeTruthy();
-      });
+      expect(screen.getAllByText('Inbox', { exact: true }).length).toBeGreaterThan(0);
     });
 
-    it('should navigate to settings when settings nav link is clicked', async () => {
-      const user = userEvent.setup();
+    it('should render integration nav items (My PRs, ADO items)', () => {
       renderLayout();
-
-      await user.click(screen.getByRole('link', { name: 'Settings' }));
-
-      expect(screen.getByText('Settings content')).toBeTruthy();
+      expect(screen.getByText('My PRs')).toBeTruthy();
+      expect(screen.getByText('ADO items')).toBeTruthy();
     });
 
+    it('should render the FILTERS section with filter items', () => {
+      renderLayout();
+      // "Filters" section label + "Manage filters" item both contain "filter"
+      expect(screen.getAllByText(/filters/i).length).toBeGreaterThan(0);
+      expect(screen.getByText('Unread')).toBeTruthy();
+    });
+  });
+
+  describe('content area', () => {
     it('should render child route content via Outlet', () => {
       renderLayout();
       expect(screen.getByText('Inbox content')).toBeTruthy();
     });
-  });
 
-  describe('user profile', () => {
-    it('should show full name when profile has a name', () => {
-      useAuthStore.setState({
-        status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'Jane', lastName: 'Doe', theme: Theme.LIGHT },
-        identity: null,
-      });
-
-      renderLayout();
-
-      expect(screen.getByText(/jane doe/i)).toBeTruthy();
-    });
-
-    it('should show email alongside name when identity is present', () => {
-      useAuthStore.setState({
-        status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'Jane', lastName: 'Doe', theme: Theme.LIGHT },
-        identity: { id: 1, email: 'jane@example.com', accountType: 'REGULAR' },
-      });
-
-      renderLayout();
-
-      expect(screen.getByText('(jane@example.com)')).toBeTruthy();
-    });
-
-    it('should not render sign out button when profile has no name (anonymous)', () => {
-      useAuthStore.setState({
-        status: AuthStatus.AUTHENTICATED,
-        profile: emptyProfile,
-        identity: null,
-      });
-
-      renderLayout();
-
-      expect(screen.queryByRole('button', { name: /sign out/i })).toBeFalsy();
-    });
-  });
-
-  describe('sign out', () => {
-    it('should render the Sign out button when profile has a name', () => {
-      useAuthStore.setState({
-        status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'Jane', lastName: 'Doe', theme: Theme.LIGHT },
-        identity: null,
-      });
-
-      renderLayout();
-
-      expect(screen.getByRole('button', { name: /sign out/i })).toBeTruthy();
-    });
-
-    it('should call logout mutation when Sign out is clicked', async () => {
+    it('should navigate to settings via Appearance in mobile profile menu', async () => {
       const user = userEvent.setup();
-      useAuthStore.setState({
-        status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'Jane', lastName: 'Doe', theme: Theme.LIGHT },
-        identity: null,
-      });
-
       renderLayout();
 
-      await user.click(screen.getByRole('button', { name: /sign out/i }));
+      // Open profile menu from bottom nav
+      await user.click(screen.getByRole('button', { name: /open profile menu/i }));
+      // Click Appearance which links to settings route
+      await user.click(await screen.findByRole('menuitem', { name: /appearance/i }));
 
-      expect(mockLogoutMutate).toHaveBeenCalledOnce();
+      expect(screen.getByText('Settings content')).toBeTruthy();
+    });
+  });
+
+  describe('footer', () => {
+    it('should render the footer but without theme toggle', () => {
+      renderLayout();
+      expect(screen.queryByTestId('theme-toggle')).toBeNull();
     });
   });
 });

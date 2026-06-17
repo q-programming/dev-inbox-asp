@@ -25,10 +25,11 @@ export const STORAGE_KEYS = {
  * - The app can render "Hello John" instantly on page load without waiting for a network call,
  *   enabling the optimistic-render pattern in AuthGuard / LandingPage.
  */
-export interface AuthProfile {
+export interface UserProfile {
   firstName: string;
   lastName: string;
   theme: Theme;
+  sideBarCollapsed?: boolean;
 }
 
 /**
@@ -61,13 +62,14 @@ export enum AuthStatus {
   UNAUTHENTICATED = 'unauthenticated',
 }
 
-interface AuthState {
+interface UserState {
   status: AuthStatus;
-  profile: AuthProfile;
+  profile: UserProfile;
   identity: AuthIdentity | null;
   setUser: (user: UserDto) => void;
   clearUser: () => void;
   toggleTheme: () => void;
+  toggleSideBar: () => void;
 }
 
 // ─── Session storage helpers (identity only) ──────────────────────────────────
@@ -99,7 +101,7 @@ function getSystemMode(): Theme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? Theme.DARK : Theme.LIGHT;
 }
 
-const defaultProfile: AuthProfile = {
+const defaultProfile: UserProfile = {
   firstName: '',
   lastName: '',
   theme: getSystemMode(),
@@ -139,7 +141,7 @@ const defaultProfile: AuthProfile = {
  *    - Success → `setUser()` → `status = AUTHENTICATED`.
  *    - Failure → `clearUser()` → `status = UNAUTHENTICATED` → redirect to /login.
  */
-const useAuthStore = create<AuthState>()(
+const useUserStore = create<UserState>()(
   persist(
     (set) => ({
       status: AuthStatus.LOADING,
@@ -161,6 +163,7 @@ const useAuthStore = create<AuthState>()(
             firstName: user.firstName ?? '',
             lastName: user.lastName ?? '',
             theme: state.profile?.theme ?? Theme.LIGHT, // preserve or default
+            sideBarCollapsed: state.profile?.sideBarCollapsed ?? false,
           },
           identity,
         }));
@@ -172,6 +175,14 @@ const useAuthStore = create<AuthState>()(
             profile: state.profile
               ? { ...state.profile, theme }
               : { firstName: '', lastName: '', theme },
+          };
+        });
+      },
+      toggleSideBar: () => {
+        set((state) => {
+          const sideBarCollapsed = !state.profile.sideBarCollapsed;
+          return {
+            profile: { ...state.profile, sideBarCollapsed },
           };
         });
       },
@@ -189,4 +200,4 @@ const useAuthStore = create<AuthState>()(
   ),
 );
 
-export default useAuthStore;
+export default useUserStore;

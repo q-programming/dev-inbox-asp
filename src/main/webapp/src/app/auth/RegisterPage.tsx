@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import Divider from '@mui/material/Divider';
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { useRegisterMutation } from '@shared/hooks/useAuthQuery';
 import { AppRoute } from '@app/routes';
 import Footer from '@shared/components/Footer';
@@ -28,7 +28,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { status } = useAuthStore();
+  const { status } = useUserStore();
   const registerMutation = useRegisterMutation();
 
   const {

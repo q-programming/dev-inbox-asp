@@ -5,7 +5,8 @@ import React from 'react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@test/setupBrowserTests';
 import { createQueryClient } from '@shared/api/queryClient';
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
+import { Theme } from '@shared/theme/theme';
 import {
   authKeys,
   useAuthBootstrap,
@@ -33,9 +34,9 @@ function makeWrapper() {
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
-  useAuthStore.setState({
+  useUserStore.setState({
     status: AuthStatus.LOADING,
-    profile: null,
+    profile: { firstName: '', lastName: '', theme: Theme.LIGHT },
     identity: null,
   });
 });
@@ -78,8 +79,8 @@ describe('useAuthBootstrap', () => {
 
     renderHook(() => useAuthBootstrap(), { wrapper: makeWrapper() });
 
-    await waitFor(() => expect(useAuthStore.getState().status).toBe(AuthStatus.AUTHENTICATED));
-    expect(useAuthStore.getState().profile?.firstName).toBe('John');
+    await waitFor(() => expect(useUserStore.getState().status).toBe(AuthStatus.AUTHENTICATED));
+    expect(useUserStore.getState().profile?.firstName).toBe('John');
   });
 
   it('should call clearUser and set UNAUTHENTICATED when /me returns null (204)', async () => {
@@ -87,10 +88,10 @@ describe('useAuthBootstrap', () => {
 
     renderHook(() => useAuthBootstrap(), { wrapper: makeWrapper() });
 
-    await waitFor(() => expect(useAuthStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED));
+    await waitFor(() => expect(useUserStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED));
     // profile is never null — clearUser resets to the empty default for theme persistence
-    expect(useAuthStore.getState().profile.firstName).toBe('');
-    expect(useAuthStore.getState().profile.lastName).toBe('');
+    expect(useUserStore.getState().profile.firstName).toBe('');
+    expect(useUserStore.getState().profile.lastName).toBe('');
   });
 
   it('should call clearUser and set UNAUTHENTICATED when /me errors', async () => {
@@ -98,19 +99,19 @@ describe('useAuthBootstrap', () => {
 
     renderHook(() => useAuthBootstrap(), { wrapper: makeWrapper() });
 
-    await waitFor(() => expect(useAuthStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED));
+    await waitFor(() => expect(useUserStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED));
   });
 
   it('should not overwrite AUTHENTICATED status on re-render (skip re-fetch hydration)', async () => {
     // Simulate already-authenticated state
-    useAuthStore.setState({ status: AuthStatus.AUTHENTICATED });
+    useUserStore.setState({ status: AuthStatus.AUTHENTICATED });
     server.use(http.post('/api/auth/me', () => HttpResponse.json(mockUser)));
 
     const { rerender } = renderHook(() => useAuthBootstrap(), { wrapper: makeWrapper() });
     rerender();
 
     // status stays AUTHENTICATED — setUser not called again
-    await waitFor(() => expect(useAuthStore.getState().status).toBe(AuthStatus.AUTHENTICATED));
+    await waitFor(() => expect(useUserStore.getState().status).toBe(AuthStatus.AUTHENTICATED));
   });
 });
 
@@ -123,8 +124,8 @@ describe('useLoginMutation', () => {
     result.current.mutate({ email: 'test@example.com', password: 'password123' });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(useAuthStore.getState().status).toBe(AuthStatus.AUTHENTICATED);
-    expect(useAuthStore.getState().profile?.firstName).toBe('John');
+    expect(useUserStore.getState().status).toBe(AuthStatus.AUTHENTICATED);
+    expect(useUserStore.getState().profile?.firstName).toBe('John');
   });
 
   it('should set isError on 401 invalid credentials', async () => {
@@ -135,31 +136,31 @@ describe('useLoginMutation', () => {
     result.current.mutate({ email: 'test@example.com', password: 'wrong' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(useAuthStore.getState().status).toBe(AuthStatus.LOADING);
+    expect(useUserStore.getState().status).toBe(AuthStatus.LOADING);
   });
 });
 
 describe('useLogoutMutation', () => {
   it('should clear the auth store on successful logout', async () => {
     server.use(http.post('/api/auth/logout', () => new HttpResponse(null, { status: 204 })));
-    useAuthStore.setState({ status: AuthStatus.AUTHENTICATED });
+    useUserStore.setState({ status: AuthStatus.AUTHENTICATED });
 
     const { result } = renderHook(() => useLogoutMutation(), { wrapper: makeWrapper() });
     result.current.mutate();
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(useAuthStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED);
+    expect(useUserStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED);
   });
 
   it('should still clear the auth store even when logout API fails', async () => {
     server.use(http.post('/api/auth/logout', () => HttpResponse.json({}, { status: 500 })));
-    useAuthStore.setState({ status: AuthStatus.AUTHENTICATED });
+    useUserStore.setState({ status: AuthStatus.AUTHENTICATED });
 
     const { result } = renderHook(() => useLogoutMutation(), { wrapper: makeWrapper() });
     result.current.mutate();
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(useAuthStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED);
+    expect(useUserStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED);
   });
 });
 

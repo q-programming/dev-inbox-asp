@@ -9,6 +9,7 @@ const RegisterPage = lazy(() => import('@app/auth/RegisterPage'));
 const AppLayout = lazy(() => import('@app/layout/Layout'));
 const InboxPage = lazy(() => import('@feature/inbox/InboxPage'));
 const SettingsPage = lazy(() => import('@feature/settings/SettingsPage'));
+const NotesPage = lazy(() => import('@feature/notes/NotesPage'));
 
 const Spinner = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -31,6 +32,7 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path={AppRoute.INBOX} element={<InboxPage />} />
               <Route path={AppRoute.SETTINGS} element={<SettingsPage />} />
+              <Route path={AppRoute.NOTES} element={<NotesPage />} />
               <Route path="*" element={<Navigate to={AppRoute.INBOX} replace />} />
             </Route>
           </Route>

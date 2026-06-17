@@ -5,7 +5,7 @@ import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 
 /** Auto-dismiss delay in milliseconds per alert type */
-export const ALERT_TIMEOUT_MS: Record<AlertType, number> = {
+const ALERT_TIMEOUT_MS: Record<AlertType, number> = {
   [AlertType.INFO]: 3_000,
   [AlertType.SUCCESS]: 3_000,
   [AlertType.WARNING]: 6_000,

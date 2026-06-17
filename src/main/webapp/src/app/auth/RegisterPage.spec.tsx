@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@test/setupBrowserTests';
 import { renderWithProviders } from '@test/renderWithProviders';
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { Theme } from '@shared/theme/theme';
 import { AppRoute } from '@app/routes';
 import RegisterPage from './RegisterPage';
@@ -34,7 +34,7 @@ beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   mockNavigate.mockClear();
-  useAuthStore.setState({
+  useUserStore.setState({
     status: AuthStatus.UNAUTHENTICATED,
     profile: emptyProfile,
     identity: null,
@@ -44,7 +44,7 @@ beforeEach(() => {
 describe('RegisterPage', () => {
   describe('redirect when already authenticated', () => {
     it('should not render the register form when user is already authenticated', () => {
-      useAuthStore.setState({
+      useUserStore.setState({
         status: AuthStatus.AUTHENTICATED,
         profile: { firstName: 'John', lastName: 'Doe', theme: Theme.LIGHT },
         identity: { id: 1, email: 'test@example.com', accountType: 'REGULAR' },

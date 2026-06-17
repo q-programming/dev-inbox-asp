@@ -1,6 +1,6 @@
 import Box from '@mui/material/Box';
 import { Navigate } from 'react-router-dom';
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store.ts';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { useMeQuery } from '@shared/hooks/useAuthQuery.ts';
 import { AppRoute } from '@app/routes';
 import LandingHeader from './landing/LandingHeader';
@@ -8,8 +8,6 @@ import HeroSection from './landing/HeroSection';
 import FeaturesSection from './landing/FeaturesSection';
 import CtaSection from './landing/CtaSection';
 import Footer from '@shared/components/Footer';
-import Button from '@mui/material/Button';
-import useAlertStore, { AlertType } from '@shared/store/alert.store.ts';
 
 /**
  * Public landing page. Also acts as the OAuth callback landing point — calls /me
@@ -21,9 +19,8 @@ import useAlertStore, { AlertType } from '@shared/store/alert.store.ts';
  *  - /me query returns a user          → /inbox (OAuth callback, store not yet updated)
  */
 const LandingPage = () => {
-  const { status } = useAuthStore();
+  const { status } = useUserStore();
   const { data: me, isSuccess } = useMeQuery();
-  const { addAlert } = useAlertStore();
 
   if (status === AuthStatus.AUTHENTICATED) {
     return <Navigate to={AppRoute.INBOX} replace />;
@@ -42,16 +39,6 @@ const LandingPage = () => {
       <HeroSection />
       <FeaturesSection />
       <CtaSection />
-      <Button
-        onClick={() => {
-          addAlert({
-            type: AlertType.SUCCESS,
-            message: 'Alerted',
-          });
-        }}
-      >
-        Alert!
-      </Button>
       <Footer />
     </Box>
   );

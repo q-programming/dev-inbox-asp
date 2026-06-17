@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@test/renderWithProviders';
 import useAlertStore, { AlertType } from '@shared/store/alert.store';
@@ -16,23 +16,29 @@ describe('AlertBridge', () => {
     it('should display a snackbar when an alert is added to the store', async () => {
       renderBridge();
 
-      useAlertStore.getState().addAlert({ type: AlertType.SUCCESS, message: 'Saved!' });
+      act(() => {
+        useAlertStore.getState().addAlert({ type: AlertType.SUCCESS, message: 'Saved!' });
+      });
 
       expect(await screen.findByText('Saved!')).toBeTruthy();
     });
 
     it('should display the correct message for an error alert', async () => {
       renderBridge();
-
-      useAlertStore.getState().addAlert({ type: AlertType.ERROR, message: 'Something went wrong' });
-
+      act(() => {
+        useAlertStore
+          .getState()
+          .addAlert({ type: AlertType.ERROR, message: 'Something went wrong' });
+      });
       expect(await screen.findByText('Something went wrong')).toBeTruthy();
     });
 
     it('should not display duplicate snackbars for the same alert id', async () => {
       renderBridge();
 
-      useAlertStore.getState().addAlert({ type: AlertType.INFO, message: 'Once only' });
+      act(() => {
+        useAlertStore.getState().addAlert({ type: AlertType.INFO, message: 'Once only' });
+      });
 
       await screen.findByText('Once only');
       const matches = screen.getAllByText('Once only');
@@ -44,7 +50,9 @@ describe('AlertBridge', () => {
     it('should render a dismiss button alongside the snackbar', async () => {
       renderBridge();
 
-      useAlertStore.getState().addAlert({ type: AlertType.WARNING, message: 'Watch out!' });
+      act(() => {
+        useAlertStore.getState().addAlert({ type: AlertType.WARNING, message: 'Watch out!' });
+      });
 
       await screen.findByText('Watch out!');
       expect(screen.getByLabelText('Dismiss notification')).toBeTruthy();
@@ -54,7 +62,9 @@ describe('AlertBridge', () => {
       const user = userEvent.setup();
       renderBridge();
 
-      useAlertStore.getState().addAlert({ type: AlertType.ERROR, message: 'Click to dismiss' });
+      act(() => {
+        useAlertStore.getState().addAlert({ type: AlertType.ERROR, message: 'Click to dismiss' });
+      });
 
       await screen.findByText('Click to dismiss');
       await user.click(screen.getByLabelText('Dismiss notification'));

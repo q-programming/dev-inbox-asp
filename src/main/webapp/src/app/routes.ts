@@ -14,6 +14,8 @@ export enum AppRoute {
   REGISTER = '/register',
   INBOX = '/inbox',
   SETTINGS = '/settings',
+  PROFILE = '/profile',
+  NOTES = '/notes',
 }
 
 // ─── Navigation metadata ──────────────────────────────────────────────────────

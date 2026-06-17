@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@test/renderWithProviders';
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { AppRoute } from '@app/routes';
 import { Theme } from '@shared/theme/theme';
 import LandingPage from './LandingPage';
@@ -26,7 +26,7 @@ const renderLandingPage = () =>
   renderWithProviders(<LandingPage />, { initialEntries: [AppRoute.HOME] });
 
 beforeEach(() => {
-  useAuthStore.setState({
+  useUserStore.setState({
     status: AuthStatus.UNAUTHENTICATED,
     profile: emptyProfile,
     identity: null,
@@ -37,7 +37,7 @@ beforeEach(() => {
 describe('LandingPage', () => {
   describe('redirect when authenticated via store', () => {
     it('should not render landing content when status is AUTHENTICATED', () => {
-      useAuthStore.setState({
+      useUserStore.setState({
         status: AuthStatus.AUTHENTICATED,
         profile: { firstName: 'Jane', lastName: 'Doe', theme: Theme.LIGHT },
         identity: null,
@@ -49,7 +49,7 @@ describe('LandingPage', () => {
     });
 
     it('should render landing content when status is UNAUTHENTICATED', () => {
-      useAuthStore.setState({
+      useUserStore.setState({
         status: AuthStatus.UNAUTHENTICATED,
         profile: emptyProfile,
         identity: null,

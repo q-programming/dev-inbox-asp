@@ -59,6 +59,16 @@ well-structured React frontend.
 
 ## React / TypeScript Standards
 
+### Component Granularity
+
+- **Favour small, focused components** — each component should do one thing (render a logo, render a search bar,
+  render a menu). Avoid large "master" components that contain multiple unrelated visual regions.
+- Extract sub-components to their own files in the same directory when they have their own logic, state, or would
+  benefit from independent testing (e.g. `ProfileMenu.tsx`, `HeaderLogo.tsx`, `NavRow.tsx`).
+- The parent/shell component (e.g. `AppHeader`, `AppSidebar`) should import and compose these pieces — keep it thin.
+- Each extracted component gets its own `*.spec.tsx`; the parent spec becomes an integration test that documents
+  the composition, not re-tests what the child specs already cover.
+
 ### General
 
 - TypeScript strict mode; no `any`, no `@ts-ignore` without a comment explaining why.
@@ -91,7 +101,7 @@ well-structured React frontend.
 - **`src/shared/`** — genuinely cross-cutting infrastructure used by multiple features:
     - `api/` — `httpClient.ts`, `queryClient.ts`
     - `hooks/` — `useAuthQuery.ts`, `useHealthQuery.ts`
-    - `store/` — `auth.store.ts`, `alert.store.ts`
+    - `store/` — `user.store.ts`, `alert.store.ts`
     - `utils/` — pure utility functions
 - URL query parameters drive all filter state; query keys must include filter params.
 

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@test/setupBrowserTests';
 import { renderWithProviders } from '@test/renderWithProviders';
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { Theme } from '@shared/theme/theme';
 import { AppRoute } from '@app/routes';
 import LoginPage from './LoginPage';
@@ -34,7 +34,7 @@ beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   mockNavigate.mockClear();
-  useAuthStore.setState({
+  useUserStore.setState({
     status: AuthStatus.UNAUTHENTICATED,
     profile: emptyProfile,
     identity: null,
@@ -44,7 +44,7 @@ beforeEach(() => {
 describe('LoginPage', () => {
   describe('redirect when already authenticated', () => {
     it('should not render the login form when user is already authenticated', () => {
-      useAuthStore.setState({
+      useUserStore.setState({
         status: AuthStatus.AUTHENTICATED,
         profile: { firstName: 'John', lastName: 'Doe', theme: Theme.LIGHT },
         identity: { id: 1, email: 'test@example.com', accountType: 'REGULAR' },
@@ -110,7 +110,7 @@ describe('LoginPage', () => {
       await user.type(screen.getByLabelText(/password/i), 'correctpassword');
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-      await waitFor(() => expect(useAuthStore.getState().status).toBe(AuthStatus.AUTHENTICATED));
+      await waitFor(() => expect(useUserStore.getState().status).toBe(AuthStatus.AUTHENTICATED));
     });
   });
 
@@ -124,7 +124,7 @@ describe('LoginPage', () => {
       await user.type(screen.getByLabelText(/password/i), 'wrongpassword');
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-      await waitFor(() => expect(useAuthStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED));
+      await waitFor(() => expect(useUserStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED));
       expect(screen.getByLabelText(/email/i)).toBeTruthy();
       expect(mockNavigate).not.toHaveBeenCalledWith(AppRoute.INBOX);
     });

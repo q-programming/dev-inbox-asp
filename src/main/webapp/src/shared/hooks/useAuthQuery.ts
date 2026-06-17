@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { ApiError, sharedConfigParams } from '@shared/api/httpClient.ts';
 import { AuthApi, Configuration, LoginRequest, RegisterRequest, UserDto } from '@api/auth';
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 
 export const authApi = new AuthApi(new Configuration(sharedConfigParams));
 
@@ -40,7 +40,7 @@ export const useMeQuery = () =>
  */
 export const useAuthBootstrap = () => {
   const { data, isSuccess, isError } = useMeQuery();
-  const { status, setUser, clearUser } = useAuthStore();
+  const { status, setUser, clearUser } = useUserStore();
 
   useEffect(() => {
     if (!isSuccess) {
@@ -71,7 +71,7 @@ export const useAuthBootstrap = () => {
  * On success, persists the user into the auth store.
  */
 export const useLoginMutation = () => {
-  const { setUser } = useAuthStore();
+  const { setUser } = useUserStore();
   const queryClient = useQueryClient();
 
   return useMutation<UserDto, ApiError, LoginRequest>({
@@ -96,7 +96,7 @@ export const useLoginMutation = () => {
  * then wipes the auth store and query cache.
  */
 export const useLogoutMutation = () => {
-  const { clearUser } = useAuthStore();
+  const { clearUser } = useUserStore();
   const queryClient = useQueryClient();
 
   return useMutation<void, ApiError, void>({
