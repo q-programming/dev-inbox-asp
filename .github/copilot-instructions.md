@@ -59,6 +59,16 @@ well-structured React frontend.
 
 ## React / TypeScript Standards
 
+### Component Granularity
+
+- **Favour small, focused components** — each component should do one thing (render a logo, render a search bar,
+  render a menu). Avoid large "master" components that contain multiple unrelated visual regions.
+- Extract sub-components to their own files in the same directory when they have their own logic, state, or would
+  benefit from independent testing (e.g. `ProfileMenu.tsx`, `HeaderLogo.tsx`, `NavRow.tsx`).
+- The parent/shell component (e.g. `AppHeader`, `AppSidebar`) should import and compose these pieces — keep it thin.
+- Each extracted component gets its own `*.spec.tsx`; the parent spec becomes an integration test that documents
+  the composition, not re-tests what the child specs already cover.
+
 ### General
 
 - TypeScript strict mode; no `any`, no `@ts-ignore` without a comment explaining why.
@@ -91,14 +101,31 @@ well-structured React frontend.
 - **`src/shared/`** — genuinely cross-cutting infrastructure used by multiple features:
     - `api/` — `httpClient.ts`, `queryClient.ts`
     - `hooks/` — `useAuthQuery.ts`, `useHealthQuery.ts`
-    - `store/` — `auth.store.ts`, `alert.store.ts`
+    - `store/` — `user.store.ts`, `alert.store.ts`
     - `utils/` — pure utility functions
 - URL query parameters drive all filter state; query keys must include filter params.
 
 ### Styling
 
-- Tailwind CSS v4 utility classes; no custom CSS unless unavoidable.
-- Use **shadcn/ui** components as primitives — do not rewrite base UI components from scratch.
+- **MUI v9 is the primary UI library** — use it for all components, layout, and theming.
+- Tailwind CSS v4 may be used for fine-grained utility overrides only when MUI `sx` is insufficient.
+- **Never use raw hex colours, magic pixel values, or hardcoded font sizes in component files.**
+  All visual tokens must come from the MUI theme (`theme.palette.*`, `theme.spacing()`, `theme.shape.borderRadius`, `theme.typography.*`).
+- Use `sx` prop for one-off style overrides; extract repeated patterns into the theme's `components` overrides.
+- **Never use emojis as icons** — always use `@mui/icons-material` SVG icons. They scale, theme-inherit colour, and are accessible.
+- Theme is defined in `src/shared/theme/theme.ts` via `buildTheme(mode)`. To add a new colour token:
+  1. Add it to the `palette` object in `buildTheme`.
+  2. Add TypeScript augmentation in the `declare module '@mui/material/styles'` block at the top of `theme.ts`.
+  3. Reference it in components via `sx={{ color: 'hero.gradientBg' }}` or `theme => theme.palette.hero.badgeBg`.
+- Light/dark mode is driven by `useAuthStore().profile.theme` (a `Theme` enum). `AppThemeProvider` reads it and rebuilds the MUI theme. Toggle by calling `useAuthStore().toggleTheme()`.
+- `background.default` and `background.paper` are set in the theme and must be the only background colours used on page wrappers. Never hardcode `bg-gray-50` or `bgcolor: '#fff'`.
+- `typography.button` has `textTransform: 'none'` and `fontWeight: 600` — do not override these per-component.
+- `shape.borderRadius` is `4` — use `theme.shape.borderRadius` or multiples via `sx={{ borderRadius: 2 }}` (which multiplies by 4px = 8px).
+- MUI v9 breaking changes to remember:
+  - `fontWeight`, `fontStyle`, `lineHeight`, `textAlign`, `alignItems` are **not** direct props on `Typography` or `Link` — put them in `sx`.
+  - `Grid` item uses `size={{ xs: 12, md: 6 }}` (v9 API), not `item xs={12}`.
+  - `Grid` container alignment: `sx={{ alignItems: 'center' }}`, not `alignItems="center"`.
+- **Always verify changes with Playwright MCP** after visual updates.
 - Responsive design is secondary; this is a desktop-first developer tool.
 
 ### Testing

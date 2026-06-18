@@ -49,3 +49,5 @@ docker/*.local.yml
 .env.local
 .env.*.local
 src/main/resources/application-local.yml
+.playwright-mcp/
+/src/main/.playwright-mcp/

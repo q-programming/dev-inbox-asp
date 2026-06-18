@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { ApiError, sharedConfigParams } from '@shared/api/httpClient.ts';
 import { AuthApi, Configuration, LoginRequest, RegisterRequest, UserDto } from '@api/auth';
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import useUserStore from '@shared/store/user.store.ts';
+import useSettingsStore from '@feature/settings/store/settings.store';
 
 export const authApi = new AuthApi(new Configuration(sharedConfigParams));
 
@@ -23,6 +24,9 @@ export const useMeQuery = () =>
     queryKey: authKeys.me,
     queryFn: () => authApi.me(),
     staleTime: 5 * 60_000,
+    // Always re-verify on mount — covers OAuth callbacks where the cookie
+    // has changed since the last cached /me response.
+    refetchOnMount: 'always',
     retry: false,
     meta: { silent: true },
   });
@@ -40,22 +44,20 @@ export const useMeQuery = () =>
  */
 export const useAuthBootstrap = () => {
   const { data, isSuccess, isError } = useMeQuery();
-  const { status, setUser, clearUser } = useAuthStore();
+  const { setUser, clearUser } = useUserStore();
+  const { applyServerProfile } = useSettingsStore();
 
   useEffect(() => {
     if (!isSuccess) {
       return;
     }
     if (data) {
-      // Only hydrate the store on initial bootstrap — skip redundant cache hits on navigation
-      if (status === AuthStatus.LOADING) {
-        setUser(data);
-      }
+      setUser(data);
+      applyServerProfile({}); //TODO update with actual user  values
     } else {
-      // Always clear: covers initial "no session" AND stale re-fetch detecting expiry
       clearUser();
     }
-  }, [isSuccess, data, status, setUser, clearUser]);
+  }, [isSuccess, data, setUser, clearUser, applyServerProfile]);
 
   useEffect(() => {
     if (isError) {
@@ -71,7 +73,7 @@ export const useAuthBootstrap = () => {
  * On success, persists the user into the auth store.
  */
 export const useLoginMutation = () => {
-  const { setUser } = useAuthStore();
+  const { setUser } = useUserStore();
   const queryClient = useQueryClient();
 
   return useMutation<UserDto, ApiError, LoginRequest>({
@@ -96,7 +98,7 @@ export const useLoginMutation = () => {
  * then wipes the auth store and query cache.
  */
 export const useLogoutMutation = () => {
-  const { clearUser } = useAuthStore();
+  const { clearUser } = useUserStore();
   const queryClient = useQueryClient();
 
   return useMutation<void, ApiError, void>({

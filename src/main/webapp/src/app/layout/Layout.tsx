@@ -1,56 +1,109 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import useAuthStore from '@shared/store/auth.store.ts';
-import { useLogoutMutation } from '@shared/hooks/useAuthQuery.ts';
-import { NAV_ITEMS } from '@app/routes';
+import { useCallback, useState } from 'react';
+import Box from '@mui/material/Box';
+import Drawer from '@mui/material/Drawer';
+import Toolbar from '@mui/material/Toolbar';
+import { Outlet } from 'react-router-dom';
+import AppHeader from './header/AppHeader.tsx';
+import AppSidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './sidebar/AppSidebar.tsx';
+import MobileBottomNav from '@app/layout/mobilebar/MobileBottomNav.tsx';
+import Footer from '@app/common/footer/Footer.tsx';
+import useSettingsStore from '@feature/settings/store/settings.store';
+import { useGlobalShortcuts } from '@shared/hooks/useGlobalShortcuts.ts';
+import { useLeaderKey } from '@shared/hooks/useLeaderKey.ts';
 
+const TRANSITION = 'width 200ms ease, margin-left 200ms ease';
+
+/**
+ * Authenticated app shell.
+ * Fixed header at top, collapsible sidebar + scrollable main content, shared footer at bottom.
+ * Sidebar width and main margin-left animate in sync via CSS transitions keyed to
+ * sideBarCollapsed from the settings store.
+ */
 const AppLayout = () => {
-  const { profile, identity } = useAuthStore();
-  const logoutMutation = useLogoutMutation();
+  useGlobalShortcuts();
+  useLeaderKey();
+  const sideBarCollapsed = useSettingsStore((state) => state.sideBarCollapsed);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const sidebarWidth = sideBarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
+  const handleMenuOpen = useCallback(() => setMobileDrawerOpen((prev) => !prev), []);
+  const handleDrawerClose = useCallback(() => setMobileDrawerOpen(false), []);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="flex justify-between items-center px-6 py-3 border-b bg-white">
-        <span className="font-bold text-lg">Dev Inbox</span>
-        {profile && (
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              {profile.firstName} {profile.lastName}
-              {identity?.email && <span className="ml-1 text-gray-400">({identity.email})</span>}
-            </span>
-            <button
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
-              className="text-sm text-gray-500 hover:text-gray-800 disabled:opacity-50"
-            >
-              Sign out
-            </button>
-          </div>
-        )}
-      </header>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        bgcolor: 'background.default',
+      }}
+    >
+      <AppHeader onMenuOpen={handleMenuOpen} />
+      <Toolbar sx={{ minHeight: { xs: 56 } }} />
 
-      <div className="flex flex-1">
-        {/* Sidemenu */}
-        <nav className="w-48 border-r bg-gray-50 p-4 flex flex-col gap-1">
-          {NAV_ITEMS.map(({ path, label }) => (
-            <NavLink
-              key={path}
-              to={path}
-              className={({ isActive }) =>
-                `px-3 py-2 rounded text-sm ${isActive ? 'bg-gray-200 font-medium' : 'text-gray-700 hover:bg-gray-100'}`
-              }
-            >
-              {label}
-            </NavLink>
-          ))}
-        </nav>
+      <Box sx={{ display: 'flex', flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <Drawer
+          open={mobileDrawerOpen}
+          onClose={handleDrawerClose}
+          variant="temporary"
+          anchor="left"
+          sx={{ display: { xs: 'block', md: 'none' } }}
+          slotProps={{ paper: { sx: { width: 280 } } }}
+        >
+          {/* Push content below the fixed AppBar */}
+          <Toolbar sx={{ minHeight: 56 }} />
+          <AppSidebar />
+        </Drawer>
 
-        {/* Page content */}
-        <main className="flex-1 p-6">
-          <Outlet />
-        </main>
-      </div>
-    </div>
+        {/* Sidebar — fixed, width animates on collapse */}
+        <Box
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            width: sidebarWidth,
+            flexShrink: 0,
+            position: 'fixed',
+            top: 56,
+            bottom: 0,
+            left: 0,
+            zIndex: (theme) => theme.zIndex.drawer,
+            overflowY: 'auto',
+            transition: TRANSITION,
+          }}
+        >
+          <AppSidebar />
+        </Box>
+
+        {/* Main content — margin animates in sync with sidebar */}
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            marginLeft: { xs: 0, md: `${sidebarWidth}px` },
+            minHeight: 0,
+            transition: TRANSITION,
+          }}
+        >
+          <Box
+            sx={{ flex: 1, overflowY: 'auto', padding: 3, paddingBottom: { xs: '56px', md: 3 } }}
+          >
+            <Outlet />
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Footer must also offset by sidebar width — sidebar is fixed so it overlays otherwise */}
+      <Box
+        sx={{
+          display: { xs: 'none', md: 'block' },
+          marginLeft: { xs: 0, md: `${sidebarWidth}px` },
+          transition: TRANSITION,
+        }}
+      >
+        <Footer />
+      </Box>
+      <MobileBottomNav />
+    </Box>
   );
 };
 

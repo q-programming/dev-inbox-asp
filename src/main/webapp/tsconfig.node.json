@@ -5,8 +5,9 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "noEmit": true
+    "resolveJsonModule": true,
+    "composite": true,
+    "skipLibCheck": true
   },
   "include": ["vite.config.ts"]
 }

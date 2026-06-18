@@ -48,3 +48,29 @@ components:
           type: string
           example: UP
 
+    IntegrationDto:
+      type: object
+      required: [ status, type ]
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          $ref: '#/components/schemas/IntegrationStatus'
+        type:
+          $ref: '#/components/schemas/IntegrationType'
+
+    IntegrationType:
+      type: string
+      enum:
+        - Github
+        - Ado
+
+    IntegrationStatus:
+      type: string
+      default: INACTIVE
+      enum:
+        - ACTIVE
+        - EXPIRED
+        - INACTIVE
+

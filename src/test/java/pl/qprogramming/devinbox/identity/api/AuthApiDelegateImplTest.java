@@ -1,5 +1,6 @@
 package pl.qprogramming.devinbox.identity.api;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.val;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -46,12 +47,14 @@ class AuthApiDelegateImplTest extends AbstractSpringTest {
     AccountMapper accountMapper;
     @Mock
     TokenProvider tokenProvider;
+    @Mock
+    private HttpServletRequest httpServletRequest;
 
     MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        val delegate = new AuthApiDelegateImpl(accountMapper, userService, tokenProvider, applicationProperties);
+        val delegate = new AuthApiDelegateImpl(accountMapper, userService, tokenProvider, applicationProperties, httpServletRequest);
         val controller = new AuthApiController(delegate);
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)

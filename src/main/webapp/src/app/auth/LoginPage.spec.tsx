@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '@test/setupBrowserTests';
-import { createQueryClient } from '@shared/api/queryClient';
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store';
+import { renderWithProviders } from '@test/renderWithProviders';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { AppRoute } from '@app/routes';
 import LoginPage from './LoginPage';
 
@@ -26,30 +24,26 @@ const mockUser = {
   accountType: 'REGULAR',
 };
 
-function renderLoginPage() {
-  const client = createQueryClient();
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[AppRoute.LOGIN]}>
-        <LoginPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-}
+const renderLoginPage = () =>
+  renderWithProviders(<LoginPage />, { initialEntries: [AppRoute.LOGIN] });
 
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   mockNavigate.mockClear();
-  useAuthStore.setState({ status: AuthStatus.UNAUTHENTICATED, profile: null, identity: null });
+  useUserStore.setState({
+    status: AuthStatus.UNAUTHENTICATED,
+    identity: null,
+  });
 });
 
 describe('LoginPage', () => {
   describe('redirect when already authenticated', () => {
     it('should not render the login form when user is already authenticated', () => {
-      useAuthStore.setState({
+      useUserStore.setState({
         status: AuthStatus.AUTHENTICATED,
-        profile: { firstName: 'John', lastName: 'Doe' },
+        firstName: 'John',
+        lastName: 'Doe',
         identity: { id: 1, email: 'test@example.com', accountType: 'REGULAR' },
       });
 
@@ -113,7 +107,7 @@ describe('LoginPage', () => {
       await user.type(screen.getByLabelText(/password/i), 'correctpassword');
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-      await waitFor(() => expect(useAuthStore.getState().status).toBe(AuthStatus.AUTHENTICATED));
+      await waitFor(() => expect(useUserStore.getState().status).toBe(AuthStatus.AUTHENTICATED));
     });
   });
 
@@ -127,21 +121,33 @@ describe('LoginPage', () => {
       await user.type(screen.getByLabelText(/password/i), 'wrongpassword');
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-      await waitFor(() => expect(useAuthStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED));
+      await waitFor(() => expect(useUserStore.getState().status).toBe(AuthStatus.UNAUTHENTICATED));
       expect(screen.getByLabelText(/email/i)).toBeTruthy();
       expect(mockNavigate).not.toHaveBeenCalledWith(AppRoute.INBOX);
+    });
+
+    it('should show error message when login fails', async () => {
+      server.use(http.post('/api/auth/login', () => HttpResponse.json({}, { status: 401 })));
+      const user = userEvent.setup();
+      renderLoginPage();
+
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
+      await user.type(screen.getByLabelText(/password/i), 'wrongpassword');
+      await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+      expect(await screen.findByTestId('login-error')).toBeTruthy();
     });
   });
 
   describe('GitHub OAuth link', () => {
-    it('should render the Sign in with GitHub link', () => {
+    it('should render the Continue with GitHub link', () => {
       renderLoginPage();
-      expect(screen.getByText(/sign in with github/i)).toBeTruthy();
+      expect(screen.getByText(/continue with github/i)).toBeTruthy();
     });
 
     it('should point to the GitHub OAuth authorization URL', () => {
       renderLoginPage();
-      const link = screen.getByRole('link', { name: /sign in with github/i });
+      const link = screen.getByRole('link', { name: /continue with github/i });
       expect(link.getAttribute('href')).toContain('/oauth2/authorization/github');
     });
   });

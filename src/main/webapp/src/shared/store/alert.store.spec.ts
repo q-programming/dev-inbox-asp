@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import useAlertStore, { AlertType, type Alert } from './alert.store';
+import { beforeEach, describe, expect, it } from 'vitest';
+import useAlertStore, { type AlertMessage, AlertType } from './alert.store';
 
-const makeAlert = (overrides: Partial<Alert> = {}): Alert => ({
+const makeAlert = (overrides: Partial<AlertMessage> = {}): AlertMessage => ({
   id: 0, // always overridden by the store
   type: AlertType.ERROR,
   message: 'Test alert',
@@ -42,7 +42,9 @@ describe('useAlertStore', () => {
     });
 
     it('should preserve the alert type and message', () => {
-      useAlertStore.getState().addAlert(makeAlert({ type: AlertType.WARNING, message: 'Watch out!' }));
+      useAlertStore
+        .getState()
+        .addAlert(makeAlert({ type: AlertType.WARNING, message: 'Watch out!' }));
 
       const alert = useAlertStore.getState().alerts[0];
       expect(alert.type).toBe(AlertType.WARNING);
@@ -55,58 +57,6 @@ describe('useAlertStore', () => {
       useAlertStore.getState().addAlert(makeAlert({ message: 'Third' }));
 
       expect(useAlertStore.getState().alerts).toHaveLength(3);
-    });
-
-    describe('auto-dismiss', () => {
-      beforeEach(() => vi.useFakeTimers());
-      afterEach(() => vi.useRealTimers());
-
-      it('should auto-dismiss a SUCCESS alert after 3 s', () => {
-        useAlertStore.getState().addAlert(makeAlert({ type: AlertType.SUCCESS }));
-
-        vi.advanceTimersByTime(3_000);
-
-        expect(useAlertStore.getState().alerts).toHaveLength(0);
-      });
-
-      it('should auto-dismiss a WARNING alert after 6 s', () => {
-        useAlertStore.getState().addAlert(makeAlert({ type: AlertType.WARNING }));
-
-        vi.advanceTimersByTime(5_999);
-        expect(useAlertStore.getState().alerts).toHaveLength(1);
-
-        vi.advanceTimersByTime(1);
-        expect(useAlertStore.getState().alerts).toHaveLength(0);
-      });
-
-      it('should auto-dismiss an ERROR alert after 10 s', () => {
-        useAlertStore.getState().addAlert(makeAlert({ type: AlertType.ERROR }));
-
-        vi.advanceTimersByTime(9_999);
-        expect(useAlertStore.getState().alerts).toHaveLength(1);
-
-        vi.advanceTimersByTime(1);
-        expect(useAlertStore.getState().alerts).toHaveLength(0);
-      });
-
-      it('should not dismiss an alert before its timeout elapses', () => {
-        useAlertStore.getState().addAlert(makeAlert({ type: AlertType.SUCCESS }));
-
-        vi.advanceTimersByTime(2_999);
-
-        expect(useAlertStore.getState().alerts).toHaveLength(1);
-      });
-
-      it('should only dismiss the timed-out alert when multiple are present', () => {
-        useAlertStore.getState().addAlert(makeAlert({ type: AlertType.SUCCESS, message: 'Quick' }));
-        useAlertStore.getState().addAlert(makeAlert({ type: AlertType.ERROR, message: 'Persistent' }));
-
-        vi.advanceTimersByTime(3_000);
-
-        const remaining = useAlertStore.getState().alerts;
-        expect(remaining).toHaveLength(1);
-        expect(remaining[0].message).toBe('Persistent');
-      });
     });
   });
 

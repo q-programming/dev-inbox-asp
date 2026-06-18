@@ -1,31 +1,25 @@
 import { create } from 'zustand';
 
-export interface Alert {
+export interface AlertMessage {
   id?: number;
   type: AlertType;
   message: string;
 }
 
 export enum AlertType {
-  SUCCESS,
-  WARNING,
-  ERROR,
+  SUCCESS = 'success',
+  WARNING = 'warning',
+  ERROR = 'error',
+  INFO = 'info',
 }
 
-/** Auto-dismiss delay in milliseconds per alert type */
-const ALERT_TIMEOUT_MS: Record<AlertType, number> = {
-  [AlertType.SUCCESS]: 3_000,
-  [AlertType.WARNING]: 6_000,
-  [AlertType.ERROR]: 10_000,
-};
-
 type AlertState = {
-  alerts: Alert[];
+  alerts: AlertMessage[];
 };
 
 type AlertActions = {
   /** Add an alert and schedule its automatic removal based on its type. */
-  addAlert: (alert: Alert) => void;
+  addAlert: (alert: AlertMessage) => void;
   /** Immediately remove an alert by id. */
   removeAlert: (id?: number) => void;
 };
@@ -38,10 +32,6 @@ const useAlertStore = create<AlertState & AlertActions>((set) => ({
   addAlert: (alert) => {
     const id = ++nextId;
     set((state) => ({ alerts: [...state.alerts, { ...alert, id }] }));
-    const delay = ALERT_TIMEOUT_MS[alert.type];
-    setTimeout(() => {
-      set((state) => ({ alerts: state.alerts.filter((alert) => alert.id !== id) }));
-    }, delay);
   },
 
   removeAlert: (id) =>

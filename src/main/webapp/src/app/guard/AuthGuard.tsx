@@ -1,4 +1,4 @@
-import useAuthStore, { AuthStatus } from '@shared/store/auth.store.ts';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { useAuthBootstrap } from '@shared/hooks/useAuthQuery.ts';
 import { Navigate, Outlet } from 'react-router-dom';
 import { AppRoute } from '@app/routes';
@@ -13,10 +13,10 @@ import { AppRoute } from '@app/routes';
  * 4. Once /me resolves: authenticated → keep rendering; unauthenticated → redirect to /login.
  */
 const AuthGuard = () => {
-  const { status, profile } = useAuthStore();
+  const { status, firstName, lastName } = useUserStore();
   useAuthBootstrap();
 
-  if (status === AuthStatus.LOADING && !profile) {
+  if (status === AuthStatus.LOADING && !firstName && !lastName) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-500 text-sm animate-pulse">Loading…</div>
