@@ -10,46 +10,52 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# dorny/test-reporter and Madrapps/jacoco-report need these permissions
 permissions:
   checks: write
   pull-requests: write
   contents: read
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Job 1 – Build & Generate Sources
-# Compiles the project and generates all OpenAPI stubs (Java + TypeScript).
-# Subsequent test jobs depend on this so they fail fast on a broken build.
+# Job 1 – Build & Generate
+# Compiles the .NET project and generates all NSwag outputs (C# stubs + TS client).
 # ──────────────────────────────────────────────────────────────────────────────
 jobs:
   build:
-    name: Build & Generate Sources
+    name: Build & Generate
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
         with:
-          java-version: '21'
-          distribution: temurin
-          cache: maven
+          dotnet-version: '10.x'
 
-      - name: Generate sources & compile (no tests)
-        run: ./mvnw clean generate-sources compile -DskipTests -B
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: DevInbox.Web/ClientApp/package-lock.json
 
-      - name: Upload generated TypeScript clients
+      - name: Install npm dependencies
+        run: npm ci
+        working-directory: DevInbox.Web/ClientApp
+
+      - name: Build (generates NSwag C# + TS clients)
+        run: dotnet build DevInbox.Web/DevInbox.Web.csproj --configuration Release
+
+      - name: Upload generated TypeScript client
         uses: actions/upload-artifact@v4
         with:
-          name: ts-generated-clients
-          path: src/main/webapp/generated/
+          name: ts-generated-client
+          path: DevInbox.Web/ClientApp/generated/
           retention-days: 1
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Job 2 – Backend Tests
-# Runs Java (Surefire + Testcontainers) tests and collects JaCoCo coverage.
-# Docker is available on ubuntu-latest; Testcontainers uses the host socket.
+# Runs xUnit tests with Testcontainers (Docker available on ubuntu-latest).
 # ──────────────────────────────────────────────────────────────────────────────
   test-backend:
     name: Backend Tests
@@ -59,37 +65,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
         with:
-          java-version: '21'
-          distribution: temurin
-          cache: maven
+          dotnet-version: '10.x'
 
-      - name: Run Java tests (skip frontend)
-        run: ./mvnw clean generate-sources test -DskipFrontend=true -B
+      - name: Run backend tests
+        run: dotnet test DevInbox.Web/DevInbox.Web.csproj --configuration Release --logger "junit;LogFilePath=test-results/results.xml" --no-build
+        continue-on-error: true
 
       - name: Publish backend test results
         if: always()
         uses: dorny/test-reporter@v1
         with:
           name: Backend Test Results
-          path: target/surefire-reports/*.xml
+          path: DevInbox.Web/test-results/results.xml
           reporter: java-junit
           fail-on-error: false
 
-      - name: Upload JaCoCo HTML report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-report
-          path: target/site/jacoco/
-          retention-days: 14
-
 # ──────────────────────────────────────────────────────────────────────────────
 # Job 3 – Frontend Tests
-# Runs Vitest browser tests (Playwright/Chromium, headless) and V8 coverage.
-# Downloads the pre-generated TypeScript API clients from the build job.
+# Runs Vitest browser tests (Playwright/Chromium, headless) with V8 coverage.
+# Downloads pre-generated TypeScript client from the build job.
 # ──────────────────────────────────────────────────────────────────────────────
   test-frontend:
     name: Frontend Tests
@@ -104,30 +101,32 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: src/main/webapp/package-lock.json
+          cache-dependency-path: DevInbox.Web/ClientApp/package-lock.json
 
-      - name: Download generated TypeScript clients
+      - name: Download generated TypeScript client
         uses: actions/download-artifact@v4
         with:
-          name: ts-generated-clients
-          path: src/main/webapp/generated/
+          name: ts-generated-client
+          path: DevInbox.Web/ClientApp/generated/
 
       - name: Install npm dependencies
-        run: npm ci --prefix src/main/webapp
+        run: npm ci
+        working-directory: DevInbox.Web/ClientApp
 
       - name: Install Playwright Chromium & system deps
         run: npx playwright install chromium --with-deps
-        working-directory: src/main/webapp
+        working-directory: DevInbox.Web/ClientApp
 
       - name: Run frontend tests with coverage
-        run: npm run test:coverage --prefix src/main/webapp
+        run: npm run test:coverage
+        working-directory: DevInbox.Web/ClientApp
 
       - name: Publish frontend test results
         if: always()
         uses: dorny/test-reporter@v1
         with:
           name: Frontend Test Results
-          path: src/main/webapp/test-report.xml
+          path: DevInbox.Web/ClientApp/test-report.xml
           reporter: java-junit
           fail-on-error: false
 
@@ -136,13 +135,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage
-          path: src/main/webapp/coverage/
+          path: DevInbox.Web/ClientApp/coverage/
           retention-days: 14
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Job 4 – Post Coverage (PR only)
-# Downloads both coverage artifacts and posts a single combined comment on the PR.
-# Uses only GITHUB_TOKEN — no PAT needed.
+# Posts a combined frontend coverage comment on the PR.
 # ──────────────────────────────────────────────────────────────────────────────
   post-coverage:
     name: Post Coverage Comment
@@ -151,13 +149,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download JaCoCo report
-        uses: actions/download-artifact@v4
-        with:
-          name: jacoco-report
-          path: jacoco/
-        continue-on-error: true
-
       - name: Download frontend coverage report
         uses: actions/download-artifact@v4
         with:
@@ -165,7 +156,7 @@ jobs:
           path: frontend-coverage/
         continue-on-error: true
 
-      - name: Post combined coverage comment
+      - name: Post coverage comment
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -174,27 +165,6 @@ jobs:
 
             const THRESHOLD = 70;
             const icon = (pct) => (pct !== undefined && pct >= THRESHOLD) ? '✅' : '⚠️';
-
-            // ── Backend: parse JaCoCo XML ────────────────────────────────
-            let backend = null;
-            try {
-              const xml = fs.readFileSync('jacoco/jacoco.xml', 'utf8');
-              // Report-level counters appear after the last </package> tag.
-              const afterPackages = xml.includes('</package>')
-                ? xml.substring(xml.lastIndexOf('</package>') + '</package>'.length)
-                : xml;
-              const rx = /<counter type="(\w+)" missed="(\d+)" covered="(\d+)"\/>/g;
-              let m;
-              backend = {};
-              while ((m = rx.exec(afterPackages)) !== null) {
-                const missed = parseInt(m[2]), covered = parseInt(m[3]);
-                const total = missed + covered;
-                backend[m[1]] = total > 0 ? Math.round(covered / total * 100) : 0;
-              }
-              if (Object.keys(backend).length === 0) backend = null;
-            } catch (e) {
-              console.log('No JaCoCo report:', e.message);
-            }
 
             // ── Frontend: parse Vitest JSON summary ──────────────────────
             let frontend = null;
@@ -211,21 +181,9 @@ jobs:
               console.log('No frontend coverage:', e.message);
             }
 
-            // ── Build comment body ────────────────────────────────────────
             const MARKER = '<!-- coverage-report -->';
             let body = `${MARKER}\n## 📊 Test Coverage Report\n\n`;
             body += `> ✅ ≥ ${THRESHOLD}% &nbsp;|&nbsp; ⚠️ below ${THRESHOLD}%\n\n`;
-
-            if (backend) {
-              body += '### 🔧 Backend (JaCoCo)\n\n';
-              body += '| Metric | Coverage |\n|--------|----------|\n';
-              for (const [type, pct] of Object.entries(backend)) {
-                body += `| ${type} | ${icon(pct)} ${pct}% |\n`;
-              }
-              body += '\n';
-            } else {
-              body += '### 🔧 Backend (JaCoCo)\n\n_No data — tests may have failed._\n\n';
-            }
 
             if (frontend) {
               body += '### 🖥️ Frontend (Vitest V8)\n\n';
@@ -237,7 +195,6 @@ jobs:
               body += '### 🖥️ Frontend (Vitest V8)\n\n_No data — tests may have failed._\n';
             }
 
-            // ── Update or create comment ──────────────────────────────────
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,

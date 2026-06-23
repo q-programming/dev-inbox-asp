@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>DevInbox.Web</RootNamespace>
+    <AssemblyName>DevInbox.Web</AssemblyName>
+    <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+    <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
+    <PackageReference Include="Scrutor" Version="7.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.*" />
+    <PackageReference Include="NSwag.MSBuild" Version="14.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Exclude ClientApp source from build output — only the compiled wwwroot matters -->
+  <ItemGroup>
+    <Content Remove="ClientApp\**" />
+  </ItemGroup>
+
+  <!-- Delete generated files before build so they are always regenerated fresh -->
+  <Target Name="CleanGenerated" BeforeTargets="Build">
+    <Delete Files="Infrastructure/OpenApi/Generated/Controllers.cs" />
+    <Delete Files="ClientApp/generated/api-client/index.ts" />
+  </Target>
+
+  <!--
+    After each build:
+    1. Generate C# controller base classes + DTOs (one controller per tag) — git-ignored.
+       Implement IXxxBaseController in Features/ and register in Program.cs.
+    2. Generate TypeScript fetch clients for the React app — git-ignored.
+  -->
+  <Target Name="GenerateClients" AfterTargets="Build">
+    <Exec Command="$(NSwagExe) openapi2cscontroller /input:openapi/api.yml /output:Infrastructure/OpenApi/Generated/Controllers.cs /namespace:DevInbox.Web.Infrastructure.OpenApi.Generated /className:{controller}Base /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /jsonLibrary:SystemTextJson" />
+    <Exec Command="$(NSwagExe) openapi2tsclient /input:openapi/api.yml /output:ClientApp/generated/api-client/index.ts /template:Fetch /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /typeStyle:Interface" />
+  </Target>
+
+  <!--
+    On publish: build React app and embed output in wwwroot for a self-contained binary.
+  -->
+  <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
+    <Exec WorkingDirectory="ClientApp" Command="npm install" />
+    <Exec WorkingDirectory="ClientApp" Command="npm run build" />
+    <ItemGroup>
+      <DistFiles Include="ClientApp\wwwroot\**" />
+      <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+</Project>

@@ -1,159 +1,233 @@
 # Copilot Instructions — Dev Inbox
 
-## Project Overview
+## About the Developer
 
-Dev Inbox is a personal developer workspace that aggregates GitHub PRs, Azure DevOps work items, and personal notes into
-a unified, filterable inbox. It is a **learning project** exploring Spring Modulith, domain events, and a
-well-structured React frontend.
+The developer is a **Java engineer with 18+ years of experience** (Spring Boot, Spring Modulith, JPA, Maven) who is
+**learning .NET / C# as a deliberate skill expansion**. This project is the learning vehicle.
 
-- **Frontend**: `src/main/webapp/` — React 18 · TypeScript 5 · Vite · TanStack Query · Zustand · Tailwind v4 · shadcn/ui
-- **Backend**: `src/main/java/pl/qprogramming/devinbox/` — Java 21 · Spring Boot 3.5 · Spring Modulith · PostgreSQL ·
-  Flyway
-- **API contract**: `src/main/resources/swagger/api.yml` (OpenAPI-first; TypeScript client is auto-generated into
-  `src/main/webapp/generated/`)
+### Copilot's role
+
+- **Tutor first, implementer second.** When the developer asks how to do something, explain the idiomatic .NET way,
+  draw comparisons to Java/Spring where helpful, and let the developer implement it.
+- **Do not do everything for them.** Scaffold, guide, point to the right API — but leave the implementation to the
+  developer unless explicitly asked to write it.
+- **Always explain the why.** A Java developer already understands concepts (DI, middleware, ORM, auth) — focus on
+  how .NET expresses those concepts differently, not on explaining the concept itself.
+- When asked to implement, write **clean, idiomatic C# 13 / .NET 10** — not Java-style code translated literally.
 
 ---
 
-## Java / Spring Standards
+## Project Overview
+
+Dev Inbox is a personal developer workspace that aggregates GitHub PRs, Azure DevOps work items, and personal notes
+into a unified inbox. It is a **.NET learning project** with a real-world feature scope.
+
+- **Backend**: `DevInbox.Web/` — ASP.NET Core 10 · C# 13 · EF Core · PostgreSQL
+- **Frontend**: `DevInbox.Web/ClientApp/` — React 18 · TypeScript 5 · Vite · TanStack Query · Zustand · MUI v9
+- **API contract**: `DevInbox.Web/openapi/api.yml` — OpenAPI-first; NSwag generates both C# controller bases and
+  the TypeScript client on every `dotnet build`
+
+---
+
+## Project Structure
+
+Validated against Microsoft's [eShop reference application](https://github.com/dotnet/eShop) conventions.
+
+```
+DevInbox.Web/
+  Common/              ← cross-cutting: IService, IComponent, ApiException, shared utilities
+  Features/            ← business capabilities (feature slices — all related code in one place)
+    Identity/          ← auth/user feature: controller, service, entity, mapper, exceptions
+      Exceptions/      ← feature-specific exceptions (e.g. UserAlreadyExistsException)
+    Inbox/
+    Notes/
+    SavedViews/
+    Settings/
+    Sync/
+  Infrastructure/
+    Auth/              ← JWT, cookies, ASP.NET Core Identity config
+    Filters/           ← global MVC filters (e.g. ApiExceptionFilter)
+    Http/              ← GitHub and Azure DevOps HTTP clients
+      GitHub/
+      AzureDevOps/
+    OpenApi/
+      Generated/       ← NSwag output — git-ignored, never edit manually
+    Persistence/       ← EF Core AppDbContext, migrations
+    Scheduling/        ← IHostedService background sync
+  openapi/
+    api.yml            ← single source of truth for the API contract
+  ClientApp/           ← React app
+    generated/         ← NSwag TypeScript client — git-ignored, never edit manually
+    src/
+  GlobalUsings.cs      ← global using directives (avoid repetitive usings)
+  Program.cs
+```
+
+### Structure rules
+- **Feature slices over layers** — `Features/Identity/` has controller + service + entity + mapper together.
+  Do NOT create top-level `Controllers/`, `Services/`, `Repositories/` folders.
+- **`Common/`** for cross-cutting concerns only — markers (`IService`, `IComponent`), base exceptions, shared utilities.
+- **`Infrastructure/`** for technical concerns — DB, auth config, HTTP clients, filters. Never business logic.
+- **Entities live inside their feature** — `Features/Identity/User.cs`, not a global `Domain/` folder.
+- **`GlobalUsings.cs`** — declare frequently used namespaces once globally (e.g. `Microsoft.EntityFrameworkCore`).
+
+---
+
+## Build System
+
+| Command | Description |
+|---|---|
+| `make dev` | Start DB + backend (watch) + frontend dev server |
+| `make build` | `dotnet build` — also regenerates all NSwag outputs |
+| `make publish` | Full release build — embeds React in wwwroot |
+| `make generate-api` | Alias for `dotnet build` |
+| `make db-up` | Start PostgreSQL via Docker Compose |
+| `make test` | Run all tests |
+
+`dotnet build` always:
+1. Deletes `Infrastructure/OpenApi/Generated/Controllers.cs` and `ClientApp/generated/api-client/index.ts`
+2. Regenerates C# controller base classes + DTOs from `api.yml` via NSwag
+3. Regenerates TypeScript fetch clients from `api.yml` via NSwag
+
+---
+
+## C# / ASP.NET Core Standards
 
 ### General
 
-- Java 21; use **virtual threads** (`spring.threads.virtual.enabled=true`) — no reactive streams needed.
-- Prefer **records** for DTOs and value objects.
-- Use **Lombok** with it's @ annotations , val/var etc.
-- All public APIs must have proper Javadoc on the _why_, not the _what_.
+- Target **C# 13 / .NET 10**. Use modern language features: primary constructors, pattern matching, records, `required`
+  properties, collection expressions.
+- Prefer **records** for DTOs and value objects (equivalent to Java records + Lombok `@Value`).
+- Use **`ILogger<T>`** for logging — never `Console.Write`.
+- All public types and members must have XML doc comments on the *why*, not the *what*.
+- Prefer `async`/`await` throughout — no `.Result` or `.Wait()` blocking calls.
 
-### Spring Modulith
+### Java → .NET mental model
 
-- Each top-level package under `pl.qprogramming.devinbox` is an **isolated module**. Never inject internal types from
-  another module.
-- Cross-module communication **only** via domain events published through Spring Modulith's event publication registry (
-  transactional outbox — no dual-write).
-- Keep module public API surface minimal: expose only the types needed by other modules in the package root; internals
-  go in sub-packages.
-- `ModularityTests` must pass; add ArchUnit rules for custom architectural constraints.
+| Java / Spring | .NET equivalent |
+|---|---|
+| `@Component` / `@Service` | `builder.Services.AddScoped<I, Impl>()` |
+| `@RestController` | `[ApiController]` + `[Route]` |
+| `@RequestBody` | `[FromBody]` |
+| `@PathVariable` | `[FromRoute]` |
+| `@RequestParam` | `[FromQuery]` |
+| `application.yml` | `appsettings.json` / `appsettings.Development.json` |
+| `@ConfigurationProperties` | `builder.Configuration.Bind()` + options pattern |
+| `JpaRepository` | `DbSet<T>` + EF Core |
+| Flyway migrations | EF Core migrations (`dotnet ef migrations add`) |
+| `@Scheduled` | `IHostedService` or `BackgroundService` |
+| `@ExceptionHandler` | `IExceptionHandler` or middleware |
+| `ProblemDetail` (Spring) | `ProblemDetails` (ASP.NET — same RFC 9457) |
+| Testcontainers | Testcontainers for .NET (same library, .NET port) |
+
+### Dependency Injection
+
+- Register services in `Program.cs` using the built-in DI container.
+- Lifetime rules: `AddScoped` for request-scoped (like `@RequestScope`), `AddSingleton` for app-wide,
+  `AddTransient` for stateless utilities.
+- Inject via **constructor injection** (primary constructors preferred in C# 13):
+  ```csharp
+  public class InboxController(IInboxRepository repository, ILogger<InboxController> logger)
+      : InboxBase { ... }
+  ```
+
+### OpenAPI-First Pattern
+
+- `openapi/api.yml` is the **single source of truth**. Never hand-write controllers that contradict the spec.
+- NSwag generates `IXxxBaseController` interfaces + `XxxBase` partial controller classes into
+  `Infrastructure/OpenApi/Generated/Controllers.cs` (git-ignored).
+- **You implement the interface** in `Features/Xxx/XxxController.cs`:
+  ```csharp
+  public class InboxController(IInboxRepository repo) : InboxBase, IInboxBaseController
+  {
+      public override Task<InboxPage> ListInboxItemsAsync(...) { ... }
+  }
+  ```
+- Register in `Program.cs`: `builder.Services.AddScoped<IInboxBaseController, InboxController>()`
+- Swashbuckle scans implemented controllers and generates the live Swagger doc at `/swagger`.
+
+### REST / Error Handling
+
+- Return `ProblemDetails` for all error responses (RFC 9457). Use `TypedResults` or `Results.Problem(...)`.
+- Use proper HTTP status codes — 201 for created, 204 for no content, 404 for not found, etc.
+- Never expose EF Core entities over the API — use generated DTOs from `Infrastructure/OpenApi/Generated/`.
 
 ### Persistence
 
-- Liquidbase versioned migrations in `src/main/resources/config/liquidbase/`.
-- liquidbase upgrade scripts to be written in sql
-- For fresh db , there is pl.qprogramming.devinbox.config.DatabaseInitializer which will do auto db creation if it's
-  empty
-- Use Spring Data JPA repositories; write `@Query` JPQL when needed — avoid raw SQL in Java code.
-- The `inbox_projection` table is a **read model** — update it only from inbox-module event handlers.
+- Use **EF Core** with PostgreSQL (`Npgsql.EntityFrameworkCore.PostgreSQL`).
+- Migrations via `dotnet ef migrations add <Name>` — SQL scripts preferred over code-first auto-apply in production.
+- Repositories live in `Infrastructure/Persistence/`. Keep EF Core out of `Features/` — features depend on
+  repository interfaces, not `DbContext` directly.
+- Never use raw SQL in C# code — use LINQ or EF Core query methods.
 
-### REST / API
+### Security / Auth
 
-- OpenAPI spec (`api.yml`) is the **source of truth**; generate server stubs from it, do not hand-write controllers that
-  contradict the spec.
-- Return proper HTTP status codes; use `ProblemDetail` (RFC 9457) for error responses.
-- DTOs live in the `inbox` or respective module — never expose JPA entities over the API.
+- Use **ASP.NET Core Identity** or JWT bearer tokens — configured in `Infrastructure/Auth/`.
+- Credentials (PATs) must be encrypted at rest — use `IDataProtector`.
+- Never log request/response bodies that may contain secrets or PII.
 
 ### Testing
 
-- Integration tests use **Testcontainers** with a real PostgreSQL container.
-- Unit tests use JUnit 5 + AssertJ; avoid Mockito overuse — prefer real objects and in-memory fakes.
-- Test class names: `*Test` for unit, `*IT` for integration.
+- **xUnit** for unit and integration tests.
+- **Testcontainers for .NET** for integration tests against a real PostgreSQL container.
+- **NSubstitute** (preferred) or Moq for mocking — equivalent to Mockito.
+- Test class names: `*Tests` for unit, `*IntegrationTests` for integration.
+- Test method names should be readable PascalCase and must not use underscores.
+- Avoid repeated test literals; extract shared values into class constants/readonly fields or fixtures.
+- Do not test implementation details — test observable behaviour.
 
 ---
 
 ## React / TypeScript Standards
 
-### Component Granularity
-
-- **Favour small, focused components** — each component should do one thing (render a logo, render a search bar,
-  render a menu). Avoid large "master" components that contain multiple unrelated visual regions.
-- Extract sub-components to their own files in the same directory when they have their own logic, state, or would
-  benefit from independent testing (e.g. `ProfileMenu.tsx`, `HeaderLogo.tsx`, `NavRow.tsx`).
-- The parent/shell component (e.g. `AppHeader`, `AppSidebar`) should import and compose these pieces — keep it thin.
-- Each extracted component gets its own `*.spec.tsx`; the parent spec becomes an integration test that documents
-  the composition, not re-tests what the child specs already cover.
-
 ### General
 
 - TypeScript strict mode; no `any`, no `@ts-ignore` without a comment explaining why.
-- Functional components only; no class components.
-- Use **arrow functions** for all components and hooks (`const Foo = () => ...`). Default export is only for route-level
-  pages.
+- Functional components only; arrow functions (`const Foo = () => ...`).
 - File names match the exported component name (`InboxList.tsx`).
-
-### State Management
-
-- **TanStack Query** owns all server state (fetching, caching, invalidation). Never store fetched data in `useState` or
-  Zustand.
-- **Zustand** is for UI-only state (selected item, panel open, density). Keep stores small and focused.
-- **React Hook Form + Zod** for all forms; define schemas in a `*.schema.ts` file co-located with the form.
 
 ### API Layer
 
-- Never import directly from `generated/`. Always go through `src/shared/api/` wrappers that map DTOs to view models.
-- Use the `@api` path alias for the generated client (configured in tsconfig + vite).
+- Generated client is in `ClientApp/generated/api-client/index.ts` — **never edit directly**.
+- Import via `@api` alias: `import { InboxClient } from '@api'`
+- Instantiate with `apiFetch`: `new InboxClient(BASE_URL, { fetch: apiFetch })`
+- `apiFetch` (in `src/shared/api/httpClient.ts`) handles credentials and normalises errors to `ApiError` /
+  `NetworkError`.
+
+### State Management
+
+- **TanStack Query** for all server state. Never fetch in `useEffect`.
+- **Zustand** for UI-only state. Keep stores small.
+- **React Hook Form + Zod** for forms; schemas in `*.schema.ts` co-located with the form.
 
 ### Feature Structure
 
-- **`src/app/`** — the app's skeleton. Nothing works without these, organized by concern:
-    - `auth/` — LoginPage, RegisterPage
-    - `guard/` — AuthGuard (route protection)
-    - `layout/` — Layout (app shell)
-    - `ui/` — Alert (global overlay)
-- **`src/features/<feature>/`** — product features (inbox, notes, settings) each with `components/`, `hooks/`, `types/`
-  subdirectories.
-- **`src/shared/`** — genuinely cross-cutting infrastructure used by multiple features:
-    - `api/` — `httpClient.ts`, `queryClient.ts`
-    - `hooks/` — `useAuthQuery.ts`, `useHealthQuery.ts`
-    - `store/` — `user.store.ts`, `alert.store.ts`
-    - `utils/` — pure utility functions
-- URL query parameters drive all filter state; query keys must include filter params.
+```
+ClientApp/src/
+  app/          ← skeleton: auth pages, guards, layout, global UI
+  features/     ← product features: inbox, notes, settings
+    inbox/
+      components/
+      hooks/
+      types/
+  shared/       ← cross-cutting: api, hooks, store, utils, theme
+```
 
 ### Styling
 
-- **MUI v9 is the primary UI library** — use it for all components, layout, and theming.
-- Tailwind CSS v4 may be used for fine-grained utility overrides only when MUI `sx` is insufficient.
-- **Never use raw hex colours, magic pixel values, or hardcoded font sizes in component files.**
-  All visual tokens must come from the MUI theme (`theme.palette.*`, `theme.spacing()`, `theme.shape.borderRadius`, `theme.typography.*`).
-- Use `sx` prop for one-off style overrides; extract repeated patterns into the theme's `components` overrides.
-- **Never use emojis as icons** — always use `@mui/icons-material` SVG icons. They scale, theme-inherit colour, and are accessible.
-- Theme is defined in `src/shared/theme/theme.ts` via `buildTheme(mode)`. To add a new colour token:
-  1. Add it to the `palette` object in `buildTheme`.
-  2. Add TypeScript augmentation in the `declare module '@mui/material/styles'` block at the top of `theme.ts`.
-  3. Reference it in components via `sx={{ color: 'hero.gradientBg' }}` or `theme => theme.palette.hero.badgeBg`.
-- Light/dark mode is driven by `useAuthStore().profile.theme` (a `Theme` enum). `AppThemeProvider` reads it and rebuilds the MUI theme. Toggle by calling `useAuthStore().toggleTheme()`.
-- `background.default` and `background.paper` are set in the theme and must be the only background colours used on page wrappers. Never hardcode `bg-gray-50` or `bgcolor: '#fff'`.
-- `typography.button` has `textTransform: 'none'` and `fontWeight: 600` — do not override these per-component.
-- `shape.borderRadius` is `4` — use `theme.shape.borderRadius` or multiples via `sx={{ borderRadius: 2 }}` (which multiplies by 4px = 8px).
-- MUI v9 breaking changes to remember:
-  - `fontWeight`, `fontStyle`, `lineHeight`, `textAlign`, `alignItems` are **not** direct props on `Typography` or `Link` — put them in `sx`.
-  - `Grid` item uses `size={{ xs: 12, md: 6 }}` (v9 API), not `item xs={12}`.
-  - `Grid` container alignment: `sx={{ alignItems: 'center' }}`, not `alignItems="center"`.
-- **Always verify changes with Playwright MCP** after visual updates.
-- Responsive design is secondary; this is a desktop-first developer tool.
-
-### Testing
-
-- **Vitest + Testing Library** for unit and component tests; **MSW** for API mocking.
-- **Playwright** for E2E tests on critical flows only.
-- Do not test implementation details; test user-visible behaviour.
-
----
-
-## Dev Commands
-
-| Command              | Description                                     |
-|----------------------|-------------------------------------------------|
-| `make dev`           | Start full stack (DB + backend + frontend)      |
-| `make test-backend`  | Run Java tests                                  |
-| `make test-frontend` | Run Vitest browser tests                        |
-| `make build`         | Full Maven build (generates client, runs tests) |
-| `make generate-api`  | Regenerate OpenAPI stubs + TS client            |
+- **MUI v9** is the primary UI library.
+- All colours from the MUI theme — no hardcoded hex values.
+- Use `@mui/icons-material` SVG icons — no emoji icons.
 
 ---
 
 ## Things to Avoid
 
-- Do not manually edit files in `src/main/webapp/generated/` or `target/generated-sources/` — they are regenerated by
-  `make generate-api`. Update the OpenAPI spec and regenerate.
-- Do not commit generated files in `src/main/webapp/generated/`.
-- Do not write back personal overlays (priority, status, tags) to GitHub or Azure DevOps APIs.
-- Do not add shared mutable state between Spring Modulith modules via direct bean injection.
+- Do not edit files in `Infrastructure/OpenApi/Generated/` or `ClientApp/generated/` — they are regenerated on
+  every build. Change `api.yml` and rebuild.
+- Do not commit generated files — both directories are git-ignored.
+- Do not expose EF Core entities over the API.
 - Do not use `useEffect` to fetch data — use TanStack Query.
+- Do not block async code with `.Result` or `.Wait()`.
+- Do not write back personal overlays (priority, status, tags) to GitHub or Azure DevOps APIs.
 - Do not introduce new dependencies without discussing the tradeoff.

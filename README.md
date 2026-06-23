@@ -1,84 +1,80 @@
 # Dev Inbox
 
-Personal developer workspace — unified inbox aggregating **GitHub PRs**, **Azure DevOps work items**, and **personal notes** in a single, filterable view.
+A personal developer workspace that aggregates GitHub PRs, Azure DevOps work items, and private notes into a unified inbox.
 
-## Tech Stack
+**Backend**: ASP.NET Core 10 (C#) · **Frontend**: React 18 + TypeScript + Vite
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Java 21 · Spring Boot 3.5 · Spring Modulith · PostgreSQL · Flyway |
-| API | OpenAPI-first (springdoc generates spec → TypeScript client auto-generated) |
-| Frontend | React 18 · TypeScript 5 · Vite · TanStack Query · Zustand · Tailwind v4 |
-| Testing | Testcontainers (Java) · Vitest browser mode + Playwright (React) |
-| Observability | Micrometer · OpenTelemetry OTLP · Prometheus |
+See [`docs/dev-inbox-asp.txt`](docs/dev-inbox-asp.txt) for the full product and architecture document.
 
-## Quick Start
-
-### Prerequisites
-- Docker & Docker Compose
-- JDK 21+
-- Node.js 22+
-
-### Run everything
-
-```bash
-# 1. Start PostgreSQL + OTel Collector
-make db-up
-
-# 2. Install frontend dependencies (first time only)
-make install-frontend
-
-# 3. Start both backend and frontend dev servers
-make dev
-```
-
-App is available at:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8080/api
-- Swagger UI: http://localhost:8080/swagger-ui.html
-
-## Development Commands
-
-| Command | Description |
-|---------|-------------|
-| `make dev` | Start full stack (DB + backend + frontend) |
-| `make test-backend` | Run Java tests (Testcontainers required) |
-| `make test-frontend` | Run Vitest browser tests |
-| `make build` | Full Maven build (generates client, runs all tests, packages jar) |
-| `make generate-api` | Regenerate OpenAPI server stubs + TypeScript client |
-| `make db-reset` | Wipe and recreate the database |
-| `make help` | Show all available commands |
+---
 
 ## Project Structure
 
 ```
-dev-inbox/
-├── src/main/java/pl/qprogramming/devinbox/
-│   ├── identity/       # User entity, integration credentials
-│   ├── github/         # GitHub API client, PR/mention import
-│   ├── ado/            # Azure DevOps API client, work item import
-│   ├── inbox/          # Read model, query service, REST endpoints
-│   ├── notes/          # Personal notes CRUD
-│   ├── sync/           # Scheduler, sync orchestration
-│   └── shared/         # Shared value objects, domain events
-├── src/main/resources/
-│   ├── config/liquibase/  # Liquibase versioned SQL migrations
-│   └── swagger/           # OpenAPI specs — one file per module (source of truth)
-│       ├── shared/shared.yml
-│       ├── inbox/inbox.yml
-│       ├── notes/notes.yml
-│       ├── identity/auth.yml
-│       ├── identity/settings.yml
-│       └── sync/sync.yml
-├── src/main/webapp/    # React frontend (Vite + TypeScript)
-│   ├── src/features/   # Feature-based component structure
-│   ├── src/shared/     # API facade, UI primitives, hooks, utils
-│   └── generated/      # Auto-generated TypeScript API client (git-ignored)
-└── docker/             # Docker Compose for local infrastructure
+DevInbox.Web/
+  ClientApp/        ← React + TypeScript (Vite)
+  Features/         ← Feature folders (Inbox, Notes, Settings, …) — implement here
+  Infrastructure/   ← Persistence, Security, Scheduling, OpenApi — implement here
+  openapi/          ← OpenAPI spec files (source of truth for the API contract)
+  wwwroot/          ← React build output (generated; not committed)
+  Program.cs
+  DevInbox.Web.csproj
+docker/             ← Docker Compose (PostgreSQL)
+docs/               ← Product & architecture document
+DevInbox.sln
+Makefile
 ```
 
-## Architecture
+---
 
-The backend is a **modular monolith** using Spring Modulith. Each top-level package is an isolated module. Cross-module communication uses domain events via the transactional outbox pattern (Spring Modulith event publication registry).
+## Prerequisites
 
-See [`docs/dev inbox - concept.txt`](docs/dev%20inbox%20-%20concept.txt) for the full project specification.
+| Tool | Version |
+|---|---|
+| .NET SDK | 10.0+ |
+| Node.js | 20+ |
+| Docker | for PostgreSQL |
+| Java | 17+ (only for `openapi-generator-cli` if used via npx) |
+
+---
+
+## Dev Commands
+
+| Command | Description |
+|---|---|
+| `make dev` | Start DB + backend (watch mode) + frontend dev server |
+| `make dev-backend` | Backend only (watch mode) |
+| `make dev-frontend` | Frontend only (Vite HMR) |
+| `make build` | Compile the .NET project |
+| `make publish` | Full release build — compiles .NET + React → `publish/` |
+| `make generate-api` | Regenerate TypeScript clients from `openapi/` specs |
+| `make test` | Run all tests |
+| `make db-up` | Start PostgreSQL container |
+| `make db-down` | Stop PostgreSQL container |
+| `make clean` | Remove all build artifacts |
+
+---
+
+## API Client Generation
+
+TypeScript clients are generated automatically by the **ASP.NET build** via `NSwag.MSBuild` — no Java, no separate Node script.
+
+```bash
+make build
+# or
+dotnet build DevInbox.Web
+```
+
+Generated clients land in `DevInbox.Web/ClientApp/generated/` (git-ignored).
+
+---
+
+## Building a Self-Contained Package
+
+```bash
+make publish
+# Output: ./publish/
+# Run:    ./publish/DevInbox.Web
+```
+
+The React app is compiled and embedded in `wwwroot/` during publish. No separate frontend server needed.

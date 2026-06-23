@@ -1,85 +1,82 @@
-.PHONY: dev dev-backend dev-frontend build test test-backend test-frontend e2e \
-        db-up db-down clean help
+.PHONY: dev dev-backend dev-frontend build publish generate-api \
+        test test-backend test-frontend install-frontend \
+        db-up db-down db-reset clean help
 
-# ──────────────────────────────────────────────
-#  Dev Inbox — Root Makefile
-# ──────────────────────────────────────────────
+CLIENT = DevInbox.Web/ClientApp
+API    = DevInbox.Web
 
-## dev: Start PostgreSQL + OTel, then run backend and frontend dev servers in parallel
+# ──────────────────────────────────────────────────────────────
+#  Dev Inbox — Makefile
+# ──────────────────────────────────────────────────────────────
+
+## dev: Start PostgreSQL, backend (watch), and frontend dev server in parallel
 dev: db-up
 	@echo "Starting backend and frontend..."
 	@trap 'kill %1 %2 2>/dev/null; exit 0' INT; \
-	  ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev & \
-	  npm --prefix src/main/webapp run dev & \
+	  dotnet watch --project $(API) run & \
+	  npm --prefix $(CLIENT) run dev & \
 	  wait
 
-## dev-backend: Run only the Spring Boot backend (requires DB up)
+## dev-backend: Run only the ASP.NET backend in watch mode (requires DB up)
 dev-backend: db-up
-	./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+	dotnet watch --project $(API) run
 
 ## dev-frontend: Run only the Vite frontend dev server
 dev-frontend:
-	npm --prefix src/main/webapp run dev
+	npm --prefix $(CLIENT) run dev
 
-## build: Full Maven build (generates API client, runs both test suites, packages jar)
+## build: Compile the .NET project (no tests, no publish)
 build:
-	./mvnw clean package
+	dotnet build $(API)
 
-## build-skip-tests: Full Maven build without tests
-build-skip-tests:
-	./mvnw clean package -DskipTests
+## publish: Full publish — compiles .NET, builds React, produces self-contained output
+publish:
+	dotnet publish $(API) -c Release -o ./publish
 
-## generate-api: Regenerate OpenAPI server stubs and TypeScript client
+## generate-api: Regenerate TypeScript clients — just run dotnet build
 generate-api:
-	./mvnw generate-sources -pl .
+	dotnet build $(API)
 
 ## test: Run all tests (backend + frontend)
 test: test-backend test-frontend
 
-## test-backend: Run Java tests only (uses Testcontainers — Docker required)
+## test-backend: Run .NET tests
 test-backend:
-	./mvnw test -DskipFrontend=true
+	dotnet test $(API)
 
-## test-frontend: Run Vitest browser tests only
+## test-frontend: Run Vitest tests
 test-frontend:
-	npm --prefix src/main/webapp run test:ci
+	npm --prefix $(CLIENT) run test:ci
 
-## test-frontend-watch: Run Vitest in watch mode
-test-frontend-watch:
-	npm --prefix src/main/webapp run test
+## install-frontend: Install npm dependencies
+install-frontend:
+	npm --prefix $(CLIENT) install
 
-## coverage-frontend: Run frontend tests with V8 coverage report
-coverage-frontend:
-	npm --prefix src/main/webapp run test:coverage
+## lint-frontend: Run ESLint on frontend sources
+lint-frontend:
+	npm --prefix $(CLIENT) run lint
 
-## db-up: Start PostgreSQL and OTel Collector via Docker Compose
+## db-up: Start PostgreSQL via Docker Compose
 db-up:
-	docker compose -f docker/docker-compose.yml up -d
+	docker compose -f docker/docker-compose.yml up -d postgres
 	@echo "Waiting for Postgres to be ready..."
 	@until docker exec devinbox-postgres pg_isready -U devinbox -d devinbox 2>/dev/null; do sleep 1; done
 	@echo "Postgres is ready."
 
-## db-down: Stop and remove Docker Compose services
+## db-down: Stop Docker Compose services
 db-down:
 	docker compose -f docker/docker-compose.yml down
 
-## db-reset: Drop and recreate the database (destructive!)
+## db-reset: Drop and recreate volumes (destructive!)
 db-reset: db-down
 	docker compose -f docker/docker-compose.yml down -v
 	$(MAKE) db-up
 
-## clean: Remove Maven target and frontend build artifacts
+## clean: Remove build artifacts
 clean:
-	./mvnw clean
-	rm -rf src/main/webapp/dist src/main/webapp/generated src/main/webapp/node_modules
-
-## install-frontend: Install npm dependencies (run after cloning or after package.json changes)
-install-frontend:
-	npm --prefix src/main/webapp install
-
-## lint-frontend: Run ESLint on frontend sources
-lint-frontend:
-	npm --prefix src/main/webapp run lint
+	dotnet clean $(API)
+	rm -rf publish
+	rm -rf $(CLIENT)/node_modules $(CLIENT)/generated $(CLIENT)/coverage
 
 ## help: Show this help
 help:
