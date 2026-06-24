@@ -1,0 +1,620 @@
+openapi: 3.0.3
+info:
+  title: Dev Inbox API
+  version: 0.1.0
+  description: Unified API for Dev Inbox — auth, inbox, notes, settings, sync
+
+servers:
+  - url: /api
+    description: Base API path
+
+tags:
+  - name: auth
+    description: Authentication operations
+  - name: settings
+    description: User settings and integration credentials
+  - name: inbox
+    description: Inbox items
+  - name: saved-views
+    description: Saved filter presets
+  - name: notes
+    description: Personal notes
+  - name: sync
+    description: Manual sync triggers
+  - name: health
+    description: Health and readiness
+
+paths:
+  # ── Auth ─────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "409":
+          description: Email already in use
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Authenticate with email and password — sets HttpOnly jwt cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authentication successful; jwt cookie is set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Clear the jwt session cookie
+      responses:
+        "204":
+          description: Logged out successfully
+
+  /auth/me:
+    post:
+      operationId: me
+      security:
+        - cookieAuth: []
+      tags: [auth]
+      summary: Returns current user
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+        "204":
+          description: No user found
+
+  # ── Settings ─────────────────────────────────────────────────
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get current user settings
+      responses:
+        "200":
+          description: User settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettingsDto"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update user settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsRequest"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettingsDto"
+
+  # ── Inbox ─────────────────────────────────────────────────────
+  /inbox:
+    get:
+      operationId: listInboxItems
+      tags: [inbox]
+      summary: List inbox items with optional filtering
+      parameters:
+        - name: source
+          in: query
+          schema:
+            $ref: "#/components/schemas/ItemSource"
+        - name: itemType
+          in: query
+          schema:
+            $ref: "#/components/schemas/ItemType"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ItemStatus"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Paginated list of inbox items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxPage"
+
+  /inbox/{id}:
+    get:
+      operationId: getInboxItem
+      tags: [inbox]
+      summary: Get a single inbox item with full detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Inbox item detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxItemDetail"
+        "404":
+          description: Not found
+
+  /inbox/{id}/overlay:
+    put:
+      operationId: updateItemOverlay
+      tags: [inbox]
+      summary: Update personal overlay for an inbox item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemOverlayRequest"
+      responses:
+        "200":
+          description: Overlay updated
+
+  # ── Saved Views ───────────────────────────────────────────────
+  /saved-views:
+    get:
+      operationId: listSavedViews
+      tags: [saved-views]
+      summary: List saved filter views
+      responses:
+        "200":
+          description: Saved views
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SavedViewDto"
+    post:
+      operationId: createSavedView
+      tags: [saved-views]
+      summary: Create a saved view
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSavedViewRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedViewDto"
+
+  # ── Notes ─────────────────────────────────────────────────────
+  /notes:
+    get:
+      operationId: listNotes
+      tags: [notes]
+      summary: List personal notes
+      responses:
+        "200":
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NoteDto"
+    post:
+      operationId: createNote
+      tags: [notes]
+      summary: Create a personal note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteRequest"
+      responses:
+        "201":
+          description: Note created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteDto"
+
+  /notes/{id}:
+    put:
+      operationId: updateNote
+      tags: [notes]
+      summary: Update a note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteRequest"
+      responses:
+        "200":
+          description: Updated note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteDto"
+    delete:
+      operationId: deleteNote
+      tags: [notes]
+      summary: Delete a note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Sync ──────────────────────────────────────────────────────
+  /sync/trigger:
+    post:
+      operationId: triggerSync
+      tags: [sync]
+      summary: Manually trigger a full sync
+      responses:
+        "202":
+          description: Sync accepted
+
+  # ── Health ────────────────────────────────────────────────────
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: jwt
+      description: JWT token stored in HttpOnly cookie
+
+  schemas:
+    # ── Auth ───────────────────────────────────────────────────
+    RegisterRequest:
+      type: object
+      required: [email, password, firstName, lastName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        firstName:
+          type: string
+        lastName:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        accountType:
+          $ref: "#/components/schemas/AccountType"
+        integrations:
+          type: array
+          items:
+            $ref: "#/components/schemas/IntegrationDto"
+
+    AccountType:
+      type: string
+      enum: [REGULAR, OAUTH_GITHUB]
+
+    IntegrationDto:
+      type: object
+      required: [status, type]
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          $ref: "#/components/schemas/IntegrationStatus"
+        type:
+          $ref: "#/components/schemas/IntegrationType"
+
+    IntegrationType:
+      type: string
+      enum: [Github, Ado]
+
+    IntegrationStatus:
+      type: string
+      default: INACTIVE
+      enum: [ACTIVE, EXPIRED, INACTIVE]
+
+    # ── Settings ───────────────────────────────────────────────
+    UserSettingsDto:
+      type: object
+      properties:
+        githubRepos:
+          type: array
+          items:
+            type: string
+        adoOrganization:
+          type: string
+        adoProject:
+          type: string
+        syncIntervalMinutes:
+          type: integer
+
+    UpdateSettingsRequest:
+      type: object
+      properties:
+        githubPat:
+          type: string
+        githubRepos:
+          type: array
+          items:
+            type: string
+        adoOrganization:
+          type: string
+        adoProject:
+          type: string
+        adoPat:
+          type: string
+        syncIntervalMinutes:
+          type: integer
+
+    # ── Inbox ──────────────────────────────────────────────────
+    InboxPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InboxItemSummary"
+        totalElements:
+          type: integer
+          format: int64
+        page:
+          type: integer
+        size:
+          type: integer
+
+    InboxItemSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceType:
+          $ref: "#/components/schemas/ItemSource"
+        itemType:
+          $ref: "#/components/schemas/ItemType"
+        title:
+          type: string
+        subtitle:
+          type: string
+        repository:
+          type: string
+        reason:
+          type: string
+        isUnread:
+          type: boolean
+        isSaved:
+          type: boolean
+        isDone:
+          type: boolean
+        isPinned:
+          type: boolean
+        priority:
+          $ref: "#/components/schemas/Priority"
+        lastActivityAt:
+          type: string
+          format: date-time
+
+    InboxItemDetail:
+      allOf:
+        - $ref: "#/components/schemas/InboxItemSummary"
+        - type: object
+          properties:
+            privateNote:
+              type: string
+            tags:
+              type: array
+              items:
+                type: string
+            followUpAt:
+              type: string
+              format: date-time
+
+    ItemOverlayRequest:
+      type: object
+      properties:
+        priority:
+          $ref: "#/components/schemas/Priority"
+        isUnread:
+          type: boolean
+        isSaved:
+          type: boolean
+        isDone:
+          type: boolean
+        isPinned:
+          type: boolean
+        privateNote:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        followUpAt:
+          type: string
+          format: date-time
+
+    SavedViewDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        filterJson:
+          type: string
+
+    CreateSavedViewRequest:
+      type: object
+      required: [name, filterJson]
+      properties:
+        name:
+          type: string
+        filterJson:
+          type: string
+
+    ItemSource:
+      type: string
+      enum: [GITHUB, ADO, NOTE]
+
+    ItemType:
+      type: string
+      enum: [PR, ISSUE, WORK_ITEM, NOTE]
+
+    ItemStatus:
+      type: string
+      enum: [UNREAD, SAVED, DONE, PINNED]
+
+    Priority:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+
+    # ── Notes ──────────────────────────────────────────────────
+    NoteDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        body:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        followUpAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateNoteRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        followUpAt:
+          type: string
+          format: date-time
+
+    # ── Health ─────────────────────────────────────────────────
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP

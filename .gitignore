@@ -1,53 +1,40 @@
-# ── Java / Maven ──────────────────────────────────────────────────────────────
-*.class
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
-*.log
-*.ctxt
-.mtj.tmp/
-hs_err_pid*
-replay_pid*
-target/
-.mvn/timing.properties
+# .NET build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.nupkg
 
-# ── IDE ───────────────────────────────────────────────────────────────────────
+# ASP.NET static files (built from React — do not commit)
+DevInbox.Web/wwwroot/
+
+# React / Node
+DevInbox.Web/ClientApp/node_modules/
+DevInbox.Web/ClientApp/dist/
+DevInbox.Web/ClientApp/generated/
+DevInbox.Web/ClientApp/test-report.xml
+DevInbox.Web/ClientApp/coverage/
+
+# Rider / VS Code / VS
 .idea/
-*.iml
-*.iws
-*.ipr
-.vscode/
-*.swp
-*.swo
+.vscode/settings.json
+.vscode/*.code-snippets
+*.DotSettings
+
+# OS
 .DS_Store
 Thumbs.db
 
-# ── Node / npm ────────────────────────────────────────────────────────────────
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Environment secrets — never commit
+*.env
+appsettings.Local.json
 
-# ── Frontend build artifacts ───────────────────────────────────────────────────
-src/main/webapp/dist/
-src/main/webapp/coverage/
-src/main/webapp/test-report.xml
-src/main/webapp/.vite/
+# NSwag generated C# stubs — regenerated on every dotnet build
+DevInbox.Web/Infrastructure/OpenApi/Generated/
 
-# ── Generated API client (regenerated on mvn compile) ─────────────────────────
-src/main/webapp/generated/
-
-# ── Docker / infra ────────────────────────────────────────────────────────────
-docker/*.local.yml
-
-# ── Environment secrets ───────────────────────────────────────────────────────
-.env
-.env.local
-.env.*.local
-src/main/resources/application-local.yml
-.playwright-mcp/
-/src/main/.playwright-mcp/
+# NSwag generated files — regenerated on every dotnet build
+DevInbox.Web/Infrastructure/OpenApi/Generated/
+DevInbox.Web/ClientApp/generated/
+publish
+DevInbox.Web.Tests/TestResults/

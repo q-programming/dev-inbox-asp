@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shared test run settings — picked up automatically by VS and `dotnet test`.
+  Equivalent to JaCoCo <excludes> in Maven: generated code is excluded from coverage.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <!-- Exclude NSwag-generated controller stubs — these are regenerated on every build -->
+          <ExcludeByFile>**/Infrastructure/OpenApi/Generated/*.cs</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

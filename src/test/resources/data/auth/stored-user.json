@@ -1,8 +1,0 @@
-{
-  "id": 1,
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john.doe@example.com",
-  "accountType": "REGULAR",
-  "activated": true
-}
