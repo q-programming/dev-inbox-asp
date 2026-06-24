@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 
+namespace DevInbox.Web.Features.Identity;
+
 [Table("users")]
 public class User
 {
@@ -7,4 +9,5 @@ public class User
     public required string Email { get; set; }
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
+    public string? Password { get; set; }
 }

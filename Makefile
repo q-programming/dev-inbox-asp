@@ -33,9 +33,9 @@ build:
 publish:
 	dotnet publish $(API) -c Release -o ./publish
 
-## generate-api: Regenerate TypeScript clients — just run dotnet build
+## generate-api: Regenerate C# controller bases and TypeScript client from api.yml
 generate-api:
-	dotnet build $(API)
+	dotnet build $(API) /p:GenerateClients=true
 
 ## test: Run all tests (backend + frontend)
 test: test-backend test-frontend

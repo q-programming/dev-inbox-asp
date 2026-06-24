@@ -7,6 +7,7 @@ namespace DevInbox.Web.Features.Identity;
 public partial class UserMapper
 {
     /// <summary>Ignores fields not present on the User entity.</summary>
+    [MapperIgnoreSource(nameof(User.Password))]
     [MapperIgnoreTarget(nameof(UserDto.Integrations))]
     [MapperIgnoreTarget(nameof(UserDto.AccountType))]
     [MapperIgnoreTarget(nameof(UserDto.AdditionalProperties))]

@@ -80,6 +80,8 @@ paths:
   /auth/me:
     post:
       operationId: me
+      security:
+        - cookieAuth: []
       tags: [auth]
       summary: Returns current user
       responses:
@@ -335,6 +337,13 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 
 components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: jwt
+      description: JWT token stored in HttpOnly cookie
+
   schemas:
     # ── Auth ───────────────────────────────────────────────────
     RegisterRequest:

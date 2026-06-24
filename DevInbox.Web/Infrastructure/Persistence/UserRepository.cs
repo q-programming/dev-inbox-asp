@@ -14,4 +14,9 @@ public class UserRepository(AppDbContext db) : IUserRepository
         _ = db.Users.Add(user);
         _ = await db.SaveChangesAsync();
     }
+
+    public async Task<User?> FindByEmailAsync(string email)
+    {
+        return await db.Users.SingleOrDefaultAsync(existingUser => existingUser.Email == email);
+    }
 }

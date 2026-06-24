@@ -1,32 +1,56 @@
+using DevInbox.Web.Infrastructure.Auth;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
 namespace DevInbox.Web.Features.Identity;
 
-public class UserController : IAuthBaseController, IComponent
+/// <summary>
+/// Handles auth HTTP endpoints: register, login, logout, and current user.
+/// Delegates business logic to <see cref="IUserService"/> and maps domain entities to DTOs.
+/// </summary>
+public class UserController(
+    IUserService userService,
+    IJwtTokenService jwtTokenService) : IAuthBaseController, IComponent
 {
-    private readonly UserService _userService;
-    public UserController(UserService userService)
+    private static readonly UserMapper _mapper = new();
+
+    /// <summary>Registers a new user and returns the created profile.</summary>
+    public async Task<UserDto> RegisterAsync(RegisterRequest body)
     {
-        _userService = userService;
+        var user = await userService.RegisterAsync(body);
+        var dto = _mapper.ToDto(user);
+        dto.Integrations = [];
+        return dto;
     }
 
-    public Task<UserDto> RegisterAsync(RegisterRequest body)
+    /// <summary>
+    /// Authenticates the user, sets the JWT HttpOnly cookie, and returns the user profile.
+    /// </summary>
+    public async Task<UserDto> LoginAsync(LoginRequest body)
     {
-        return _userService.RegisterAsync(body);
+        var user = await userService.LoginAsync(body);
+        jwtTokenService.IssueAccessToken(user.Email);
+        var dto = _mapper.ToDto(user);
+        dto.Integrations =
+        [
+            new() { Id = 1, Type = IntegrationType.Github, Status = IntegrationStatus.ACTIVE },
+            new() { Id = 2, Type = IntegrationType.Ado,    Status = IntegrationStatus.INACTIVE },
+        ];
+        return dto;
     }
 
-    public Task<UserDto> LoginAsync(LoginRequest body)
-    {
-        throw new NotImplementedException();
-    }
-
+    /// <summary>Clears the JWT cookie, ending the user's session.</summary>
     public Task LogoutAsync()
     {
-        throw new NotImplementedException();
+        jwtTokenService.RevokeAccessToken();
+        return Task.CompletedTask;
     }
 
-    public Task<UserDto> MeAsync()
+    /// <summary>Returns the profile of the currently authenticated user.</summary>
+    public async Task<UserDto> MeAsync()
     {
-        return _userService.GetCurrentUserAsync();
+        var user = await userService.GetCurrentUserAsync();
+        var dto = _mapper.ToDto(user);
+        dto.Integrations = []; // TODO: load real integrations
+        return dto;
     }
 }
