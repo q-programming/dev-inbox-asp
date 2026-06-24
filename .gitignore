@@ -36,3 +36,4 @@ DevInbox.Web/Infrastructure/OpenApi/Generated/
 # NSwag generated files — regenerated on every dotnet build
 DevInbox.Web/Infrastructure/OpenApi/Generated/
 DevInbox.Web/ClientApp/generated/
+publish

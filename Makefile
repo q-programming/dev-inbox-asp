@@ -31,7 +31,7 @@ build:
 
 ## publish: Full publish — compiles .NET, builds React, produces self-contained output
 publish:
-	dotnet publish $(API) -c Release -o ./publish
+	dotnet publish $(API)/$(notdir $(API)).csproj -c Release -o ./publish
 
 ## generate-api: Regenerate C# controller bases and TypeScript client from api.yml
 generate-api:

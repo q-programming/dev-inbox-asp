@@ -62,7 +62,7 @@ describe('health query hooks', () => {
 
   describe('useOkHealthQuery', () => {
     it('should return health data on success', async () => {
-      server.use(http.get('/api/health', () => HttpResponse.json(HEALTH_UP)));
+      server.use(http.get('/api/healthz', () => HttpResponse.json(HEALTH_UP)));
 
       const { result } = renderHook(() => useOkHealthQuery(), { wrapper: makeWrapper() });
 
@@ -71,7 +71,7 @@ describe('health query hooks', () => {
     });
 
     it('should not dispatch an alert on failure (silent by default)', async () => {
-      server.use(http.get('/api/health', () => HttpResponse.json({}, { status: 503 })));
+      server.use(http.get('/api/healthz', () => HttpResponse.json({}, { status: 503 })));
 
       const { result } = renderHook(() => useOkHealthQuery(), { wrapper: makeWrapper() });
 

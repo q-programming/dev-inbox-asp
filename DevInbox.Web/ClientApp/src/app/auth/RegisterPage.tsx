@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -40,16 +41,18 @@ export default function RegisterPage() {
   } = useForm<RegisterFormData>({ resolver: zodResolver(registerSchema) });
 
   if (status === AuthStatus.AUTHENTICATED) {
-    addAlert({
-      type: AlertType.SUCCESS,
-      message: 'Successfully registered. Your account was automatically enabled',
-    });
     return <Navigate to={AppRoute.INBOX} replace />;
   }
 
   const onSubmit = (data: RegisterFormData) => {
     registerMutation.mutate(data, {
-      onSuccess: () => navigate(AppRoute.LOGIN),
+      onSuccess: () => {
+        addAlert({
+          type: AlertType.SUCCESS,
+          message: 'Successfully registered. Your account was automatically enabled',
+        });
+        return navigate(AppRoute.LOGIN);
+      },
     });
   };
 

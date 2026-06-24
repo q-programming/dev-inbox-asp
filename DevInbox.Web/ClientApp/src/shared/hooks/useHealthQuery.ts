@@ -37,7 +37,7 @@ export const useHealthQuery = (options: HealthQueryOptions = {}) =>
 export const useOkHealthQuery = (options: HealthQueryOptions = {}) =>
   useQuery<HealthStatus, ApiError>({
     queryKey: healthKeys.ok,
-    queryFn: () => healthApi.healthCheckOk(),
+    queryFn: () => healthApi.healthCheck(),
     staleTime: 30_000,
     retry: false,
     meta: { silent: true },

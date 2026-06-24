@@ -33,7 +33,7 @@ const IntegrationsSection = memo(() => {
         description: integrationDescriptions[integration.type],
         icon: <IntegrationIcon integration={integration.type} size={28} />,
         status: integration.status,
-        actionLabel: integration.status === IntegrationStatus.Active ? 'Disconnect' : 'Connect',
+        actionLabel: integration.status === IntegrationStatus.ACTIVE ? 'Disconnect' : 'Connect',
       })) ?? [],
     [identity],
   );

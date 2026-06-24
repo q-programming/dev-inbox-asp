@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@test/renderWithProviders';
 import IntegrationsSection from './IntegrationsSection';
 import useUserStore, { AuthStatus } from '@shared/store/user.store';
-import { IntegrationStatus, IntegrationType } from '@api';
+import { AccountType, IntegrationStatus, IntegrationType } from '@api';
 
 beforeEach(() => {
   useUserStore.setState({
@@ -13,10 +13,10 @@ beforeEach(() => {
     identity: {
       id: 1,
       email: 'jane@dev.com',
-      accountType: 'REGULAR' as const,
+      accountType: AccountType.REGULAR,
       integrations: [
-        { type: IntegrationType.Github, status: IntegrationStatus.Inactive },
-        { type: IntegrationType.Ado, status: IntegrationStatus.Inactive },
+        { type: IntegrationType.Github, status: IntegrationStatus.INACTIVE },
+        { type: IntegrationType.Ado, status: IntegrationStatus.INACTIVE },
       ],
     },
   });
@@ -29,10 +29,10 @@ describe('IntegrationsSection', () => {
         identity: {
           id: 1,
           email: 'jane@dev.com',
-          accountType: 'REGULAR' as const,
+          accountType: AccountType.REGULAR,
           integrations: [
-            { type: IntegrationType.Github, status: IntegrationStatus.Active },
-            { type: IntegrationType.Ado, status: IntegrationStatus.Inactive },
+            { type: IntegrationType.Github, status: IntegrationStatus.ACTIVE },
+            { type: IntegrationType.Ado, status: IntegrationStatus.INACTIVE },
           ],
         },
       });

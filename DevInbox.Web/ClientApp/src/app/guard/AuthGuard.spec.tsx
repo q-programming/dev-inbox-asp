@@ -5,6 +5,7 @@ import { renderWithProviders } from '@test/renderWithProviders';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import AuthGuard from './AuthGuard';
 import { AppRoute } from '@app/routes';
+import { AccountType } from '@api';
 
 // Prevent useAuthBootstrap from making real API calls — AuthGuard behaviour
 // is tested solely via store state.
@@ -84,7 +85,7 @@ describe('AuthGuard', () => {
         status: AuthStatus.AUTHENTICATED,
         firstName: 'John',
         lastName: 'Doe',
-        identity: { id: 1, email: 'test@example.com', accountType: 'REGULAR' },
+        identity: { id: 1, email: 'test@example.com', accountType: AccountType.REGULAR },
       });
 
       renderGuard();

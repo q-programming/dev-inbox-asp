@@ -12,7 +12,7 @@ function makeConfig(overrides: Partial<IntegrationConfig> = {}): IntegrationConf
     name: 'GitHub',
     description: 'Connect your GitHub account.',
     icon: <span>GH</span>,
-    status: IntegrationStatus.Inactive,
+    status: IntegrationStatus.INACTIVE,
     actionLabel: 'Connect',
     ...overrides,
   };
@@ -22,7 +22,7 @@ describe('IntegrationCard', () => {
   describe('active vs inactive state', () => {
     it('shows the status badge when active', () => {
       renderWithProviders(
-        <IntegrationCard config={makeConfig({ status: IntegrationStatus.Active })} />,
+        <IntegrationCard config={makeConfig({ status: IntegrationStatus.ACTIVE })} />,
       );
       expect(screen.getByTestId('integration-status-badge')).toBeTruthy();
     });
@@ -35,7 +35,7 @@ describe('IntegrationCard', () => {
     it('shows connectedAs text and hides description when active', () => {
       renderWithProviders(
         <IntegrationCard
-          config={makeConfig({ status: IntegrationStatus.Active, connectedAs: '@jane' })}
+          config={makeConfig({ status: IntegrationStatus.ACTIVE, connectedAs: '@jane' })}
         />,
       );
       expect(screen.getByText(/connected as @jane/i)).toBeTruthy();

@@ -22,7 +22,16 @@ export const authKeys = {
 export const useMeQuery = () =>
   useQuery<UserDto | null | undefined, ApiError>({
     queryKey: authKeys.me,
-    queryFn: () => authApi.me(),
+    queryFn: async () => {
+      try {
+        return await authApi.me();
+      } catch (e: unknown) {
+        // NSwag throws SwaggerException with status 204 for "No user found" —
+        // treat it as a null session rather than an error.
+        if ((e as { status?: number })?.status === 204) return null;
+        throw e;
+      }
+    },
     staleTime: 5 * 60_000,
     // Always re-verify on mount — covers OAuth callbacks where the cookie
     // has changed since the last cached /me response.

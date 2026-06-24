@@ -7,6 +7,7 @@
     <RootNamespace>DevInbox.Web</RootNamespace>
     <AssemblyName>DevInbox.Web</AssemblyName>
     <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+    <Version>0.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,10 +18,6 @@
     <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
     <PackageReference Include="Scrutor" Version="7.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.*" />
-    <PackageReference Include="NSwag.MSBuild" Version="14.*">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
 
   <!-- Exclude ClientApp source from build output — only the compiled wwwroot matters -->
@@ -28,13 +25,13 @@
     <Content Remove="ClientApp\**" />
   </ItemGroup>
 
-  <!-- Delete generated files before build so they are always regenerated fresh -->
   <!--
     Bootstrap: generate C# controller file if missing (e.g. after git clean or fresh clone).
     Always runs when the file is absent regardless of GenerateClients — the file must exist to compile.
+    Requires: dotnet tool restore (nswag local tool from dotnet-tools.json)
   -->
   <Target Name="BootstrapGenerateCsClients" BeforeTargets="BeforeBuild" Condition="!Exists('Infrastructure/OpenApi/Generated/Controllers.cs')">
-    <Exec Command="$(NSwagExe) openapi2cscontroller /input:openapi/api.yml /output:Infrastructure/OpenApi/Generated/Controllers.cs /namespace:DevInbox.Web.Infrastructure.OpenApi.Generated /className:{controller}Base /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /jsonLibrary:SystemTextJson /templateDirectory:$(MSBuildProjectDirectory)/openapi/nswag-templates" />
+    <Exec Command="dotnet nswag openapi2cscontroller /input:openapi/api.yml /output:Infrastructure/OpenApi/Generated/Controllers.cs /namespace:DevInbox.Web.Infrastructure.OpenApi.Generated /className:{controller}Base /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /jsonLibrary:SystemTextJson /templateDirectory:$(MSBuildProjectDirectory)/openapi/nswag-templates" />
     <ItemGroup>
       <Compile Include="Infrastructure/OpenApi/Generated/Controllers.cs" />
     </ItemGroup>
@@ -48,8 +45,8 @@
   <Target Name="GenerateClients" AfterTargets="Build" Condition="'$(GenerateClients)' == 'true'">
     <Delete Files="Infrastructure/OpenApi/Generated/Controllers.cs" />
     <Delete Files="ClientApp/generated/api-client/index.ts" />
-    <Exec Command="$(NSwagExe) openapi2cscontroller /input:openapi/api.yml /output:Infrastructure/OpenApi/Generated/Controllers.cs /namespace:DevInbox.Web.Infrastructure.OpenApi.Generated /className:{controller}Base /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /jsonLibrary:SystemTextJson /templateDirectory:$(MSBuildProjectDirectory)/openapi/nswag-templates" />
-    <Exec Command="$(NSwagExe) openapi2tsclient /input:openapi/api.yml /output:ClientApp/generated/api-client/index.ts /template:Fetch /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /typeStyle:Interface" />
+    <Exec Command="dotnet nswag openapi2cscontroller /input:openapi/api.yml /output:Infrastructure/OpenApi/Generated/Controllers.cs /namespace:DevInbox.Web.Infrastructure.OpenApi.Generated /className:{controller}Base /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /jsonLibrary:SystemTextJson /templateDirectory:$(MSBuildProjectDirectory)/openapi/nswag-templates" />
+    <Exec Command="dotnet nswag openapi2tsclient /input:openapi/api.yml /output:ClientApp/generated/api-client/index.ts /template:Fetch /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /typeStyle:Interface" />
   </Target>
 
   <!--

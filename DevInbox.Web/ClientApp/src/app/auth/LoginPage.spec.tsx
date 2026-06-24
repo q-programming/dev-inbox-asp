@@ -7,6 +7,7 @@ import { renderWithProviders } from '@test/renderWithProviders';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { AppRoute } from '@app/routes';
 import LoginPage from './LoginPage';
+import { AccountType } from '@api';
 
 // Hoist navigate mock so it is available inside the vi.mock factory.
 const mockNavigate = vi.hoisted(() => vi.fn());
@@ -44,7 +45,7 @@ describe('LoginPage', () => {
         status: AuthStatus.AUTHENTICATED,
         firstName: 'John',
         lastName: 'Doe',
-        identity: { id: 1, email: 'test@example.com', accountType: 'REGULAR' },
+        identity: { id: 1, email: 'test@example.com', accountType: AccountType.REGULAR },
       });
 
       renderLoginPage();

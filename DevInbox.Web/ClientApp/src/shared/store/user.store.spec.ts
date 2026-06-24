@@ -8,7 +8,7 @@ const mockUserDto: UserDto = {
   email: 'john.doe@example.com',
   firstName: 'John',
   lastName: 'Doe',
-  accountType: AccountType.Regular,
+  accountType: AccountType.REGULAR,
 };
 
 beforeEach(() => {
@@ -52,7 +52,7 @@ describe('useUserStore', () => {
       expect(useUserStore.getState().identity).toEqual({
         id: 42,
         email: 'john.doe@example.com',
-        accountType: AccountType.Regular,
+        accountType: AccountType.REGULAR,
       });
     });
 

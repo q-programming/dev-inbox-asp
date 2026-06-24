@@ -25,15 +25,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.x'
 
       - name: Set up Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: npm
@@ -43,11 +43,14 @@ jobs:
         run: npm ci
         working-directory: DevInbox.Web/ClientApp
 
+      - name: Restore dotnet tools
+        run: dotnet tool restore
+
       - name: Build (generates NSwag C# + TS clients)
-        run: dotnet build DevInbox.Web/DevInbox.Web.csproj --configuration Release
+        run: dotnet build DevInbox.Web/DevInbox.Web.csproj --configuration Release /p:GenerateClients=true
 
       - name: Upload generated TypeScript client
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ts-generated-client
           path: DevInbox.Web/ClientApp/generated/
@@ -63,25 +66,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.x'
 
+      - name: Restore dotnet tools
+        run: dotnet tool restore
+
       - name: Run backend tests
-        run: dotnet test DevInbox.Web/DevInbox.Web.csproj --configuration Release --logger "junit;LogFilePath=test-results/results.xml" --no-build
+        run: dotnet test DevInbox.Web.Tests/DevInbox.Web.Tests.csproj --configuration Release --logger trx --results-directory DevInbox.Web.Tests/test-results --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
         continue-on-error: true
 
       - name: Publish backend test results
         if: always()
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         with:
           name: Backend Test Results
-          path: DevInbox.Web/test-results/results.xml
-          reporter: java-junit
+          path: DevInbox.Web.Tests/test-results/*.trx
+          reporter: dotnet-trx
           fail-on-error: false
+
+      - name: Upload backend coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-coverage
+          path: DevInbox.Web.Tests/test-results/**/coverage.cobertura.xml
+          retention-days: 1
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Job 3 – Frontend Tests
@@ -94,17 +108,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: DevInbox.Web/ClientApp/package-lock.json
 
       - name: Download generated TypeScript client
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ts-generated-client
           path: DevInbox.Web/ClientApp/generated/
@@ -123,7 +137,7 @@ jobs:
 
       - name: Publish frontend test results
         if: always()
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         with:
           name: Frontend Test Results
           path: DevInbox.Web/ClientApp/test-report.xml
@@ -132,7 +146,7 @@ jobs:
 
       - name: Upload frontend coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage
           path: DevInbox.Web/ClientApp/coverage/
@@ -150,14 +164,21 @@ jobs:
 
     steps:
       - name: Download frontend coverage report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: frontend-coverage
           path: frontend-coverage/
         continue-on-error: true
 
+      - name: Download backend coverage report
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-coverage
+          path: backend-coverage/
+        continue-on-error: true
+
       - name: Post coverage comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -165,6 +186,7 @@ jobs:
 
             const THRESHOLD = 70;
             const icon = (pct) => (pct !== undefined && pct >= THRESHOLD) ? '✅' : '⚠️';
+            const pf = (v) => v !== undefined ? `${(v * 100).toFixed(2)}%` : 'N/A';
 
             // ── Frontend: parse Vitest JSON summary ──────────────────────
             let frontend = null;
@@ -181,6 +203,24 @@ jobs:
               console.log('No frontend coverage:', e.message);
             }
 
+            // ── Backend: parse coverlet Cobertura XML ────────────────────
+            let backend = null;
+            try {
+              const files = fs.readdirSync('backend-coverage', { recursive: true });
+              const xmlFile = files.map(f => `backend-coverage/${f}`).find(f => String(f).endsWith('.xml'));
+              if (xmlFile) {
+                const xml = fs.readFileSync(xmlFile, 'utf8');
+                const lineRate   = parseFloat(xml.match(/line-rate="([^"]+)"/)?.[1] ?? '0') * 100;
+                const branchRate = parseFloat(xml.match(/branch-rate="([^"]+)"/)?.[1] ?? '0') * 100;
+                backend = {
+                  Lines:    lineRate.toFixed(2),
+                  Branches: branchRate.toFixed(2),
+                };
+              }
+            } catch (e) {
+              console.log('No backend coverage:', e.message);
+            }
+
             const MARKER = '<!-- coverage-report -->';
             let body = `${MARKER}\n## 📊 Test Coverage Report\n\n`;
             body += `> ✅ ≥ ${THRESHOLD}% &nbsp;|&nbsp; ⚠️ below ${THRESHOLD}%\n\n`;
@@ -191,8 +231,18 @@ jobs:
               for (const [label, pct] of Object.entries(frontend)) {
                 body += `| ${label} | ${icon(pct)} ${pct}% |\n`;
               }
+              body += '\n';
             } else {
-              body += '### 🖥️ Frontend (Vitest V8)\n\n_No data — tests may have failed._\n';
+              body += '### 🖥️ Frontend (Vitest V8)\n\n_No data — tests may have failed._\n\n';
+            }
+
+            if (backend) {
+              body += '### ⚙️ Backend (coverlet)\n\n';
+              body += '| Metric | Coverage |\n|--------|----------|\n';
+              body += `| Lines | ${icon(parseFloat(backend.Lines))} ${backend.Lines}% |\n`;
+              body += `| Branches | ${icon(parseFloat(backend.Branches))} ${backend.Branches}% |\n`;
+            } else {
+              body += '### ⚙️ Backend (coverlet)\n\n_No data — tests may have failed._\n';
             }
 
             const { data: comments } = await github.rest.issues.listComments({

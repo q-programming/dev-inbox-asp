@@ -2,6 +2,8 @@ using DevInbox.Web.Infrastructure.Auth;
 using DevInbox.Web.Infrastructure.Filters;
 using DevInbox.Web.Infrastructure.Persistence;
 
+Banner.Print();
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers(opt => opt.Filters.Add<ApiExceptionFilter>());
