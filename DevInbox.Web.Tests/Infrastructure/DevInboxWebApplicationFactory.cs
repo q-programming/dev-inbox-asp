@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace DevInbox.Web.Tests.Infrastructure;
 
@@ -24,10 +25,19 @@ public class DevInboxWebApplicationFactory : WebApplicationFactory<Program>
 
         _ = builder.ConfigureServices(services =>
         {
+            // Replace real PostgreSQL DbContext with in-memory for isolation
             _ = services.RemoveAll<DbContextOptions<AppDbContext>>()
-            .AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase("context-load-tests")); ;
+                .AddDbContext<AppDbContext>(options =>
+                    options.UseInMemoryDatabase("context-load-tests"));
 
+            // Replace the DB health check with an always-healthy stub so the
+            // in-memory provider does not falsely report DOWN in test runs
+            services.Configure<HealthCheckServiceOptions>(opts =>
+            {
+                var dbCheck = opts.Registrations.FirstOrDefault(r => r.Name == "database");
+                if (dbCheck is not null)
+                    opts.Registrations.Remove(dbCheck);
+            });
         });
     }
 }

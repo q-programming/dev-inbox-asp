@@ -37,3 +37,4 @@ DevInbox.Web/Infrastructure/OpenApi/Generated/
 DevInbox.Web/Infrastructure/OpenApi/Generated/
 DevInbox.Web/ClientApp/generated/
 publish
+DevInbox.Web.Tests/TestResults/

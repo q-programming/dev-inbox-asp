@@ -77,7 +77,7 @@ jobs:
         run: dotnet tool restore
 
       - name: Run backend tests
-        run: dotnet test DevInbox.Web.Tests/DevInbox.Web.Tests.csproj --configuration Release --logger trx --results-directory DevInbox.Web.Tests/test-results --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+        run: dotnet test DevInbox.Web.Tests/DevInbox.Web.Tests.csproj --configuration Release --settings .runsettings --logger trx --results-directory DevInbox.Web.Tests/test-results --collect:"XPlat Code Coverage"
         continue-on-error: true
 
       - name: Publish backend test results

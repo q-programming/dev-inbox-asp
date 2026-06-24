@@ -42,7 +42,7 @@ test: test-backend test-frontend
 
 ## test-backend: Run .NET tests
 test-backend:
-	dotnet test $(API)
+	dotnet test $(API) --settings .runsettings
 
 ## test-frontend: Run Vitest tests
 test-frontend:

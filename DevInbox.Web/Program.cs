@@ -29,6 +29,9 @@ builder.Services.Scan(scan => scan
 builder.Services.AddDbContext<AppDbContext>(opt =>
      opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>("database");
+
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();

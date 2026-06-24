@@ -29,8 +29,10 @@ public class JwtTokenService(IOptions<JwtOptions> jwtOptions, IHttpContextAccess
     /// <summary>
     /// Removes the JWT cookie from the current response, effectively logging the user out.
     /// </summary>
-    public void RevokeAccessToken() =>
+    public void RevokeAccessToken()
+    {
         httpContextAccessor.HttpContext?.Response.Cookies.Delete("jwt");
+    }
 
     private string GenerateAccessToken(string subject, IEnumerable<Claim>? additionalClaims = null)
     {

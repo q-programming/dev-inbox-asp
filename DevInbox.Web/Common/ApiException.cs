@@ -20,3 +20,9 @@ public class ConflictException(string message) : ApiException(StatusCodes.Status
 
 // 5xx Server errors
 public class ServiceUnavailableException(string message) : ApiException(StatusCodes.Status503ServiceUnavailable, message);
+
+public class ServiceNotImplementedException : ApiException
+{
+    public ServiceNotImplementedException() : base(StatusCodes.Status501NotImplemented, "This feature is not yet implemented.") { }
+    public ServiceNotImplementedException(string message) : base(StatusCodes.Status501NotImplemented, message) { }
+}

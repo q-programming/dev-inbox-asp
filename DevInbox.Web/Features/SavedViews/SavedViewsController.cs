@@ -4,9 +4,13 @@ namespace DevInbox.Web.Features.SavedViews;
 
 public class SavedViewsController : ISavedViewsBaseController, IComponent
 {
-    public Task<System.Collections.Generic.ICollection<SavedViewDto>> ListSavedViewsAsync()
-        => throw new NotImplementedException();
+    public Task<ICollection<SavedViewDto>> ListSavedViewsAsync()
+    {
+        throw new ServiceNotImplementedException();
+    }
 
     public Task<SavedViewDto> CreateSavedViewAsync(CreateSavedViewRequest body)
-        => throw new NotImplementedException();
+    {
+        throw new ServiceNotImplementedException();
+    }
 }
