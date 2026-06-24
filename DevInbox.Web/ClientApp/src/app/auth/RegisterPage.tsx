@@ -16,6 +16,7 @@ import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { useRegisterMutation } from '@shared/hooks/useAuthQuery';
 import { AppRoute } from '@app/routes';
 import Footer from '@app/common/footer/Footer.tsx';
+import useAlertStore, { AlertType } from '@shared/store/alert.store';
 
 const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -29,6 +30,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const navigate = useNavigate();
   const status = useUserStore((state) => state.status);
+  const { addAlert } = useAlertStore();
   const registerMutation = useRegisterMutation();
 
   const {
@@ -38,6 +40,10 @@ export default function RegisterPage() {
   } = useForm<RegisterFormData>({ resolver: zodResolver(registerSchema) });
 
   if (status === AuthStatus.AUTHENTICATED) {
+    addAlert({
+      type: AlertType.SUCCESS,
+      message: 'Successfully registered. Your account was automatically enabled',
+    });
     return <Navigate to={AppRoute.INBOX} replace />;
   }
 

@@ -153,6 +153,10 @@ export function buildTheme(mode: PaletteMode, fontSize: number = DEFAULT_FONT_SI
           '.notistack-SnackbarContainer': {
             bottom: '66px !important',
           },
+          '.notistack-MuiContent-info': {
+            backgroundColor: `${light ? BG_PAPER_LIGHT : BG_PAPER_DARK} !important`,
+            color: `${light ? TEXT_PRIMARY_LIGHT : TEXT_PRIMARY_DARK} !important`,
+          },
         },
       },
       MuiLink: {

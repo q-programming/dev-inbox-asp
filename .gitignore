@@ -18,7 +18,8 @@ DevInbox.Web/ClientApp/coverage/
 
 # Rider / VS Code / VS
 .idea/
-.vscode/
+.vscode/settings.json
+.vscode/*.code-snippets
 *.DotSettings
 
 # OS

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppRoute } from '@app/routes.ts';
 import useAlertStore, { AlertType } from '@shared/store/alert.store.ts';
+import { modKey } from '@shared/utils/platform';
 
 const LEADER = 'g';
 const TIMEOUT_MS = 1000;
@@ -69,7 +70,10 @@ export function useLeaderKey() {
 
         const item = LeaderItems.find((item) => item.key === event.key);
         if (item) {
-          addAlert({ type: AlertType.INFO, message: `Navigating to ${item.label}` });
+          addAlert({
+            type: AlertType.INFO,
+            message: `Navigating to ${item.label} [ ${modKey}${item.key.toUpperCase()} ]`,
+          });
           navigate(item.route);
         }
       }

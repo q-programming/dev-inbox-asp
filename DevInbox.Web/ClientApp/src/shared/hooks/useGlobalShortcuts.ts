@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AppRoute } from '@app/routes.ts';
 import useAlertStore, { AlertType } from '@shared/store/alert.store.ts';
+import { modKey } from '@shared/utils/platform';
 
 export const FOCUS_SEARCH_EVENT = 'dev-inbox:focus-search';
 
@@ -63,13 +64,13 @@ export function useGlobalShortcuts() {
       }
       if (isMod && event.key === ',') {
         event.preventDefault();
-        addAlert({ type: AlertType.INFO, message: `Navigating to Settings` });
+        addAlert({ type: AlertType.INFO, message: `Navigating to Settings [ ${modKey}, ]` });
         navigate(AppRoute.SETTINGS);
         return;
       }
       if (isMod && event.key === 'r') {
         event.preventDefault();
-        addAlert({ type: AlertType.INFO, message: `Triggering manual sync...` });
+        addAlert({ type: AlertType.INFO, message: `Triggering manual sync...[ ${modKey}R ]` });
         return;
       }
 
