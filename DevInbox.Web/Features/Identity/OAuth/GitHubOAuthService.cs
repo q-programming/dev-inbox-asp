@@ -39,7 +39,9 @@ public class GitHubOAuthService(IHttpClientFactory httpClientFactory, IOptions<G
     {
         var storedState = context.Request.Cookies["oauth_state"];
         if (string.IsNullOrEmpty(storedState) || storedState != state)
+        {
             throw new BadRequestException("Invalid OAuth state — possible CSRF attempt.");
+        }
 
         // single-use — delete immediately after verification
         context.Response.Cookies.Delete("oauth_state");

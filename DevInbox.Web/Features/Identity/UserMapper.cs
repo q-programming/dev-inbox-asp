@@ -10,6 +10,7 @@ public partial class UserMapper
     [MapProperty("Type", "AccountType")]
     /// <summary>Ignores fields not present on the User entity.</summary>
     [MapperIgnoreSource(nameof(User.Password))]
+    [MapperIgnoreSource(nameof(User.GitHubAccessToken))]
     [MapperIgnoreTarget(nameof(UserDto.Integrations))]
     [MapperIgnoreTarget(nameof(UserDto.AdditionalProperties))]
     public partial UserDto ToDto(User user);

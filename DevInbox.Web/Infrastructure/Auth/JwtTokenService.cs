@@ -37,10 +37,14 @@ public class JwtTokenService(IOptions<JwtOptions> jwtOptions, IHttpContextAccess
     private string GenerateAccessToken(string subject, IEnumerable<Claim>? additionalClaims = null)
     {
         if (string.IsNullOrWhiteSpace(subject))
+        {
             throw new ArgumentException("Token subject must be provided.", nameof(subject));
+        }
 
         if (string.IsNullOrWhiteSpace(_options.SigningKey))
+        {
             throw new InvalidOperationException("JWT signing key is missing. Configure Jwt:SigningKey.");
+        }
 
         var claims = new List<Claim>
         {
@@ -49,7 +53,9 @@ public class JwtTokenService(IOptions<JwtOptions> jwtOptions, IHttpContextAccess
         };
 
         if (additionalClaims is not null)
+        {
             claims.AddRange(additionalClaims);
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

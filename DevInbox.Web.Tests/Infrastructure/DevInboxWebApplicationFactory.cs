@@ -45,7 +45,9 @@ public class DevInboxWebApplicationFactory : WebApplicationFactory<Program>, IAs
             {
                 var dbCheck = opts.Registrations.FirstOrDefault(r => r.Name == "database");
                 if (dbCheck is not null)
+                {
                     opts.Registrations.Remove(dbCheck);
+                }
             });
         });
     }

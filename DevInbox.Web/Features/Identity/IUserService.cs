@@ -16,6 +16,8 @@ public interface IUserService
     /// <summary>Validates credentials and returns the authenticated user.</summary>
     Task<User> LoginAsync(LoginRequest body);
 
+    Task LogoutAsync();
+
     /// <summary>Returns the currently authenticated user from the JWT sub claim.</summary>
     Task<User> GetCurrentUserAsync();
 

@@ -1,4 +1,5 @@
 using System.Text;
+using DevInbox.Web.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -48,7 +49,10 @@ public static class AuthServiceCollectionExtensions
                     OnMessageReceived = ctx =>
                     {
                         if (ctx.Request.Cookies.TryGetValue("jwt", out var token))
+                        {
                             ctx.Token = token;
+                        }
+
                         return Task.CompletedTask;
                     }
                 };
@@ -78,6 +82,27 @@ public static class AuthServiceCollectionExtensions
             client.DefaultRequestHeaders.Add("User-Agent", "DevInbox");
             client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
         }).AddStandardResilienceHandler();
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="EncryptionService"/> as a singleton.
+    /// The AES-256 key is derived once at startup from <c>Encryption:Password</c> and
+    /// <c>Encryption:Salt</c> via PBKDF2 — equivalent to a Spring <c>@PostConstruct</c> init.
+    /// </summary>
+    public static IServiceCollection AddEncryption(this IServiceCollection services, IConfiguration configuration)
+    {
+        if (string.IsNullOrWhiteSpace(configuration["Encryption:Password"]))
+        {
+            throw new InvalidOperationException("Encryption:Password is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(configuration["Encryption:Salt"]))
+        {
+            throw new InvalidOperationException("Encryption:Salt is required.");
+        }
+
+        services.AddSingleton<EncryptionService>();
         return services;
     }
 }

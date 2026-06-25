@@ -22,7 +22,9 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
     {
         var email = Utils.NormalizeEmail(body.Email);
         if (await userRepository.ExistsByEmailAsync(email!))
+        {
             throw new UserAlreadyExistsException(body.Email);
+        }
 
         var user = new User
         {
@@ -47,7 +49,9 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
         var user = await userRepository.FindByEmailAsync(email!);
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(body.Password, user.Password))
+        {
             throw new UnauthorizedException("Authentication failed");
+        }
 
         return user;
     }
@@ -63,11 +67,20 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
             .FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(email))
+        {
             throw new UnauthorizedException("No authenticated user.");
+        }
 
         return await userRepository.FindByEmailAsync(email)
             ?? throw new UnauthorizedException("Authenticated user no longer exists.");
     }
+
+    /// <summary>
+    /// Logout is handled at the transport layer — the JWT cookie is revoked by the controller.
+    /// Integration tokens (GitHub, Azure DevOps) are not cleared on logout;
+    /// they are managed explicitly via the Settings disconnect flow.
+    /// </summary>
+    public Task LogoutAsync() => Task.CompletedTask;
 
     public async Task<User> LoginOrCreateGitHubUserAsync(GitHubUserProfile profile, string accessToken)
     {
@@ -79,8 +92,8 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
         if (user != null)
         {
             logger.LogDebug("Refreshing GitHub token for {Email}", email);
-            // TODO: update token
-            _ = accessToken;
+            user.GitHubAccessToken = accessToken;
+            await userRepository.UpdateAsync(user);
         }
         else
         {
@@ -92,7 +105,9 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
                 FirstName = firstName,
                 LastName = lastName,
                 Email = email,
-                Type = User.AccountType.OAUTH_GITHUB
+                Type = User.AccountType.OAUTH_GITHUB,
+                GitHubAccessToken = accessToken
+
 
             };
             await userRepository.AddAsync(user);

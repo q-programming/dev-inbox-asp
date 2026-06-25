@@ -1,5 +1,8 @@
+using DevInbox.Web.Infrastructure.Security;
 using DevInbox.Web.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Testcontainers.PostgreSql;
 
 namespace DevInbox.Web.Tests.Infrastructure;
@@ -12,6 +15,17 @@ namespace DevInbox.Web.Tests.Infrastructure;
 /// </summary>
 public abstract class DatabaseIntegrationTest : IAsyncLifetime
 {
+    private static readonly IConfiguration EncryptionConfig = new ConfigurationBuilder()
+        .AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Encryption:Password"] = "integration-test-password",
+            ["Encryption:Salt"] = "integration-test-salt"
+        })
+        .Build();
+
+    private readonly EncryptionService _encryption =
+        new(EncryptionConfig, NullLogger<EncryptionService>.Instance);
+
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
 
     /// <summary>Shared DbContext for the test — created after the container is ready.</summary>
@@ -29,13 +43,14 @@ public abstract class DatabaseIntegrationTest : IAsyncLifetime
             .UseNpgsql(ConnectionString)
             .Options;
 
-        DataBase = new AppDbContext(options);
+        DataBase = new AppDbContext(options, _encryption);
         await DataBase.Database.EnsureCreatedAsync();
     }
 
     public virtual async Task DisposeAsync()
     {
         await DataBase.DisposeAsync();
+        _encryption.Dispose();
         await _postgres.DisposeAsync();
     }
 
@@ -49,6 +64,6 @@ public abstract class DatabaseIntegrationTest : IAsyncLifetime
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(ConnectionString)
             .Options;
-        return new AppDbContext(options);
+        return new AppDbContext(options, _encryption);
     }
 }

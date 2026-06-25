@@ -179,7 +179,9 @@ public class GitHubOAuthServiceTests
         context.Request.Host = new HostString(requestHost);
 
         if (stateCookie is not null)
+        {
             context.Request.Headers.Cookie = $"oauth_state={stateCookie}";
+        }
 
         return context;
     }

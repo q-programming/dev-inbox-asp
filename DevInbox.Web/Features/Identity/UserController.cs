@@ -41,7 +41,7 @@ public class UserController(
         return dto;
     }
 
-    /// <summary>Clears the JWT cookie, ending the user's session.</summary>
+    /// <summary>Clears the JWT cookie, ending the session. Integration tokens are managed separately.</summary>
     public Task LogoutAsync()
     {
         jwtTokenService.RevokeAccessToken();

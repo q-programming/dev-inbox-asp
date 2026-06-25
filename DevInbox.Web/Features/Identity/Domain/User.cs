@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DevInbox.Web.Features.Identity.Domain;
@@ -12,6 +13,10 @@ public class User
     public string? LastName { get; set; }
     public string? Password { get; set; }
     public AccountType? Type { get; set; } = AccountType.REGULAR;
+
+    [Column("github_token")]
+    [MaxLength(512)]
+    public string? GitHubAccessToken { get; set; }
 
     public enum AccountType
     {
