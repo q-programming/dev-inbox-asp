@@ -93,6 +93,49 @@ paths:
                 $ref: "#/components/schemas/UserDto"
         "204":
           description: No user found
+  /auth/github:
+    get:
+      operationId: githubAuth
+      tags: [auth]
+      summary: Starts GitHub login flow
+      responses:
+        "302":
+          description: Redirect to GitHub OAuth authorization endpoint
+          headers:
+            Location:
+              description: GitHub authorization URL
+              schema:
+                type: string
+                format: uri
+  /auth/github/callback:
+    get:
+      operationId: githubAuthCallback
+      tags: [auth]
+      summary: Handles GitHub OAuth callback and redirects to inbox
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirects the authenticated user to the inbox
+          headers:
+            Location:
+              description: Relative URL of the application inbox
+              schema:
+                type: string
+                example: /inbox
+        '400':
+          description: Missing or invalid OAuth callback parameters
+        '401':
+          description: Authentication failed
 
   # ── Settings ─────────────────────────────────────────────────
   /settings:

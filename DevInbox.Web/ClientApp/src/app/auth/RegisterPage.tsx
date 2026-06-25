@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid';
 import Link from '@mui/material/Link';
 import Paper from '@mui/material/Paper';
@@ -18,6 +19,7 @@ import { useRegisterMutation } from '@shared/hooks/useAuthQuery';
 import { AppRoute } from '@app/routes';
 import Footer from '@app/common/footer/Footer.tsx';
 import useAlertStore, { AlertType } from '@shared/store/alert.store';
+import { redirectTo } from '@shared/utils/navigation';
 
 const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -33,6 +35,7 @@ export default function RegisterPage() {
   const status = useUserStore((state) => state.status);
   const { addAlert } = useAlertStore();
   const registerMutation = useRegisterMutation();
+  const [githubLoading, setGithubLoading] = useState(false);
 
   const {
     register,
@@ -161,7 +164,7 @@ export default function RegisterPage() {
               variant="contained"
               fullWidth
               size="large"
-              disabled={registerMutation.isPending}
+              disabled={registerMutation.isPending || githubLoading}
               endIcon={<PersonAddIcon />}
               sx={{ mt: 1 }}
             >
@@ -176,15 +179,20 @@ export default function RegisterPage() {
           </Divider>
 
           <Button
-            component="a"
-            href={`${import.meta.env.VITE_API_BASE_URL ?? ''}/oauth2/authorization/github`}
             variant="outlined"
             fullWidth
             size="large"
-            startIcon={<GitHubIcon />}
+            disabled={registerMutation.isPending || githubLoading}
+            startIcon={
+              githubLoading ? <CircularProgress size={18} color="inherit" /> : <GitHubIcon />
+            }
             color="inherit"
+            onClick={() => {
+              setGithubLoading(true);
+              redirectTo(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/auth/github`);
+            }}
           >
-            Continue with GitHub
+            {githubLoading ? 'Redirecting…' : 'Continue with GitHub'}
           </Button>
         </Paper>
 

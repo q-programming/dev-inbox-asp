@@ -1,4 +1,4 @@
-using DevInbox.Web.Features.Identity;
+using DevInbox.Web.Features.Identity.Domain;
 
 namespace DevInbox.Web.Infrastructure.Persistence;
 

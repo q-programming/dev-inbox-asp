@@ -33,6 +33,7 @@ builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("database");
 
 builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddGitHubOAuth(builder.Configuration);
 
 var app = builder.Build();
 

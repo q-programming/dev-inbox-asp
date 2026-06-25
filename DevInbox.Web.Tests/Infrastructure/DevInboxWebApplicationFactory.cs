@@ -9,29 +9,38 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace DevInbox.Web.Tests.Infrastructure;
 
-public class DevInboxWebApplicationFactory : WebApplicationFactory<Program>
+public class DevInboxWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    private readonly DatabaseIntegrationTest _database = new FactoryDatabase();
+
+    public async Task InitializeAsync() => await _database.InitializeAsync();
+
+    public new async Task DisposeAsync()
+    {
+        await _database.DisposeAsync();
+        await base.DisposeAsync();
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        _ = builder.UseEnvironment("Testing");
+        builder.UseEnvironment("Testing");
 
-        _ = builder.ConfigureAppConfiguration((_, configBuilder) =>
+        builder.ConfigureAppConfiguration((_, configBuilder) =>
         {
             configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Database:AutoMigrate"] = "false",
+                ["GitHub:ClientId"] = "test-client-id",
+                ["GitHub:ClientSecret"] = "test-client-secret",
             });
         });
 
-        _ = builder.ConfigureServices(services =>
+        builder.ConfigureServices(services =>
         {
-            // Replace real PostgreSQL DbContext with in-memory for isolation
-            _ = services.RemoveAll<DbContextOptions<AppDbContext>>()
+            services.RemoveAll<DbContextOptions<AppDbContext>>()
                 .AddDbContext<AppDbContext>(options =>
-                    options.UseInMemoryDatabase("context-load-tests"));
+                    options.UseNpgsql(_database.ConnectionString));
 
-            // Replace the DB health check with an always-healthy stub so the
-            // in-memory provider does not falsely report DOWN in test runs
             services.Configure<HealthCheckServiceOptions>(opts =>
             {
                 var dbCheck = opts.Registrations.FirstOrDefault(r => r.Name == "database");
@@ -40,4 +49,7 @@ public class DevInboxWebApplicationFactory : WebApplicationFactory<Program>
             });
         });
     }
+
+    /// <summary>Concrete adapter so the factory can use DatabaseIntegrationTest via composition.</summary>
+    private sealed class FactoryDatabase : DatabaseIntegrationTest;
 }

@@ -1,3 +1,4 @@
+using DevInbox.Web.Features.Identity.OAuth;
 using DevInbox.Web.Infrastructure.Auth;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
@@ -9,7 +10,9 @@ namespace DevInbox.Web.Features.Identity;
 /// </summary>
 public class UserController(
     IUserService userService,
-    IJwtTokenService jwtTokenService) : IAuthBaseController, IComponent
+    IJwtTokenService jwtTokenService,
+    IHttpContextAccessor httpContextAccessor,
+    IGitHubOAuthService githubAuthService) : IAuthBaseController, IComponent
 {
     private static readonly UserMapper _mapper = new();
 
@@ -52,5 +55,23 @@ public class UserController(
         var dto = _mapper.ToDto(user);
         dto.Integrations = []; // TODO: load real integrations
         return dto;
+    }
+
+    public Task GithubAuthAsync()
+    {
+        var httpContext = httpContextAccessor.HttpContext!;
+        var githubOAuthUrl = githubAuthService.CreateAuthorizationUrl(httpContext);
+        httpContext.Response.Redirect(githubOAuthUrl);
+        return Task.CompletedTask;
+    }
+
+    public async Task GithubAuthCallbackAsync(string code, string state)
+    {
+        var httpContext = httpContextAccessor.HttpContext!;
+        var (profile, accessToken) = await githubAuthService.AuthenticateAsync(httpContext, code, state);
+
+        var user = await userService.LoginOrCreateGitHubUserAsync(profile, accessToken);
+        jwtTokenService.IssueAccessToken(user.Email);
+        httpContext.Response.Redirect(githubAuthService.GetPostLoginRedirectUrl());
     }
 }

@@ -8,7 +8,7 @@ namespace DevInbox.Web.Infrastructure.Auth;
 
 public class JwtTokenService(IOptions<JwtOptions> jwtOptions, IHttpContextAccessor httpContextAccessor) : IJwtTokenService, IService
 {
-    private readonly JwtOptions _jwtOptions = jwtOptions.Value;
+    private readonly JwtOptions _options = jwtOptions.Value; // .Value evaluated once — avoids repeated boxing
 
     /// <summary>
     /// Generates a JWT access token and writes it to an HttpOnly cookie on the current response.
@@ -22,7 +22,7 @@ public class JwtTokenService(IOptions<JwtOptions> jwtOptions, IHttpContextAccess
             HttpOnly = true,
             Secure = httpContextAccessor.HttpContext.Request.IsHttps,
             SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddMinutes(_jwtOptions.AccessTokenLifetimeMinutes)
+            Expires = DateTimeOffset.UtcNow.AddMinutes(_options.AccessTokenLifetimeMinutes)
         });
     }
 
@@ -39,7 +39,7 @@ public class JwtTokenService(IOptions<JwtOptions> jwtOptions, IHttpContextAccess
         if (string.IsNullOrWhiteSpace(subject))
             throw new ArgumentException("Token subject must be provided.", nameof(subject));
 
-        if (string.IsNullOrWhiteSpace(_jwtOptions.SigningKey))
+        if (string.IsNullOrWhiteSpace(_options.SigningKey))
             throw new InvalidOperationException("JWT signing key is missing. Configure Jwt:SigningKey.");
 
         var claims = new List<Claim>
@@ -51,14 +51,14 @@ public class JwtTokenService(IOptions<JwtOptions> jwtOptions, IHttpContextAccess
         if (additionalClaims is not null)
             claims.AddRange(additionalClaims);
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SigningKey));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: _jwtOptions.Issuer,
-            audience: _jwtOptions.Audience,
+            issuer: _options.Issuer,
+            audience: _options.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_jwtOptions.AccessTokenLifetimeMinutes),
+            expires: DateTime.UtcNow.AddMinutes(_options.AccessTokenLifetimeMinutes),
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);

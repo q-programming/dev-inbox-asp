@@ -1,4 +1,4 @@
-namespace DevInbox.Web.Features.Identity;
+namespace DevInbox.Web.Features.Identity.Domain;
 
 public interface IUserRepository : IService
 {

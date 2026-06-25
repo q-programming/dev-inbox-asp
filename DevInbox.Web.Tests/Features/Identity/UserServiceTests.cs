@@ -1,10 +1,12 @@
 using System.Security.Claims;
-using DevInbox.Web.Features.Identity.Exceptions;
 using DevInbox.Web.Features.Identity;
+using DevInbox.Web.Features.Identity.Domain;
+using DevInbox.Web.Features.Identity.Exceptions;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using DevInbox.Web.Common;
+using DevInbox.Web.Features.Identity.OAuth;
 
 namespace DevInbox.Web.Tests.Features.Identity;
 
@@ -14,19 +16,21 @@ public class UserServiceTests
     private const string FirstName = "Jan";
     private const string LastName = "Kowalski";
     private const string StrongPassword = "strongpassword123";
-    private readonly IUserRepository _users;
+    private const string AccessToken = "accessToken";
+    private const string InvalidEmail = "login@github.invalid";
+    private readonly IUserRepository _userRepository;
     private readonly UserService _service;
 
     public UserServiceTests()
     {
-        _users = Substitute.For<IUserRepository>();
-        _service = new UserService(_users, Substitute.For<IHttpContextAccessor>());
+        _userRepository = Substitute.For<IUserRepository>();
+        _service = new UserService(_userRepository, Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>());
     }
 
     [Fact(DisplayName = "RegisterAsync should normalize email, hash password, and persist user")]
     public async Task RegisterAsyncShouldMapUserAndPersistViaRepositoryAsync()
     {
-        _ = _users.ExistsByEmailAsync(TestEmail).Returns(false);
+        _ = _userRepository.ExistsByEmailAsync(TestEmail).Returns(false);
 
         var request = new RegisterRequest
         {
@@ -38,8 +42,8 @@ public class UserServiceTests
 
         var result = await _service.RegisterAsync(request);
 
-        _ = await _users.Received(1).ExistsByEmailAsync(TestEmail);
-        await _users.Received(1).AddAsync(Arg.Is<User>(u =>
+        _ = await _userRepository.Received(1).ExistsByEmailAsync(TestEmail);
+        await _userRepository.Received(1).AddAsync(Arg.Is<User>(u =>
             u.Email == TestEmail &&
             u.FirstName == FirstName &&
             u.LastName == LastName));
@@ -52,7 +56,7 @@ public class UserServiceTests
     [Fact(DisplayName = "LoginAsync should authenticate user and return mapped dto")]
     public async Task LoginAsyncShouldSucceedAsync()
     {
-        _ = _users.FindByEmailAsync(TestEmail).Returns(new User
+        _ = _userRepository.FindByEmailAsync(TestEmail).Returns(new User
         {
             FirstName = FirstName,
             LastName = LastName,
@@ -75,7 +79,7 @@ public class UserServiceTests
     [Fact(DisplayName = "LoginAsync should fail for wrong password")]
     public async Task LoginAsyncShouldFailForWrongPasswordAsync()
     {
-        _ = _users.FindByEmailAsync(TestEmail).Returns(new User
+        _ = _userRepository.FindByEmailAsync(TestEmail).Returns(new User
         {
             FirstName = FirstName,
             LastName = LastName,
@@ -94,7 +98,7 @@ public class UserServiceTests
     [Fact(DisplayName = "LoginAsync should fail for not existing user")]
     public async Task LoginAsyncShouldFailForNotExistingUserAsync()
     {
-        _ = _users.FindByEmailAsync(TestEmail).Returns((User?)null);
+        _ = _userRepository.FindByEmailAsync(TestEmail).Returns((User?)null);
         var request = new LoginRequest
         {
             Email = TestEmail,
@@ -106,7 +110,7 @@ public class UserServiceTests
     [Fact(DisplayName = "RegisterAsync should throw when user with email already exists")]
     public async Task RegisterAsyncShouldThrowErrorForExistingEmailAsync()
     {
-        _ = _users.ExistsByEmailAsync(TestEmail).Returns(true);
+        _ = _userRepository.ExistsByEmailAsync(TestEmail).Returns(true);
 
         var request = new RegisterRequest
         {
@@ -118,8 +122,8 @@ public class UserServiceTests
 
         _ = await Assert.ThrowsAsync<UserAlreadyExistsException>(async () => await _service.RegisterAsync(request));
 
-        _ = await _users.Received(1).ExistsByEmailAsync(TestEmail);
-        await _users.DidNotReceive().AddAsync(Arg.Is<User>(user =>
+        _ = await _userRepository.Received(1).ExistsByEmailAsync(TestEmail);
+        await _userRepository.DidNotReceive().AddAsync(Arg.Is<User>(user =>
             user.Email == TestEmail &&
             user.FirstName == FirstName &&
             user.LastName == LastName));
@@ -128,8 +132,8 @@ public class UserServiceTests
     [Fact(DisplayName = "GetCurrentUserAsync should return user when NameIdentifier claim is present")]
     public async Task GetCurrentUserAsyncShouldReturnUserForAuthenticatedRequestAsync()
     {
-        var service = new UserService(_users, CreateAccessorWithClaim(TestEmail));
-        _ = _users.FindByEmailAsync(TestEmail).Returns(new User
+        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestEmail), Substitute.For<ILogger<UserService>>());
+        _ = _userRepository.FindByEmailAsync(TestEmail).Returns(new User
         {
             FirstName = FirstName,
             LastName = LastName,
@@ -148,7 +152,7 @@ public class UserServiceTests
     {
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns((HttpContext?)null);
-        var service = new UserService(_users, accessor);
+        var service = new UserService(_userRepository, accessor, Substitute.For<ILogger<UserService>>());
 
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetCurrentUserAsync());
     }
@@ -160,7 +164,7 @@ public class UserServiceTests
         httpContext.User.Returns(new ClaimsPrincipal(new ClaimsIdentity()));
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns(httpContext);
-        var service = new UserService(_users, accessor);
+        var service = new UserService(_userRepository, accessor, Substitute.For<ILogger<UserService>>());
 
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetCurrentUserAsync());
     }
@@ -168,10 +172,70 @@ public class UserServiceTests
     [Fact(DisplayName = "GetCurrentUserAsync should throw when user no longer exists in the database")]
     public async Task GetCurrentUserAsyncShouldThrowWhenUserNoLongerExistsAsync()
     {
-        var service = new UserService(_users, CreateAccessorWithClaim(TestEmail));
-        _ = _users.FindByEmailAsync(TestEmail).Returns((User?)null);
+        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestEmail), Substitute.For<ILogger<UserService>>());
+        _ = _userRepository.FindByEmailAsync(TestEmail).Returns((User?)null);
 
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetCurrentUserAsync());
+    }
+
+    [Fact(DisplayName = "LoginOrCreateGitHubUserAsync should create new user if not existing")]
+    public async Task LoginOrCreateGitHubUserAsyncShouldCreateUserAsync()
+    {
+        _ = _userRepository.FindByEmailAsync(TestEmail).Returns((User?)null);
+        var result = await _service.LoginOrCreateGitHubUserAsync(new GitHubUserProfile
+        {
+            Email = TestEmail,
+            Name = $"{FirstName} {LastName}"
+        }, AccessToken);
+        await _userRepository.Received(1).AddAsync(Arg.Is<User>(user =>
+            user.Email == TestEmail &&
+            user.FirstName == FirstName &&
+            user.LastName == LastName));
+
+        Assert.Equal(TestEmail, result.Email);
+        Assert.Equal(FirstName, result.FirstName);
+        Assert.Equal(LastName, result.LastName);
+    }
+
+    [Fact(DisplayName = "LoginOrCreateGitHubUserAsync should create new user without email")]
+    public async Task LoginOrCreateGitHubUserAsyncShouldCreateUserNoEmailAsync()
+    {
+        _ = _userRepository.FindByEmailAsync(InvalidEmail).Returns((User?)null);
+        var result = await _service.LoginOrCreateGitHubUserAsync(new GitHubUserProfile
+        {
+            Login = "login",
+            Name = $"{FirstName} {LastName}"
+        }, AccessToken);
+        await _userRepository.Received(1).AddAsync(Arg.Is<User>(user =>
+            user.Email == InvalidEmail &&
+            user.FirstName == FirstName &&
+            user.LastName == LastName));
+
+        Assert.NotEqual(TestEmail, result.Email);
+        Assert.Equal(FirstName, result.FirstName);
+        Assert.Equal(LastName, result.LastName);
+    }
+
+    [Fact(DisplayName = "LoginOrCreateGitHubUserAsync should return existing user")]
+    public async Task LoginOrCreateGitHubUserAsyncShouldReturnExistingAsync()
+    {
+        var user = new User
+        {
+            Email = TestEmail,
+            FirstName = FirstName,
+            LastName = LastName,
+        };
+        _ = _userRepository.FindByEmailAsync(TestEmail).Returns(user);
+        var result = await _service.LoginOrCreateGitHubUserAsync(new GitHubUserProfile
+        {
+            Email = TestEmail,
+            Name = $"{FirstName} {LastName}"
+        }, AccessToken);
+        await _userRepository.DidNotReceive().AddAsync(Arg.Any<User>());
+
+        Assert.Equal(TestEmail, result.Email);
+        Assert.Equal(FirstName, result.FirstName);
+        Assert.Equal(LastName, result.LastName);
     }
 
     private static IHttpContextAccessor CreateAccessorWithClaim(string email)

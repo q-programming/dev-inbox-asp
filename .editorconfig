@@ -16,6 +16,9 @@ dotnet_analyzer_diagnostic.category-Security.severity = warning
 # Common hygiene
 dotnet_diagnostic.IDE0005.severity = warning
 dotnet_diagnostic.IDE0055.severity = warning
+dotnet_diagnostic.IDE0058.severity = none
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
 
 # Using directives
 dotnet_sort_system_directives_first = true
