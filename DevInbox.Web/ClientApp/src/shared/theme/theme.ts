@@ -1,15 +1,5 @@
+import { Theme } from '@api';
 import { createTheme, type PaletteMode } from '@mui/material';
-
-export enum Theme {
-  LIGHT = 'light',
-  DARK = 'dark',
-}
-
-export enum Density {
-  RELAXED = 'relaxed',
-  TIGHT = 'tight',
-  SUPER_TIGHT = 'super-tight',
-}
 
 // ── TypeScript palette augmentation ─────────────────────────────────────────
 declare module '@mui/material/styles' {
@@ -67,13 +57,13 @@ export const FONT_SIZE_MAX = 18;
  * always matches the real theme without running the full MUI theme factory.
  */
 export const THEME_PREVIEW_TOKENS = {
-  [Theme.LIGHT]: {
+  [Theme.Light]: {
     bg: BG_DEFAULT_LIGHT,
     paper: BG_PAPER_LIGHT,
     primary: PRIMARY_LIGHT,
     divider: DIVIDER_LIGHT,
   },
-  [Theme.DARK]: {
+  [Theme.Dark]: {
     bg: BG_DEFAULT_DARK,
     paper: BG_PAPER_DARK,
     primary: PRIMARY_DARK,
@@ -82,7 +72,7 @@ export const THEME_PREVIEW_TOKENS = {
 } as const;
 
 export function buildTheme(mode: PaletteMode, fontSize: number = DEFAULT_FONT_SIZE) {
-  const light = mode === Theme.LIGHT;
+  const light = mode === Theme.Light;
   // MUI's `typography.fontSize` is the rem base (in px). Scaling it shifts all
   // rem-based sizes proportionally — headlines, body copy, captions, buttons.
   const htmlFontSize = 16; // browser default — keep fixed

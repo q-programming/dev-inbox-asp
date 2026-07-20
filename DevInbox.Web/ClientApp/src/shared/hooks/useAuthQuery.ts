@@ -1,4 +1,5 @@
 import { AuthClient, LoginRequest, RegisterRequest, UserDto } from '@api';
+import { useSettingsQuery } from '@feature/settings/hooks/useSettingsQuery';
 import useSettingsStore from '@feature/settings/store/settings.store';
 import { ApiError, apiFetch, BASE_URL } from '@shared/api/httpClient.ts';
 import useUserStore from '@shared/store/user.store.ts';
@@ -25,11 +26,13 @@ export const useMeQuery = () =>
     queryFn: async () => {
       try {
         return await authApi.me();
-      } catch (e: unknown) {
+      } catch (error: unknown) {
         // NSwag throws SwaggerException with status 204 for "No user found" —
         // treat it as a null session rather than an error.
-        if ((e as { status?: number })?.status === 204) return null;
-        throw e;
+        if ((error as { status?: number })?.status === 204) {
+          return null;
+        }
+        throw error;
       }
     },
     staleTime: 5 * 60_000,
@@ -52,7 +55,8 @@ export const useMeQuery = () =>
  * Must be called exactly once, inside `AuthGuard`, so it runs on every protected page.
  */
 export const useAuthBootstrap = () => {
-  const { data, isSuccess, isError } = useMeQuery();
+  const { data: user, isSuccess, isError } = useMeQuery();
+  const { data: settings } = useSettingsQuery(isSuccess && !!user);
   const { setUser, clearUser } = useUserStore();
   const { applyServerProfile } = useSettingsStore();
 
@@ -60,13 +64,15 @@ export const useAuthBootstrap = () => {
     if (!isSuccess) {
       return;
     }
-    if (data) {
-      setUser(data);
-      applyServerProfile({}); //TODO update with actual user  values
+    if (user) {
+      setUser(user);
+      if (settings) {
+        applyServerProfile(settings);
+      }
     } else {
       clearUser();
     }
-  }, [isSuccess, data, setUser, clearUser, applyServerProfile]);
+  }, [isSuccess, user, settings, setUser, clearUser, applyServerProfile]);
 
   useEffect(() => {
     if (isError) {

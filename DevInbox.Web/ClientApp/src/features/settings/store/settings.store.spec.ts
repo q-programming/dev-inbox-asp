@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import useSettingsStore, { SETTINGS_STORAGE_KEY } from './settings.store';
-import { DEFAULT_FONT_SIZE, Density, Theme } from '@shared/theme/theme';
+import { Density, Theme } from '@api';
+import { DEFAULT_FONT_SIZE } from '@shared/theme/theme';
 
 beforeEach(() => {
   localStorage.clear();
   useSettingsStore.setState({
-    theme: Theme.LIGHT,
-    density: Density.RELAXED,
+    theme: Theme.Light,
+    density: Density.Relaxed,
     fontSize: DEFAULT_FONT_SIZE,
     sideBarCollapsed: false,
   });
@@ -16,25 +17,25 @@ describe('useSettingsStore', () => {
   describe('toggleTheme', () => {
     it('toggles from LIGHT to DARK', () => {
       useSettingsStore.getState().toggleTheme();
-      expect(useSettingsStore.getState().theme).toBe(Theme.DARK);
+      expect(useSettingsStore.getState().theme).toBe(Theme.Dark);
     });
 
     it('toggles from DARK back to LIGHT', () => {
-      useSettingsStore.setState({ theme: Theme.DARK });
+      useSettingsStore.setState({ theme: Theme.Dark });
       useSettingsStore.getState().toggleTheme();
-      expect(useSettingsStore.getState().theme).toBe(Theme.LIGHT);
+      expect(useSettingsStore.getState().theme).toBe(Theme.Light);
     });
   });
 
   describe('switchDensity', () => {
     it('updates density to TIGHT', () => {
-      useSettingsStore.getState().switchDensity(Density.TIGHT);
-      expect(useSettingsStore.getState().density).toBe(Density.TIGHT);
+      useSettingsStore.getState().switchDensity(Density.Tight);
+      expect(useSettingsStore.getState().density).toBe(Density.Tight);
     });
 
     it('updates density to SUPER_TIGHT', () => {
-      useSettingsStore.getState().switchDensity(Density.SUPER_TIGHT);
-      expect(useSettingsStore.getState().density).toBe(Density.SUPER_TIGHT);
+      useSettingsStore.getState().switchDensity(Density.SuperTight);
+      expect(useSettingsStore.getState().density).toBe(Density.SuperTight);
     });
   });
 
@@ -61,15 +62,15 @@ describe('useSettingsStore', () => {
   describe('localStorage persistence', () => {
     it('persists theme, density, fontSize, sideBarCollapsed to localStorage', () => {
       useSettingsStore.getState().toggleTheme();
-      useSettingsStore.getState().switchDensity(Density.TIGHT);
+      useSettingsStore.getState().switchDensity(Density.Tight);
       useSettingsStore.getState().changeFontSize(16);
       useSettingsStore.getState().toggleSideBar();
 
       const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
       expect(raw).not.toBeNull();
       const parsed = JSON.parse(raw!);
-      expect(parsed.state.theme).toBe(Theme.DARK);
-      expect(parsed.state.density).toBe(Density.TIGHT);
+      expect(parsed.state.theme).toBe(Theme.Dark);
+      expect(parsed.state.density).toBe(Density.Tight);
       expect(parsed.state.fontSize).toBe(16);
       expect(parsed.state.sideBarCollapsed).toBe(true);
     });

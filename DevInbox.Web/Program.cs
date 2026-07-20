@@ -1,12 +1,36 @@
 using DevInbox.Web.Infrastructure.Auth;
 using DevInbox.Web.Infrastructure.Filters;
 using DevInbox.Web.Infrastructure.Persistence;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 Banner.Print();
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers(opt => opt.Filters.Add<ApiExceptionFilter>());
+// NSwag emits a per-property [JsonConverter(typeof(JsonStringEnumConverter<T>))] attribute on every
+// generated enum DTO property. Attribute-level converters always take priority over anything added to
+// JsonSerializerOptions.Converters, so registering JsonStringEnumMemberConverter there alone is not enough —
+// it never gets a chance to run. A JsonTypeInfo modifier runs after attribute resolution and can forcibly
+// replace the converter for every enum property, which is the only way to make EnumMember.Value (e.g. "light",
+// "super-tight") win over the attribute's default member-name serialization ("Light", "SuperTight").
+builder.Services.AddControllers(opt => opt.Filters.Add<ApiExceptionFilter>())
+    .AddJsonOptions(opt =>
+    {
+        var resolver = new DefaultJsonTypeInfoResolver();
+        resolver.Modifiers.Add(typeInfo =>
+        {
+            foreach (var property in typeInfo.Properties)
+            {
+                var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                if (propertyType.IsEnum)
+                {
+                    property.CustomConverter = new JsonStringEnumMemberConverter();
+                }
+            }
+        });
+        opt.JsonSerializerOptions.TypeInfoResolver = resolver;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
@@ -18,9 +42,18 @@ builder.Services.Scan(scan => scan
      .AsImplementedInterfaces()
      .AsSelf()
      .WithScopedLifetime());
+// Search components     
 builder.Services.Scan(scan => scan
      .FromAssemblyOf<Program>()
      .AddClasses(cl => cl.AssignableTo<IComponent>())
+     .AsImplementedInterfaces()
+     .AsSelf()
+     .WithScopedLifetime());
+
+// Search repositories (open generic base type requires typeof(), not the closed generic syntax)
+builder.Services.Scan(scan => scan
+     .FromAssemblyOf<Program>()
+     .AddClasses(cl => cl.AssignableTo(typeof(Repository<>)))
      .AsImplementedInterfaces()
      .AsSelf()
      .WithScopedLifetime());

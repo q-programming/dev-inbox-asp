@@ -124,7 +124,7 @@ paths:
           schema:
             type: string
       responses:
-        '302':
+        "302":
           description: Redirects the authenticated user to the inbox
           headers:
             Location:
@@ -132,9 +132,9 @@ paths:
               schema:
                 type: string
                 example: /inbox
-        '400':
+        "400":
           description: Missing or invalid OAuth callback parameters
-        '401':
+        "401":
           description: Authentication failed
 
   # ── Settings ─────────────────────────────────────────────────
@@ -159,7 +159,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateSettingsRequest"
+              $ref: "#/components/schemas/UserSettingsDto"
       responses:
         "200":
           description: Updated settings
@@ -459,25 +459,29 @@ components:
       enum: [ACTIVE, EXPIRED, INACTIVE]
 
     # ── Settings ───────────────────────────────────────────────
+    Theme:
+      type: string
+      enum: [light, dark]
+      x-enumNames: [Light, Dark]
+
+    Density:
+      type: string
+      enum: [relaxed, tight, super-tight]
+      # x-enumNames: NSwag extension — lets us keep hyphenated wire values (e.g. "super-tight")
+      # while generating valid C#/TS identifiers (SuperTight) for the enum members.
+      x-enumNames: [Relaxed, Tight, SuperTight]
+
     UserSettingsDto:
       type: object
       properties:
-        githubRepos:
-          type: array
-          items:
-            type: string
-        adoOrganization:
-          type: string
-        adoProject:
-          type: string
-        syncIntervalMinutes:
+        theme:
+          $ref: "#/components/schemas/Theme"
+        density:
+          $ref: "#/components/schemas/Density"
+        fontSize:
           type: integer
-
-    UpdateSettingsRequest:
-      type: object
-      properties:
-        githubPat:
-          type: string
+        sideBarCollapsed:
+          type: boolean
         githubRepos:
           type: array
           items:
@@ -485,8 +489,6 @@ components:
         adoOrganization:
           type: string
         adoProject:
-          type: string
-        adoPat:
           type: string
         syncIntervalMinutes:
           type: integer

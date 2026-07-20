@@ -5,7 +5,7 @@ import { renderWithProviders } from '@test/renderWithProviders';
 import AppearanceSection from './AppearanceSection';
 import useUserStore, { AuthStatus } from '@shared/store/user.store';
 import useSettingsStore from '@feature/settings/store/settings.store';
-import { Density, Theme } from '@shared/theme/theme';
+import { Density, Theme } from '@api';
 
 beforeEach(() => {
   useUserStore.setState({
@@ -14,7 +14,7 @@ beforeEach(() => {
     lastName: 'Dev',
     identity: null,
   });
-  useSettingsStore.setState({ theme: Theme.LIGHT, density: Density.RELAXED, fontSize: 14 });
+  useSettingsStore.setState({ theme: Theme.Light, density: Density.Relaxed, fontSize: 14 });
 });
 
 describe('AppearanceSection', () => {
@@ -50,17 +50,17 @@ describe('AppearanceSection', () => {
       const mockSwitchDensity = vi.fn();
       useSettingsStore.setState({ switchDensity: mockSwitchDensity });
       renderWithProviders(<AppearanceSection />);
-      await user.click(screen.getByTestId(`density-card-${Density.TIGHT}`));
-      expect(mockSwitchDensity).toHaveBeenCalledWith(Density.TIGHT);
+      await user.click(screen.getByTestId(`density-card-${Density.Tight}`));
+      expect(mockSwitchDensity).toHaveBeenCalledWith(Density.Tight);
     });
 
     it('marks the current density card as pressed', () => {
       renderWithProviders(<AppearanceSection />);
-      expect(screen.getByTestId(`density-card-${Density.RELAXED}`)).toHaveAttribute(
+      expect(screen.getByTestId(`density-card-${Density.Relaxed}`)).toHaveAttribute(
         'aria-pressed',
         'true',
       );
-      expect(screen.getByTestId(`density-card-${Density.TIGHT}`)).toHaveAttribute(
+      expect(screen.getByTestId(`density-card-${Density.Tight}`)).toHaveAttribute(
         'aria-pressed',
         'false',
       );

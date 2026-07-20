@@ -3,7 +3,8 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { Theme, THEME_PREVIEW_TOKENS } from '@shared/theme/theme';
+import { THEME_PREVIEW_TOKENS } from '@shared/theme/theme';
+import { Theme } from '@api';
 
 interface ThemeCardProps {
   mode: Theme;
@@ -82,10 +83,10 @@ const ThemeCard = memo(({ mode, selected, onSelect }: ThemeCardProps) => {
       </Box>
 
       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-        {mode === Theme.LIGHT ? 'Light Mode' : 'Dark Mode'}
+        {mode === Theme.Light ? 'Light Mode' : 'Dark Mode'}
       </Typography>
       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-        {mode === Theme.LIGHT ? 'Default high-clarity view' : 'Easy on the eyes at night'}
+        {mode === Theme.Dark ? 'Default high-clarity view' : 'Easy on the eyes at night'}
       </Typography>
 
       {selected && (

@@ -5,7 +5,7 @@ import Typography from '@mui/material/Typography';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import { DENSITY_DESCRIPTIONS, DENSITY_LABELS } from '@feature/settings/types/settings.types';
-import { Density } from '@shared/theme/theme.ts';
+import { Density } from '@api';
 
 interface DensityCardProps {
   density: Density;
@@ -15,16 +15,16 @@ interface DensityCardProps {
 
 /** Row counts per density level — drives the preview mockup height. */
 const ROW_COUNTS: Record<Density, number> = {
-  [Density.RELAXED]: 2,
-  [Density.TIGHT]: 3,
-  [Density.SUPER_TIGHT]: 5,
+  [Density.Relaxed]: 2,
+  [Density.Tight]: 3,
+  [Density.SuperTight]: 5,
 };
 
 /** Preview row heights in px per density level. */
 const ROW_HEIGHTS: Record<Density, number> = {
-  [Density.RELAXED]: 28,
-  [Density.TIGHT]: 20,
-  [Density.SUPER_TIGHT]: 14,
+  [Density.Relaxed]: 28,
+  [Density.Tight]: 20,
+  [Density.SuperTight]: 14,
 };
 
 /** Miniature inbox-row preview card for one density option. */
@@ -73,7 +73,7 @@ const DensityCard = memo(({ density, selected, onSelect }: DensityCardProps) => 
                   borderRadius: 0.5,
                 }}
               />
-              {density !== Density.SUPER_TIGHT && (
+              {density !== Density.SuperTight && (
                 <Box sx={{ height: 5, width: '55%', bgcolor: 'action.hover', borderRadius: 0.5 }} />
               )}
             </Box>

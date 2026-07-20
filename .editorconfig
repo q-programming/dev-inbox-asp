@@ -20,6 +20,10 @@ dotnet_diagnostic.IDE0058.severity = none
 dotnet_diagnostic.CA1848.severity = none
 dotnet_diagnostic.CA1873.severity = none
 
+# CS9107: primary-constructor parameter passthrough to a base constructor (e.g. Repository<T> subclasses)
+# is our deliberate pattern; the base class alone validates/stores the value, so double-capture is harmless.
+dotnet_diagnostic.CS9107.severity = none
+
 # Using directives
 dotnet_sort_system_directives_first = true
 dotnet_separate_import_directive_groups = false

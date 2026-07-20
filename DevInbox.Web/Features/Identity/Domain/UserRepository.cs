@@ -1,10 +1,10 @@
-using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Identity.Exceptions;
+using DevInbox.Web.Infrastructure.Persistence;
 using DevInbox.Web.Infrastructure.Persistence.Exceptions;
 
-namespace DevInbox.Web.Infrastructure.Persistence;
+namespace DevInbox.Web.Features.Identity.Domain;
 
-public class UserRepository(AppDbContext db) : IUserRepository
+public class UserRepository(AppDbContext db) : Repository<User>(db), IUserRepository
 {
     public Task<bool> ExistsByEmailAsync(string email)
     {
@@ -13,8 +13,7 @@ public class UserRepository(AppDbContext db) : IUserRepository
 
     public async Task AddAsync(User user)
     {
-        db.Users.Add(user);
-        try { await db.SaveChangesAsync(); }
+        try { await base.AddAsync(user); }
         catch (DbUpdateException ex) when (ex.IsUniqueConstraintViolation())
         {
             throw new UserAlreadyExistsException(user.Email);
@@ -26,8 +25,4 @@ public class UserRepository(AppDbContext db) : IUserRepository
         return db.Users.SingleOrDefaultAsync(u => u.Email == email);
     }
 
-    public async Task UpdateAsync(User user)
-    {
-        await db.SaveChangesAsync();
-    }
 }

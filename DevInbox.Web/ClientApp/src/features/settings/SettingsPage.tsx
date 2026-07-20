@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import AppearanceSection from './components/AppearanceSection';
 import DangerZoneSection from './components/DangerZoneSection';
 import IntegrationsSection from './components/IntegrationsSection';
+import AppearanceSettingsActions from './components/AppearanceSettingsActions';
 import SettingsTips from './components/SettingsTips';
 
 /**
@@ -46,6 +47,7 @@ const SettingsPage = () => {
 
         <Divider />
         <AppearanceSection />
+
 
         <Divider />
         <IntegrationsSection />
