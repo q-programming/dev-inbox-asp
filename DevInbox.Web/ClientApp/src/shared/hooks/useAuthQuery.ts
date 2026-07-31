@@ -1,5 +1,5 @@
 import { AuthClient, LoginRequest, RegisterRequest, UserDto } from '@api';
-import { useSettingsQuery } from '@feature/settings/hooks/useSettingsQuery';
+import { settingsKeys, useSettingsQuery } from '@feature/settings/hooks/useSettingsQuery';
 import useSettingsStore from '@feature/settings/store/settings.store';
 import { ApiError, apiFetch, BASE_URL } from '@shared/api/httpClient.ts';
 import useUserStore from '@shared/store/user.store.ts';
@@ -122,6 +122,7 @@ export const useLogoutMutation = () => {
       // Clear regardless of success/failure — cookie may already be gone
       clearUser();
       queryClient.removeQueries({ queryKey: authKeys.all });
+      queryClient.removeQueries({ queryKey: settingsKeys.all });
     },
     meta: { silent: true },
   });

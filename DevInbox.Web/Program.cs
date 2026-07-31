@@ -1,8 +1,9 @@
-using DevInbox.Web.Infrastructure.Auth;
-using DevInbox.Web.Infrastructure.Filters;
-using DevInbox.Web.Infrastructure.Persistence;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using DevInbox.Web.Infrastructure.Auth;
+using DevInbox.Web.Infrastructure.Events;
+using DevInbox.Web.Infrastructure.Filters;
+using DevInbox.Web.Infrastructure.Persistence;
 
 Banner.Print();
 
@@ -69,7 +70,22 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddGitHubOAuth(builder.Configuration);
 builder.Services.AddEncryption(builder.Configuration);
 
+// Event handling
+builder.Services.Scan(scan => scan
+    .FromAssemblyOf<Program>()
+    .AddClasses(classes =>
+        classes.AssignableTo(typeof(IEventHandler<>)))
+    .AsImplementedInterfaces()
+    .AsSelf()
+    .WithScopedLifetime());
+
+builder.Services.AddScoped<
+    IPublisher,
+    EventPublisher>();
+
+
 var app = builder.Build();
+//Middlewares
 
 // Auto-migrate database schema on startup if enabled in configuration ( ussually on dev environment ) — ensures the database is created and up-to-date without manual intervention. In production, consider using proper migration tools instead.
 if (builder.Configuration.GetValue<bool>("Database:AutoMigrate"))
@@ -95,6 +111,12 @@ app.MapControllers();
 // Serve React app for any non-API route (SPA fallback)
 app.MapFallbackToFile("index.html");
 
+// Publish an ApplicationStartedEvent to notify other components that the application has started
+using (var scope = app.Services.CreateScope())
+{
+    var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
+    await publisher.Publish(new ApplicationStartedEvent());
+}
 app.Run();
 
 public partial class Program;

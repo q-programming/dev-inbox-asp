@@ -11,7 +11,7 @@ public class UserRepository(AppDbContext db) : Repository<User>(db), IUserReposi
         return db.Users.AnyAsync(u => u.Email == email);
     }
 
-    public async Task AddAsync(User user)
+    public override async Task AddAsync(User user)
     {
         try { await base.AddAsync(user); }
         catch (DbUpdateException ex) when (ex.IsUniqueConstraintViolation())

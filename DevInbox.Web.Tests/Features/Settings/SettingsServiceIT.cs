@@ -1,9 +1,13 @@
+using System.Security.Claims;
 using DevInbox.Web.Features.Identity;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Settings;
 using DevInbox.Web.Features.Settings.Domain;
+using DevInbox.Web.Infrastructure.Events;
+using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 
 namespace DevInbox.Web.Tests.Features.Settings;
@@ -11,7 +15,7 @@ namespace DevInbox.Web.Tests.Features.Settings;
 /// <summary>
 /// Integration tests for <see cref="SettingsService"/> against a real PostgreSQL container.
 /// Exercises <see cref="SettingsRepository"/> and EF Core mapping/conversions end-to-end
-/// (e.g. the string-backed <see cref="ApplicationTheme"/>/<see cref="ApplicationDensity"/> enums).
+/// (e.g. the string-backed <see cref="Theme"/>/<see cref="Density"/> enums).
 /// Mirrors the structure of <c>UserServiceIT</c> in Features/Identity.
 /// </summary>
 public class SettingsServiceIT : DatabaseIntegrationTest
@@ -37,19 +41,93 @@ public class SettingsServiceIT : DatabaseIntegrationTest
         await DataBase.Users.AddAsync(_user);
         await DataBase.SaveChangesAsync();
 
-        var userService = new UserService(new UserRepository(DataBase), Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>());
+        var claimsIdentity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, TestEmail)], "TestAuth");
+        var httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        httpContextAccessor.HttpContext.Returns(new DefaultHttpContext { User = new ClaimsPrincipal(claimsIdentity) });
+
+        var userService = new UserService(new UserRepository(DataBase), httpContextAccessor, Substitute.For<ILogger<UserService>>(), Substitute.For<IPublisher>());
         _service = new SettingsService(new SettingsRepository(DataBase), userService);
     }
 
+    public override async Task DisposeAsync()
+    {
+        await DataBase.UserSettings.ExecuteDeleteAsync();
+        await base.DisposeAsync();
+    }
+
     [Fact(DisplayName = "GetSettings integration should create and persist default settings for a new user")]
-    public Task GetSettingsShouldPersistDefaultSettingsOnFirstCallAsync() => throw new NotImplementedException();
+    public Task GetSettingsShouldPersistDefaultSettingsOnFirstCallAsync() => Task.Run(async () =>
+    {
+        // Act
+        var result = await _service.GetSettingsAsync();
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(_user.Id, result.UserId);
+        Assert.Equal(Web.Features.Settings.Domain.Theme.Light, result.Theme);
+        Assert.Equal(Web.Features.Settings.Domain.Density.Relaxed, result.Density);
+    });
 
     [Fact(DisplayName = "GetSettings integration should return the previously persisted settings without duplicating rows")]
-    public Task GetSettingsShouldReturnPersistedSettingsWithoutDuplicatingAsync() => throw new NotImplementedException();
+    public Task GetSettingsShouldReturnPersistedSettingsWithoutDuplicatingAsync() => Task.Run(async () =>
+    {
+        await DataBase.UserSettings.AddAsync(new UserSettings
+        {
+            UserId = _user.Id,
+            User = _user,
+            Theme = Web.Features.Settings.Domain.Theme.Dark,
+            Density = Web.Features.Settings.Domain.Density.Tight,
+            FontSize = 16
+        });
+        await DataBase.SaveChangesAsync();
+        // Act
+        var result = await _service.GetSettingsAsync();
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(_user.Id, result.UserId);
+        Assert.Equal(Web.Features.Settings.Domain.Theme.Dark, result.Theme);
+        Assert.Equal(Web.Features.Settings.Domain.Density.Tight, result.Density);
+    });
 
     [Fact(DisplayName = "SaveSettings integration should persist updated theme and density to the database")]
-    public Task SaveSettingsShouldPersistUpdatedThemeAndDensityAsync() => throw new NotImplementedException();
+    public Task SaveSettingsShouldPersistUpdatedThemeAndDensityAsync() => Task.Run(async () =>
+    {
+        await DataBase.UserSettings.AddAsync(new UserSettings
+        {
+            UserId = _user.Id,
+            User = _user,
+            Theme = Web.Features.Settings.Domain.Theme.Dark,
+            Density = Web.Features.Settings.Domain.Density.Tight,
+            FontSize = 16
+        });
+        await DataBase.SaveChangesAsync();
+        // Act
+        var result = await _service.SaveSettingsAsync(new UserSettingsDto
+        {
+            Theme = Web.Infrastructure.OpenApi.Generated.Theme.Light,
+            Density = Web.Infrastructure.OpenApi.Generated.Density.Relaxed,
+            FontSize = 18
+        });
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(_user.Id, result.UserId);
+        Assert.Equal(Web.Features.Settings.Domain.Theme.Light, result.Theme);
+        Assert.Equal(Web.Features.Settings.Domain.Density.Relaxed, result.Density);
+    });
 
-    [Fact(DisplayName = "SaveSettings integration should not create a duplicate row when settings already exist")]
-    public Task SaveSettingsShouldNotCreateDuplicateRowWhenSettingsExistAsync() => throw new NotImplementedException();
+    [Fact(DisplayName = "SaveSettings should create new settings and link them to the current user when none exist")]
+    public Task SaveSettingsShouldCreateNewSettingsWhenNoneExistAsync() => Task.Run(async () =>
+    {
+        // Act
+        var result = await _service.SaveSettingsAsync(new UserSettingsDto
+        {
+            Theme = Web.Infrastructure.OpenApi.Generated.Theme.Light,
+            Density = Web.Infrastructure.OpenApi.Generated.Density.Relaxed,
+            FontSize = 18
+        });
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(_user.Id, result.UserId);
+        Assert.Equal(Web.Features.Settings.Domain.Theme.Light, result.Theme);
+        Assert.Equal(Web.Features.Settings.Domain.Density.Relaxed, result.Density);
+    });
 }

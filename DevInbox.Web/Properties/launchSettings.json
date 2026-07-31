@@ -1,34 +1,39 @@
 {
+  "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "https": {
+    "DevInbox.Web (Backend Only)": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": false,
       "launchUrl": "swagger",
-      "applicationUrl": "https://localhost:7080;http://localhost:5080",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
-    "http": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": false,
-      "launchUrl": "swagger",
-      "applicationUrl": "http://localhost:5080",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
-    "Local": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": false,
       "applicationUrl": "http://localhost:5080",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Local"
-      }
- }
-    
+      },
+      "hotReloadEnabled": true
+    },
+    "DevInbox.Web (Full Stack)": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "http://localhost:5173",
+      "applicationUrl": "http://localhost:5080",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Local",
+        "VITE_DEV_SERVER": "true"
+      },
+      "hotReloadEnabled": true,
+      "nativeDebugging": false
+    },
+    "DevInbox.Web (Testing)": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5080",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Testing"
+      },
+      "hotReloadEnabled": false
+    }
   }
 }

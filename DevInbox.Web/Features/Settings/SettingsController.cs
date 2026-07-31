@@ -9,13 +9,13 @@ public class SettingsController(ISettingsService settingsService) : ISettingsBas
     private static readonly SettingsMapper _mapper = new();
     public async Task<UserSettingsDto> GetSettingsAsync()
     {
-        var userSettings = await settingsService.GetSettings();
+        var userSettings = await settingsService.GetSettingsAsync();
         return _mapper.ToDto(userSettings);
     }
 
     public async Task<UserSettingsDto> UpdateSettingsAsync(UserSettingsDto body)
     {
-        var updated = await settingsService.SaveSettings(body);
+        var updated = await settingsService.SaveSettingsAsync(body);
         return _mapper.ToDto(updated);
     }
 }

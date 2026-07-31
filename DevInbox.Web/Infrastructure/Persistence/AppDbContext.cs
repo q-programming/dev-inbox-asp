@@ -1,3 +1,4 @@
+using DevInbox.Web.Features.Audit.Domain;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Settings.Domain;
 using DevInbox.Web.Infrastructure.Security;
@@ -8,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,12 +21,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
         {
             entity.Property(user => user.GitHubAccessToken).HasConversion(encryptedString);
             entity.Property(user => user.Type).HasConversion<string>();
+            entity.Property(user => user.Type).HasConversion<string>();
 
         });
         modelBuilder.Entity<UserSettings>(entity =>
         {
-            entity.Property(s => s.Theme).HasConversion<string>();
-            entity.Property(s => s.Density).HasConversion<string>();
+            entity.Property(setting => setting.Theme).HasConversion<string>();
+            entity.Property(setting => setting.Density).HasConversion<string>();
+        });
+        modelBuilder.Entity<AuditEntry>(entity =>
+        {
+            entity.Property(audit => audit.EventType).HasConversion<string>();
         });
 
         base.OnModelCreating(modelBuilder);

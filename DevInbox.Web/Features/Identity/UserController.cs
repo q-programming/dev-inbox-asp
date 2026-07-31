@@ -54,6 +54,10 @@ public class UserController(
         var user = await userService.GetCurrentUserAsync();
         var dto = _mapper.ToDto(user);
         dto.Integrations = []; // TODO: load real integrations
+        if (dto.AccountType == AccountType.OAUTH_GITHUB)
+        {
+            dto.Integrations = [new() { Type = IntegrationType.Github, Status = IntegrationStatus.ACTIVE }];
+        }
         return dto;
     }
 

@@ -1,7 +1,7 @@
 using DevInbox.Web.Features.Identity;
 using DevInbox.Web.Features.Identity.Domain;
+using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
-using DevInbox.Web.Infrastructure.Persistence;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +21,7 @@ public class UserServiceIT : DatabaseIntegrationTest
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync();
-        _service = new UserService(new UserRepository(DataBase), Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>());
+        _service = new UserService(new UserRepository(DataBase), Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>(), Substitute.For<IPublisher>());
     }
 
     [Fact(DisplayName = "LoginAsync integration should authenticate user and return mapped dto")]

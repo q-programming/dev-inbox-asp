@@ -1,7 +1,10 @@
 using System.Security.Claims;
+using DevInbox.Web.Common.Utils;
 using DevInbox.Web.Features.Identity.Domain;
+using DevInbox.Web.Features.Identity.Events;
 using DevInbox.Web.Features.Identity.Exceptions;
 using DevInbox.Web.Features.Identity.OAuth;
+using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
 namespace DevInbox.Web.Features.Identity;
@@ -10,7 +13,7 @@ namespace DevInbox.Web.Features.Identity;
 /// Handles user registration, authentication, and profile retrieval.
 /// Returns domain entities — callers are responsible for mapping to DTOs.
 /// </summary>
-public class UserService(IUserRepository userRepository, IHttpContextAccessor httpContextAccessor, ILogger<UserService> logger) : IUserService, IService
+public class UserService(IUserRepository userRepository, IHttpContextAccessor httpContextAccessor, ILogger<UserService> logger, IPublisher publisher) : IUserService, IService
 {
     private const string GitHubInvalidSuffix = "@github.invalid";
 
@@ -20,7 +23,7 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
     /// </summary>
     public async Task<User> RegisterAsync(RegisterRequest body)
     {
-        var email = Utils.NormalizeEmail(body.Email);
+        var email = EmailUtils.NormalizeEmail(body.Email);
         if (await userRepository.ExistsByEmailAsync(email!))
         {
             throw new UserAlreadyExistsException(body.Email);
@@ -35,6 +38,7 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
             Type = User.AccountType.REGULAR
         };
         await userRepository.AddAsync(user);
+        await publisher.PublishAsync(new UserCreatedEvent(user.Id, user.Email, user.FirstName, user.LastName, User.AccountType.REGULAR.ToString()));
         return user;
     }
 
@@ -45,14 +49,15 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
     /// </summary>
     public async Task<User> LoginAsync(LoginRequest body)
     {
-        var email = Utils.NormalizeEmail(body.Email);
-        var user = await userRepository.FindByEmailAsync(email!);
-
-        if (user == null || !BCrypt.Net.BCrypt.Verify(body.Password, user.Password))
+        var email = EmailUtils.NormalizeEmail(body.Email);
+        var user = await userRepository.FindByEmailAsync(email!) ?? throw new UnauthorizedException("Authentication failed");
+        if (!BCrypt.Net.BCrypt.Verify(body.Password, user.Password))
         {
+            await publisher.PublishAsync(new AuthenticationFailedEvent(email!, "Invalid credentials"));
             throw new UnauthorizedException("Authentication failed");
-        }
 
+        }
+        await publisher.PublishAsync(new UserAuthenticatedEvent(user.Id, user.Email, user.GitHubAccessToken));
         return user;
     }
 
@@ -80,7 +85,10 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
     /// Integration tokens (GitHub, Azure DevOps) are not cleared on logout;
     /// they are managed explicitly via the Settings disconnect flow.
     /// </summary>
-    public Task LogoutAsync() => Task.CompletedTask;
+    public Task LogoutAsync()
+    {
+        return Task.CompletedTask;
+    }
 
     public async Task<User> LoginOrCreateGitHubUserAsync(GitHubUserProfile profile, string accessToken)
     {
@@ -111,8 +119,10 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
 
             };
             await userRepository.AddAsync(user);
+            await publisher.PublishAsync(new UserCreatedEvent(user.Id, user.Email, user.FirstName, user.LastName, User.AccountType.OAUTH_GITHUB.ToString()));
             logger.LogDebug("Created new user for GitHub for {Email}", email);
         }
+        await publisher.PublishAsync(new UserAuthenticatedEvent(user.Id, user.Email, user.GitHubAccessToken));
         return user;
     }
 }

@@ -10,7 +10,7 @@ public class SettingsService(ISettingsRepository repository, IUserService userSe
 {
 
     private static readonly SettingsMapper _mapper = new();
-    public async Task<UserSettings> GetSettings()
+    public async Task<UserSettings> GetSettingsAsync()
     {
         var user = await userService.GetCurrentUserAsync();
         var userSettings = await repository.GetByUserId(user.Id);
@@ -23,7 +23,7 @@ public class SettingsService(ISettingsRepository repository, IUserService userSe
         return userSettings;
     }
 
-    public async Task<UserSettings> SaveSettings(UserSettingsDto settingsDto)
+    public async Task<UserSettings> SaveSettingsAsync(UserSettingsDto settingsDto)
     {
         var user = await userService.GetCurrentUserAsync();
         var userSettings = await repository.GetByUserId(user.Id) ?? CreateDefaultSettings(user);
@@ -44,8 +44,8 @@ public class SettingsService(ISettingsRepository repository, IUserService userSe
     {
         return new UserSettings
         {
-            Theme = ApplicationTheme.Light,
-            Density = ApplicationDensity.Relaxed,
+            Theme = Domain.Theme.Light,
+            Density = Domain.Density.Relaxed,
             FontSize = 14,
             User = user,
         };

@@ -8,6 +8,7 @@
     <AssemblyName>DevInbox.Web</AssemblyName>
     <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
     <Version>0.1.0</Version>
+    <UserSecretsId>devinbox-web-dev-secrets</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,13 +28,26 @@
   <ItemGroup>
     <Content Remove="ClientApp\**" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Common\Events\" />
+  </ItemGroup>
+
+  <!--
+    Ensure local dotnet tools (nswag, from dotnet-tools.json) are restored before they're invoked.
+    Without this, a fresh clone on a machine that never ran `dotnet tool restore` (e.g. Visual Studio's
+    own build, or a new OS/user profile with its own NuGet cache) fails with MSB3073 because the
+    "dotnet nswag" command isn't available yet. This runs on every build but is a fast no-op once
+    the tools are already restored.
+  -->
+  <Target Name="RestoreLocalDotnetTools" BeforeTargets="BootstrapGenerateCsClients;GenerateClients">
+    <Exec Command="dotnet tool restore" WorkingDirectory="$(MSBuildProjectDirectory)/.." />
+  </Target>
 
   <!--
     Bootstrap: generate C# controller file if missing (e.g. after git clean or fresh clone).
     Always runs when the file is absent regardless of GenerateClients — the file must exist to compile.
-    Requires: dotnet tool restore (nswag local tool from dotnet-tools.json)
   -->
-  <Target Name="BootstrapGenerateCsClients" BeforeTargets="BeforeBuild" Condition="!Exists('Infrastructure/OpenApi/Generated/Controllers.cs')">
+  <Target Name="BootstrapGenerateCsClients" BeforeTargets="BeforeBuild">
     <Exec Command="dotnet nswag openapi2cscontroller /input:openapi/api.yml /output:Infrastructure/OpenApi/Generated/Controllers.cs /namespace:DevInbox.Web.Infrastructure.OpenApi.Generated /className:{controller}Base /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /jsonLibrary:SystemTextJson /templateDirectory:$(MSBuildProjectDirectory)/openapi/nswag-templates" />
     <ItemGroup>
       <Compile Include="Infrastructure/OpenApi/Generated/Controllers.cs" />
@@ -45,7 +59,7 @@
     C# controller bases + DTOs for the backend, TypeScript fetch client for React.
     Only runs when GenerateClients=true — e.g. `dotnet build /p:GenerateClients=true` or `make generate-api`.
   -->
-  <Target Name="GenerateClients" AfterTargets="Build" Condition="'$(GenerateClients)' == 'true'">
+  <Target Name="GenerateClients" AfterTargets="Build">
     <Delete Files="Infrastructure/OpenApi/Generated/Controllers.cs" />
     <Delete Files="ClientApp/generated/api-client/index.ts" />
     <Exec Command="dotnet nswag openapi2cscontroller /input:openapi/api.yml /output:Infrastructure/OpenApi/Generated/Controllers.cs /namespace:DevInbox.Web.Infrastructure.OpenApi.Generated /className:{controller}Base /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /jsonLibrary:SystemTextJson /templateDirectory:$(MSBuildProjectDirectory)/openapi/nswag-templates" />

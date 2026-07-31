@@ -1,12 +1,14 @@
 using System.Security.Claims;
+using DevInbox.Web.Common;
 using DevInbox.Web.Features.Identity;
 using DevInbox.Web.Features.Identity.Domain;
+using DevInbox.Web.Features.Identity.Events;
 using DevInbox.Web.Features.Identity.Exceptions;
+using DevInbox.Web.Features.Identity.OAuth;
+using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
-using DevInbox.Web.Common;
-using DevInbox.Web.Features.Identity.OAuth;
 
 namespace DevInbox.Web.Tests.Features.Identity;
 
@@ -20,11 +22,13 @@ public class UserServiceTests
     private const string InvalidEmail = "login@github.invalid";
     private readonly IUserRepository _userRepository;
     private readonly UserService _service;
+    private readonly IPublisher _asyncPublisher;
 
     public UserServiceTests()
     {
         _userRepository = Substitute.For<IUserRepository>();
-        _service = new UserService(_userRepository, Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>());
+        _asyncPublisher = Substitute.For<IPublisher>();
+        _service = new UserService(_userRepository, Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>(), _asyncPublisher);
     }
 
     [Fact(DisplayName = "RegisterAsync should normalize email, hash password, and persist user")]
@@ -47,10 +51,12 @@ public class UserServiceTests
             u.Email == TestEmail &&
             u.FirstName == FirstName &&
             u.LastName == LastName));
+        await _asyncPublisher.Received(1).PublishAsync(Arg.Is<UserCreatedEvent>(ev => ev.Email == TestEmail));
 
         Assert.Equal(TestEmail, result.Email);
         Assert.Equal(FirstName, result.FirstName);
         Assert.Equal(LastName, result.LastName);
+
     }
 
     [Fact(DisplayName = "LoginAsync should authenticate user and return mapped dto")]
@@ -70,7 +76,7 @@ public class UserServiceTests
             Password = StrongPassword
         };
         var result = await _service.LoginAsync(request);
-
+        await _asyncPublisher.Received(1).PublishAsync(Arg.Is<UserAuthenticatedEvent>(ev => ev.Email == TestEmail));
         Assert.Equal(TestEmail, result.Email);
         Assert.Equal(FirstName, result.FirstName);
         Assert.Equal(LastName, result.LastName);
@@ -93,6 +99,7 @@ public class UserServiceTests
             Password = "wrongpassword"
         };
         _ = await Assert.ThrowsAsync<UnauthorizedException>(async () => await _service.LoginAsync(request));
+        await _asyncPublisher.Received(1).PublishAsync(Arg.Is<AuthenticationFailedEvent>(ev => ev.Email == TestEmail));
     }
 
     [Fact(DisplayName = "LoginAsync should fail for not existing user")]
@@ -105,6 +112,7 @@ public class UserServiceTests
             Password = StrongPassword
         };
         _ = await Assert.ThrowsAsync<UnauthorizedException>(async () => await _service.LoginAsync(request));
+        await _asyncPublisher.Received(0).PublishAsync(Arg.Is<AuthenticationFailedEvent>(ev => ev.Email == TestEmail));
     }
 
     [Fact(DisplayName = "RegisterAsync should throw when user with email already exists")]
@@ -132,7 +140,7 @@ public class UserServiceTests
     [Fact(DisplayName = "GetCurrentUserAsync should return user when NameIdentifier claim is present")]
     public async Task GetCurrentUserAsyncShouldReturnUserForAuthenticatedRequestAsync()
     {
-        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestEmail), Substitute.For<ILogger<UserService>>());
+        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestEmail), Substitute.For<ILogger<UserService>>(), _asyncPublisher);
         _ = _userRepository.FindByEmailAsync(TestEmail).Returns(new User
         {
             FirstName = FirstName,
@@ -152,7 +160,7 @@ public class UserServiceTests
     {
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns((HttpContext?)null);
-        var service = new UserService(_userRepository, accessor, Substitute.For<ILogger<UserService>>());
+        var service = new UserService(_userRepository, accessor, Substitute.For<ILogger<UserService>>(), Substitute.For<IPublisher>());
 
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetCurrentUserAsync());
     }
@@ -164,7 +172,7 @@ public class UserServiceTests
         httpContext.User.Returns(new ClaimsPrincipal(new ClaimsIdentity()));
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns(httpContext);
-        var service = new UserService(_userRepository, accessor, Substitute.For<ILogger<UserService>>());
+        var service = new UserService(_userRepository, accessor, Substitute.For<ILogger<UserService>>(), _asyncPublisher);
 
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetCurrentUserAsync());
     }
@@ -172,7 +180,7 @@ public class UserServiceTests
     [Fact(DisplayName = "GetCurrentUserAsync should throw when user no longer exists in the database")]
     public async Task GetCurrentUserAsyncShouldThrowWhenUserNoLongerExistsAsync()
     {
-        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestEmail), Substitute.For<ILogger<UserService>>());
+        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestEmail), Substitute.For<ILogger<UserService>>(), _asyncPublisher);
         _ = _userRepository.FindByEmailAsync(TestEmail).Returns((User?)null);
 
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetCurrentUserAsync());
@@ -191,6 +199,8 @@ public class UserServiceTests
             user.Email == TestEmail &&
             user.FirstName == FirstName &&
             user.LastName == LastName));
+        await _asyncPublisher.Received(1).PublishAsync(Arg.Is<UserCreatedEvent>(ev => ev.Email == TestEmail));
+        await _asyncPublisher.Received(1).PublishAsync(Arg.Is<UserAuthenticatedEvent>(ev => ev.Email == TestEmail));
 
         Assert.Equal(TestEmail, result.Email);
         Assert.Equal(FirstName, result.FirstName);

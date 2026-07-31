@@ -9,9 +9,9 @@ public class UserSettings
 {
     public long Id { get; set; }
 
-    public ApplicationTheme Theme { get; set; }
+    public Theme Theme { get; set; }
 
-    public ApplicationDensity Density { get; set; }
+    public Density Density { get; set; }
 
     public int FontSize { get; set; }
 

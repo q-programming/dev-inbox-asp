@@ -6,6 +6,6 @@ namespace DevInbox.Web.Features.Settings;
 
 public interface ISettingsService
 {
-    Task<UserSettings> GetSettings();
-    Task<UserSettings> SaveSettings(UserSettingsDto settings);
+    Task<UserSettings> GetSettingsAsync();
+    Task<UserSettings> SaveSettingsAsync(UserSettingsDto settings);
 }

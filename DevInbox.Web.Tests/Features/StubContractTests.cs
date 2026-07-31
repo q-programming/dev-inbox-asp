@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using DevInbox.Web.Tests.Infrastructure;
 
 namespace DevInbox.Web.Tests.Features;
@@ -13,7 +14,29 @@ namespace DevInbox.Web.Tests.Features;
 public class StubContractTests(DevInboxWebApplicationFactory factory)
     : IClassFixture<DevInboxWebApplicationFactory>
 {
+    private const string Password = "strongpassword123";
+
     private readonly HttpClient _client = factory.CreateClient();
+
+    /// <summary>
+    /// Registers a unique user and logs in, leaving the jwt HttpOnly cookie set on <see cref="_client"/>
+    /// for subsequent authenticated requests.
+    /// </summary>
+    private async Task RegisterAndLoginAsync()
+    {
+        var email = $"{Guid.NewGuid()}@example.com";
+
+        await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
+        {
+            Email = email,
+            Password = Password,
+            FirstName = "Jan",
+            LastName = "Kowalski"
+        });
+
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequest { Email = email, Password = Password });
+        loginResponse.EnsureSuccessStatusCode();
+    }
 
     // ── Health (implemented) ─────────────────────────────────────────────────
 
@@ -96,20 +119,54 @@ public class StubContractTests(DevInboxWebApplicationFactory factory)
         Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
     }
 
-    // ── Settings (not yet implemented — target: 200) ─────────────────────────
+    // ── Settings (implemented) ────────────────────────────────────────────────
 
-    [Fact(DisplayName = "GET /api/settings — stub, expects 501 until implemented (target: 200)")]
-    public async Task GetSettingsReturns500UntilImplemented()
+    [Fact(DisplayName = "GET /api/settings — implemented, returns 401 without an authenticated user")]
+    public async Task GetSettingsReturns401WithoutAuthenticatedUser()
     {
         var response = await _client.GetAsync("/api/settings");
-        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    [Fact(DisplayName = "PUT /api/settings — stub, expects 501 until implemented (target: 200)")]
-    public async Task PutSettingsReturns500UntilImplemented()
+    [Fact(DisplayName = "PUT /api/settings — returns 401 without an authenticated user")]
+    public async Task PutSettingsReturns401WithoutAuthenticatedUser()
     {
         var response = await _client.PutAsJsonAsync("/api/settings", new { });
-        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact(DisplayName = "GET /api/settings — returns default settings for an authenticated user")]
+    public async Task GetSettingsReturns200WithDefaultSettingsForAuthenticatedUserAsync()
+    {
+        await RegisterAndLoginAsync();
+
+        var response = await _client.GetAsync("/api/settings");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<UserSettingsDto>();
+        Assert.NotNull(body);
+        Assert.Equal(Theme.Light, body!.Theme);
+        Assert.Equal(Density.Relaxed, body.Density);
+    }
+
+    [Fact(DisplayName = "PUT /api/settings — persists and returns updated settings for an authenticated user")]
+    public async Task PutSettingsReturns200WithUpdatedSettingsForAuthenticatedUserAsync()
+    {
+        await RegisterAndLoginAsync();
+
+        var response = await _client.PutAsJsonAsync("/api/settings", new UserSettingsDto
+        {
+            Theme = Theme.Dark,
+            Density = Density.Tight,
+            FontSize = 20
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<UserSettingsDto>();
+        Assert.NotNull(body);
+        Assert.Equal(Theme.Dark, body!.Theme);
+        Assert.Equal(Density.Tight, body.Density);
+        Assert.Equal(20, body.FontSize);
     }
 
     // ── Sync (not yet implemented — target: 202) ─────────────────────────────
