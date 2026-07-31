@@ -49,4 +49,11 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
 
         return (items, totalElements);
     }
+
+    public Task<InboxItem?> GetByIdForUserAsync(long id, long userId)
+    {
+        return dbContext.InboxItems
+            .AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Id == id && i.InboxId == userId);
+    }
 }

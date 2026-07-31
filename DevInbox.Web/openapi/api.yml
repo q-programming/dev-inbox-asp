@@ -248,7 +248,7 @@ paths:
         "404":
           description: Not found
 
-  /inbox/{id}:
+  /inbox/item/{id}:
     get:
       operationId: getInboxItem
       tags: [inbox]
@@ -258,8 +258,8 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            type: integer
+            format: int64
       responses:
         "200":
           description: Inbox item detail
@@ -270,7 +270,7 @@ paths:
         "404":
           description: Not found
 
-  /inbox/{id}/overlay:
+  /inbox/item/{id}/overlay:
     put:
       operationId: updateItemOverlay
       tags: [inbox]
@@ -280,8 +280,8 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            type: integer
+            format: int64
       requestBody:
         required: true
         content:
@@ -434,6 +434,7 @@ components:
     # ── Auth ───────────────────────────────────────────────────
     RegisterRequest:
       type: object
+      additionalProperties: false
       required: [email, password, firstName, lastName]
       properties:
         email:
@@ -449,6 +450,7 @@ components:
 
     LoginRequest:
       type: object
+      additionalProperties: false
       required: [email, password]
       properties:
         email:
@@ -459,6 +461,7 @@ components:
 
     UserDto:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: integer
@@ -486,6 +489,7 @@ components:
 
     IntegrationDto:
       type: object
+      additionalProperties: false
       required: [status, type]
       properties:
         id:
@@ -520,6 +524,7 @@ components:
 
     UserSettingsDto:
       type: object
+      additionalProperties: false
       properties:
         theme:
           $ref: "#/components/schemas/Theme"
@@ -543,6 +548,7 @@ components:
     # ── Inbox ──────────────────────────────────────────────────
     InboxPage:
       type: object
+      additionalProperties: false
       properties:
         items:
           type: array
@@ -557,6 +563,7 @@ components:
           type: integer
     InboxStatus:
       type: object
+      additionalProperties: false
       properties:
         lastUpdatedAt:
           type: string
@@ -575,6 +582,7 @@ components:
 
     InboxSummary:
         type: object
+        additionalProperties: false
         description: Aggregated status/counts calculated while loading the inbox page. This is not used
         properties:
           total:
@@ -613,6 +621,7 @@ components:
 
     InboxItemSummary:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: integer
@@ -648,22 +657,188 @@ components:
           format: date-time
 
     InboxItemDetail:
-      allOf:
-        - $ref: "#/components/schemas/InboxItemSummary"
-        - type: object
-          properties:
-            privateNote:
-              type: string
-            tags:
-              type: array
-              items:
-                type: string
-            followUpAt:
-              type: string
-              format: date-time
+      type: object
+      additionalProperties: false
+      properties:
+        privateNote:
+          type: string
+        title:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        followUpAt:
+          type: string
+          format: date-time
+        source:
+          $ref: "#/components/schemas/ItemSource"
+        github:
+          $ref: "#/components/schemas/GitHubPullRequestDetail"
+        ado:
+          $ref: "#/components/schemas/AdoWorkItemDetail"
+        note:
+          $ref: "#/components/schemas/NoteDetail"
+
+    GitHubPullRequestDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        pullRequestNumber:
+          type: integer
+        repository:
+          type: string
+        title:
+          type: string
+        state:
+          $ref: "#/components/schemas/GitHubPullRequestState"
+        url:
+          type: string
+        author:
+          $ref: "#/components/schemas/PersonReference"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        reviewers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PullRequestReviewer"
+        labels:
+          type: array
+          items:
+            type: string
+        linkedWorkItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/LinkedItem"
+        latestComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommentPreview"
+
+    PullRequestReviewer:
+      type: object
+      additionalProperties: false
+      properties:
+        reviewer:
+          $ref: "#/components/schemas/PersonReference"
+        reviewState:
+          $ref: "#/components/schemas/ReviewState"
+    GitHubPullRequestState:
+      type: string
+      enum:
+        - open
+        - draft
+        - merged
+        - closed
+
+    LinkedItem:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+        url:
+          type: string    
+
+    ReviewState:
+      type: string
+      enum:
+        - waiting
+        - approved
+        - changesRequested
+        - commented
+
+    AdoWorkItemDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        workItemId:
+          type: integer
+        project:
+          type: string
+        title:
+          type: string
+        workItemType:
+          type: string
+        state:
+          type: string
+        assignedTo:
+          $ref: "#/components/schemas/PersonReference"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        parent:
+          $ref: "#/components/schemas/LinkedItem"
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommentPreview"
+
+    NoteDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        noteId:
+          type: integer
+          format: int64
+        title:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        linkedItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/LinkedItem"
+
+    CommentPreview:
+      type: object
+      additionalProperties: false
+      properties:
+        author:
+          $ref: "#/components/schemas/PersonReference"
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    PersonReference:
+      type: object
+      additionalProperties: false
+      properties:
+        login:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
 
     ItemOverlayRequest:
       type: object
+      additionalProperties: false
       properties:
         priority:
           $ref: "#/components/schemas/Priority"
@@ -687,6 +862,7 @@ components:
 
     SavedViewDto:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: string
@@ -698,6 +874,7 @@ components:
 
     CreateSavedViewRequest:
       type: object
+      additionalProperties: false
       required: [name, filterJson]
       properties:
         name:
@@ -728,6 +905,7 @@ components:
     # ── Notes ──────────────────────────────────────────────────
     NoteDto:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: string
@@ -752,6 +930,7 @@ components:
 
     CreateNoteRequest:
       type: object
+      additionalProperties: false
       required: [title]
       properties:
         title:
@@ -769,6 +948,7 @@ components:
     # ── Health ─────────────────────────────────────────────────
     HealthStatus:
       type: object
+      additionalProperties: false
       properties:
         status:
           type: string

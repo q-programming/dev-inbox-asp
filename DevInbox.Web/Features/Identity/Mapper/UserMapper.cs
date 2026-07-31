@@ -11,7 +11,6 @@ public partial class UserMapper
     /// <summary>Ignores fields not present on the User entity.</summary>
     [MapperIgnoreSource(nameof(User.Password))]
     [MapperIgnoreTarget(nameof(UserDto.Integrations))]
-    [MapperIgnoreTarget(nameof(UserDto.AdditionalProperties))]
     [MapperIgnoreSource(nameof(User.Inbox))]
     public partial UserDto ToDto(User user);
 }

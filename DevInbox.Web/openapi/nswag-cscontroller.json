@@ -1,0 +1,18 @@
+{
+  "runtime": "Net100",
+  "documentGenerator": {
+    "fromDocument": {
+      "url": "api.yml"
+    }
+  },
+  "codeGenerators": {
+    "openApiToCSharpController": {
+      "output": "../Infrastructure/OpenApi/Generated/Controllers.cs",
+      "namespace": "DevInbox.Web.Infrastructure.OpenApi.Generated",
+      "className": "{controller}Base",
+      "operationGenerationMode": "MultipleClientsFromFirstTagAndOperationId",
+      "jsonLibrary": "SystemTextJson",
+      "templateDirectory": "./nswag-templates"
+    }
+  }
+}

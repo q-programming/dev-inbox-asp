@@ -8,7 +8,6 @@ namespace DevInbox.Web.Features.Settings.Mapping;
 public partial class SettingsMapper
 {
     /// <summary>Ignores fields not present on the User entity.</summary>
-    [MapperIgnoreTarget(nameof(UserSettingsDto.AdditionalProperties))]
     [MapperIgnoreTarget(nameof(UserSettingsDto.GithubRepos))]
     [MapperIgnoreTarget(nameof(UserSettingsDto.AdoOrganization))]
     [MapperIgnoreTarget(nameof(UserSettingsDto.AdoProject))]
@@ -23,7 +22,6 @@ public partial class SettingsMapper
     [MapperIgnoreTarget(nameof(UserSettings.Id))]
     [MapperIgnoreTarget(nameof(UserSettings.UserId))]
     [MapperIgnoreTarget(nameof(UserSettings.User))]
-    [MapperIgnoreSource(nameof(UserSettingsDto.AdditionalProperties))]
     [MapperIgnoreSource(nameof(UserSettingsDto.GithubRepos))]
     [MapperIgnoreSource(nameof(UserSettingsDto.AdoOrganization))]
     [MapperIgnoreSource(nameof(UserSettingsDto.AdoProject))]

@@ -9,6 +9,7 @@ export const inboxApi = new InboxClient(BASE_URL, { fetch: apiFetch });
 export const inboxKeys = {
   all: ['inbox'] as const,
   items: ['inbox', 'items'] as const,
+  detail: ['inbox', 'detail'] as const,
   summary: ['inbox', 'summary'] as const,
 } as const;
 
@@ -23,6 +24,15 @@ export const useInboxSummaryQuery = () =>
     queryKey: inboxKeys.summary,
     queryFn: () => inboxApi.getInboxSummary(),
   });
+
+export const useInboxItemQuery = (itemId?: number) =>
+  useQuery({
+    queryKey: [...inboxKeys.detail, itemId],
+    queryFn: () => inboxApi.getInboxItem(itemId!),
+    enabled: !!itemId,
+    staleTime: 30_000, // 30 seconds
+    gcTime: 5 * 60_000, // 5 minutes
+  });  
 
 export const useSyncMutation = () =>
   {

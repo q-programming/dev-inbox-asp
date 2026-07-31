@@ -1,4 +1,5 @@
 import { AuthClient, LoginRequest, RegisterRequest, UserDto } from '@api';
+import { useInboxStore } from '@feature/inbox/store/inbox.store';
 import { settingsKeys, useSettingsQuery } from '@feature/settings/hooks/useSettingsQuery';
 import useSettingsStore from '@feature/settings/store/settings.store';
 import { ApiError, apiFetch, BASE_URL } from '@shared/api/httpClient.ts';
@@ -114,6 +115,7 @@ export const useLoginMutation = () => {
  */
 export const useLogoutMutation = () => {
   const { clearUser } = useUserStore();
+  const { clear } = useInboxStore();
   const queryClient = useQueryClient();
 
   return useMutation<void, ApiError, void>({
@@ -121,6 +123,7 @@ export const useLogoutMutation = () => {
     onSettled: () => {
       // Clear regardless of success/failure — cookie may already be gone
       clearUser();
+      clear();
       queryClient.removeQueries({ queryKey: authKeys.all });
       queryClient.removeQueries({ queryKey: settingsKeys.all });
     },

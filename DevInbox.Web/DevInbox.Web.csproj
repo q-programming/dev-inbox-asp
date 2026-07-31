@@ -45,24 +45,24 @@
     Bootstrap: generate C# controller file if missing (e.g. after git clean or fresh clone).
     Always runs when the file is absent regardless of GenerateClients — the file must exist to compile.
   -->
-  <Target Name="BootstrapGenerateCsClients" BeforeTargets="BeforeBuild">
-    <Exec Command="dotnet nswag openapi2cscontroller /input:openapi/api.yml /output:Infrastructure/OpenApi/Generated/Controllers.cs /namespace:DevInbox.Web.Infrastructure.OpenApi.Generated /className:{controller}Base /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /jsonLibrary:SystemTextJson /templateDirectory:$(MSBuildProjectDirectory)/openapi/nswag-templates" />
-    <ItemGroup>
-      <Compile Include="Infrastructure/OpenApi/Generated/Controllers.cs" />
-    </ItemGroup>
-  </Target>
+	<Target Name="BootstrapGenerateCsClients" BeforeTargets="BeforeBuild">
+		<Exec Command="dotnet nswag run openapi/nswag-cscontroller.json" />
+		<ItemGroup>
+			<Compile Include="Infrastructure/OpenApi/Generated/Controllers.cs" />
+		</ItemGroup>
+	</Target>
 
   <!--
     On-demand regeneration: delete and regenerate both generated files from api.yml.
     C# controller bases + DTOs for the backend, TypeScript fetch client for React.
     Only runs when GenerateClients=true — e.g. `dotnet build /p:GenerateClients=true` or `make generate-api`.
   -->
-  <Target Name="GenerateClients" AfterTargets="Build">
-    <Delete Files="Infrastructure/OpenApi/Generated/Controllers.cs" />
-    <Delete Files="ClientApp/generated/api-client/index.ts" />
-    <Exec Command="dotnet nswag openapi2cscontroller /input:openapi/api.yml /output:Infrastructure/OpenApi/Generated/Controllers.cs /namespace:DevInbox.Web.Infrastructure.OpenApi.Generated /className:{controller}Base /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /jsonLibrary:SystemTextJson /templateDirectory:$(MSBuildProjectDirectory)/openapi/nswag-templates" />
-    <Exec Command="dotnet nswag openapi2tsclient /input:openapi/api.yml /output:ClientApp/generated/api-client/index.ts /template:Fetch /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId /typeStyle:Interface" />
-  </Target>
+	<Target Name="GenerateClients" AfterTargets="Build">
+		<Delete Files="Infrastructure/OpenApi/Generated/Controllers.cs" />
+		<Delete Files="ClientApp/generated/api-client/index.ts" />
+		<Exec Command="dotnet nswag run openapi/nswag-cscontroller.json" />
+		<Exec Command="dotnet nswag run openapi/nswag-tsclient.json" />
+	</Target>
 
   <!--
     On publish: build React app and embed output in wwwroot for a self-contained binary.

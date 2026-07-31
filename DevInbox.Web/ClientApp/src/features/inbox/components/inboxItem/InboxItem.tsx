@@ -7,14 +7,18 @@ import Typography from '@mui/material/Typography';
 
 import InboxItemBadges from '../inboxItemBadge/InboxItemBadge';
 import InboxItemIcon from '../inboxItemIcon/InboxItemIcon';
+import { useInboxStore } from '@feature/inbox/store/inbox.store';
 
 interface IInboxItem {
   item: InboxItemSummary;
 }
 
 const InboxItem = ({ item }: IInboxItem) => {
+  const { openItem } = useInboxStore();
+
   return (
     <ListItemButton
+      onClick={() => openItem(item?.id)}
       divider
       sx={{
         alignItems: 'stretch',

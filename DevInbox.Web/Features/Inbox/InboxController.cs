@@ -11,12 +11,12 @@ public class InboxController(IInboxService inboxService) : IInboxBaseController,
         return inboxService.ListInboxItemsAsync(page, size, source, itemType, status);
     }
 
-    public Task<InboxItemDetail> GetInboxItemAsync(System.Guid id)
+    public Task<InboxItemDetail> GetInboxItemAsync(long id)
     {
-        throw new ServiceNotImplementedException();
+        return inboxService.GetInboxItemByIdAsync(id);
     }
 
-    public Task UpdateItemOverlayAsync(System.Guid id, ItemOverlayRequest body)
+    public Task UpdateItemOverlayAsync(long id, ItemOverlayRequest body)
     {
         throw new ServiceNotImplementedException();
     }

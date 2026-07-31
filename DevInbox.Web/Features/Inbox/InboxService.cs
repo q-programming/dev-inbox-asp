@@ -1,5 +1,6 @@
 
 using System.Security.Claims;
+using DevInbox.Web.Features.Inbox.Details;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Features.Inbox.Mapper;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
@@ -11,7 +12,12 @@ using Priority = DevInbox.Web.Features.Inbox.Domain.Priority;
 
 namespace DevInbox.Web.Features.Inbox;
 
-public class InboxService(IInboxRepository inboxRepository, InboxItemRepository inboxItemRepository, IHttpContextAccessor httpContextAccessor, AppDbContext dbContext) : IInboxService, IService
+public class InboxService(
+    IInboxRepository inboxRepository,
+    InboxItemRepository inboxItemRepository,
+    IInboxDetailService inboxDetailService,
+    IHttpContextAccessor httpContextAccessor,
+    AppDbContext dbContext) : IInboxService, IService
 {
     InboxMapper _inboxMapper = new();
 
@@ -82,13 +88,15 @@ public class InboxService(IInboxRepository inboxRepository, InboxItemRepository 
             var source = RandomEnum<ItemSource>();
             var type = RandomEnum<ItemType>();
             var reason = RandomEnum<InboxReason>();
+            var number = Random.Shared.Next(1000, 9999);
             var item = new InboxItem
             {
                 InboxId = inbox.UserId,
                 Source = source,
+                ExternalId = number.ToString(),
                 Type = type,
                 Reason = reason,
-                Title = GenerateTitle(source, type),
+                Title = $"{source} {type} #{number}",
                 ActivityAt = DateTimeOffset.UtcNow.AddDays(-random.Next(0, 30)),
                 CreatedAt = DateTimeOffset.UtcNow.AddDays(-random.Next(30, 90)),
                 UpdatedAt = DateTimeOffset.UtcNow,
@@ -141,6 +149,15 @@ public class InboxService(IInboxRepository inboxRepository, InboxItemRepository 
         };
     }
 
+    public async Task<InboxItemDetail> GetInboxItemByIdAsync(long id)
+    {
+        var userId = GetCurrentUserId();
+        var item = await inboxItemRepository.GetByIdForUserAsync(id, userId) ?? throw new NotFoundException($"Inbox item with ID {id} not found for user {userId}");
+        var itemDto = _inboxMapper.ToInboxItemDetail(item);
+        await inboxDetailService.PopulateAsync(item, itemDto);
+        return itemDto;
+    }
+
     private long GetCurrentUserId()
     {
         var userIdClaim = httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -153,12 +170,6 @@ public class InboxService(IInboxRepository inboxRepository, InboxItemRepository 
     {
         var values = Enum.GetValues<T>();
         return values[Random.Shared.Next(values.Length)];
-    }
-
-    private static string GenerateTitle(ItemSource source, ItemType type)
-    {
-        var number = Random.Shared.Next(1000, 9999);
-        return $"{source} {type} #{number}";
     }
 
     private static string PickRandomTag()

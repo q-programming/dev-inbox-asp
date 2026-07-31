@@ -5,6 +5,7 @@ namespace DevInbox.Web.Features.Inbox.Domain;
 public class InboxItem
 {
     public long Id { get; set; }
+    public string ExternalId { get; set; } = null!;
     public ItemSource Source { get; set; }
     public ItemType Type { get; set; }
     public string? Title { get; set; }

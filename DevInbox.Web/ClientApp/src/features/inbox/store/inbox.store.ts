@@ -8,6 +8,9 @@ interface InboxStore {
   status?: InboxStatus;
   setStatus: (status: InboxStatus) => void;
   updateVersion: (version: number) => void;
+  selectedItemId?: number;
+  openItem: (itemId?: number) => void;
+  closeItem: () => void;
   clear: () => void;
 }
 
@@ -25,8 +28,9 @@ export const useInboxStore = create<InboxStore>()(
               }
             : undefined,
         })),
-
-      clear: () => set({ status: undefined }),
+      openItem: (itemId) => set({ selectedItemId: itemId }),
+      closeItem: () => set({ selectedItemId: undefined }),  
+      clear: () => set({ status: undefined, selectedItemId: undefined }),
     }),
     {
       name: INBOX_STORAGE_KEY,
