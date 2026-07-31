@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using DevInbox.Web.Features.Identity.Domain;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -13,9 +14,9 @@ public class JwtTokenService(IOptions<JwtOptions> jwtOptions, IHttpContextAccess
     /// <summary>
     /// Generates a JWT access token and writes it to an HttpOnly cookie on the current response.
     /// </summary>
-    public void IssueAccessToken(string subject, IEnumerable<Claim>? additionalClaims = null)
+    public void IssueAccessToken(User user, IEnumerable<Claim>? additionalClaims = null)
     {
-        var token = GenerateAccessToken(subject, additionalClaims);
+        var token = GenerateAccessToken(user, additionalClaims);
 
         httpContextAccessor.HttpContext?.Response.Cookies.Append("jwt", token, new CookieOptions
         {
@@ -34,11 +35,11 @@ public class JwtTokenService(IOptions<JwtOptions> jwtOptions, IHttpContextAccess
         httpContextAccessor.HttpContext?.Response.Cookies.Delete("jwt");
     }
 
-    private string GenerateAccessToken(string subject, IEnumerable<Claim>? additionalClaims = null)
+    private string GenerateAccessToken(User user, IEnumerable<Claim>? additionalClaims = null)
     {
-        if (string.IsNullOrWhiteSpace(subject))
+        if (string.IsNullOrEmpty(user.Email))
         {
-            throw new ArgumentException("Token subject must be provided.", nameof(subject));
+            throw new ArgumentException("Token user must have a valid email.", nameof(user));
         }
 
         if (string.IsNullOrWhiteSpace(_options.SigningKey))
@@ -48,7 +49,9 @@ public class JwtTokenService(IOptions<JwtOptions> jwtOptions, IHttpContextAccess
 
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, subject),
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(ClaimTypes.Email, user.Email),
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

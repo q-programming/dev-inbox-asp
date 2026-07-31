@@ -1,4 +1,5 @@
 using System.Text;
+using DevInbox.Web.Features.GitHub.Client;
 using DevInbox.Web.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -75,7 +76,7 @@ public static class AuthServiceCollectionExtensions
         }
         _ = services.Configure<GithubOptions>(ghSection);
         // HTTP client
-        services.AddHttpClient("github", client =>
+        services.AddHttpClient<IGitHubClient, GitHubClient>((sp, client) =>
         {
             client.BaseAddress = new Uri("https://api.github.com");
             client.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");

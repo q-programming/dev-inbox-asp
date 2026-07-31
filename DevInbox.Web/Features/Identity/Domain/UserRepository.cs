@@ -25,4 +25,13 @@ public class UserRepository(AppDbContext db) : Repository<User>(db), IUserReposi
         return db.Users.SingleOrDefaultAsync(u => u.Email == email);
     }
 
+    public Task<User?> FindByEmailWithGitHubProfileAsync(string email)
+    {
+        return db.Users.Include(u => u.GitHubProfile).SingleOrDefaultAsync(u => u.Email == email);
+    }
+
+    public Task<User?> FindByIdAsync(long id)
+    {
+        return db.Users.SingleOrDefaultAsync(u => u.Id == id);
+    }
 }

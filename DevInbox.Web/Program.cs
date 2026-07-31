@@ -36,6 +36,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
 
+
 // Search all services in the assembly and register those implementing IService or IComponent interfaces with scoped lifetime
 builder.Services.Scan(scan => scan
      .FromAssemblyOf<Program>()
@@ -61,7 +62,8 @@ builder.Services.Scan(scan => scan
 
 // Add DbContext with PostgreSQL provider and connection string from configuration
 builder.Services.AddDbContext<AppDbContext>(opt =>
-     opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+     opt.UseNpgsql(builder.Configuration.GetConnectionString("Default"))
+        .UseSnakeCaseNamingConvention());
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("database");

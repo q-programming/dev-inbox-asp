@@ -12,18 +12,11 @@
       },
       "hotReloadEnabled": true
     },
-    "DevInbox.Web (Full Stack)": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "launchUrl": "http://localhost:5173",
-      "applicationUrl": "http://localhost:5080",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Local",
-        "VITE_DEV_SERVER": "true"
-      },
-      "hotReloadEnabled": true,
-      "nativeDebugging": false
+    "React UI": {
+      "commandName": "Executable",
+      "executablePath": "cmd.exe",
+      "commandLineArgs": "/c npm run dev",
+      "workingDirectory": "ClientApp"
     },
     "DevInbox.Web (Testing)": {
       "commandName": "Project",

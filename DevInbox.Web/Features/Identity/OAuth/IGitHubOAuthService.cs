@@ -1,3 +1,5 @@
+using DevInbox.Web.Features.GitHub.Client.DTO;
+
 namespace DevInbox.Web.Features.Identity.OAuth;
 
 /// <summary>
@@ -16,7 +18,7 @@ public interface IGitHubOAuthService
     /// Verifies the state cookie, exchanges the code for an access token, and returns the GitHub user profile.
     /// Throws <see cref="BadRequestException"/> if state is invalid.
     /// </summary>
-    Task<(GitHubUserProfile Profile, string AccessToken)> AuthenticateAsync(HttpContext context, string code, string state);
+    Task<(GitHubUserProfileDTO Profile, string AccessToken)> AuthenticateAsync(HttpContext context, string code, string state);
 
     /// <summary>
     /// Returns the post-login redirect target — frontend dev server in Development, relative /inbox in production.

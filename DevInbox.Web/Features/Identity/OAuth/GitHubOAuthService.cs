@@ -1,11 +1,13 @@
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using DevInbox.Web.Features.GitHub.Client;
+using DevInbox.Web.Features.GitHub.Client.DTO;
 using DevInbox.Web.Infrastructure.Auth;
 using Microsoft.Extensions.Options;
 
 namespace DevInbox.Web.Features.Identity.OAuth;
 
-public class GitHubOAuthService(IHttpClientFactory httpClientFactory, IOptions<GithubOptions> ghOptions) : IGitHubOAuthService, IService
+public class GitHubOAuthService(IHttpClientFactory httpClientFactory, IOptions<GithubOptions> ghOptions, IGitHubClient gitHubClient) : IGitHubOAuthService, IService
 {
     private readonly GithubOptions _options = ghOptions.Value; // .Value evaluated once
 
@@ -35,7 +37,7 @@ public class GitHubOAuthService(IHttpClientFactory httpClientFactory, IOptions<G
         return _options.AuthorizationUri + query;
     }
 
-    public async Task<(GitHubUserProfile Profile, string AccessToken)> AuthenticateAsync(HttpContext context, string code, string state)
+    public async Task<(GitHubUserProfileDTO Profile, string AccessToken)> AuthenticateAsync(HttpContext context, string code, string state)
     {
         var storedState = context.Request.Cookies["oauth_state"];
         if (string.IsNullOrEmpty(storedState) || storedState != state)
@@ -48,8 +50,8 @@ public class GitHubOAuthService(IHttpClientFactory httpClientFactory, IOptions<G
 
         var redirectUri = BuildCallbackUri(context.Request);
         var accessToken = await ExchangeCodeAsync(code, redirectUri);
-        var profile = await GetUserProfileAsync(accessToken);
-        return (profile, accessToken);
+        var (Profile, AccessToken) = await gitHubClient.GetCurrentUserAsync(accessToken);
+        return (Profile, AccessToken);
     }
 
     private async Task<string> ExchangeCodeAsync(string code, string redirectUri)
@@ -82,21 +84,6 @@ public class GitHubOAuthService(IHttpClientFactory httpClientFactory, IOptions<G
         }
 
         return result.AccessToken;
-    }
-
-    private async Task<GitHubUserProfile> GetUserProfileAsync(string accessToken)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, "/user");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        var response = await GitHubClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
-        var profile = await response.Content.ReadFromJsonAsync<GitHubUserProfile>()
-            ?? throw new InvalidOperationException("GitHub returned empty user profile.");
-
-        profile.AccessToken = accessToken;
-        return profile;
     }
 
     public string GetPostLoginRedirectUrl()

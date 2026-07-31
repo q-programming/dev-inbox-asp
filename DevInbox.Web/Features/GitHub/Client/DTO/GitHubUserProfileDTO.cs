@@ -1,12 +1,12 @@
 using System.Text.Json.Serialization;
 
-namespace DevInbox.Web.Features.Identity.OAuth;
+namespace DevInbox.Web.Features.GitHub.Client.DTO;
 
 /// <summary>
 /// Maps the relevant fields from the GitHub GET /user API response.
 /// Snake_case JSON property names are mapped to PascalCase via <see cref="JsonPropertyNameAttribute"/>.
 /// </summary>
-public sealed class GitHubUserProfile
+public sealed class GitHubUserProfileDTO
 {
     /// <summary>GitHub username, e.g. "octocat"</summary>
     [JsonPropertyName("login")]
@@ -29,6 +29,4 @@ public sealed class GitHubUserProfile
 
     [JsonPropertyName("bio")]
     public string? Bio { get; set; }
-
-    public string AccessToken { get; set; } = string.Empty;
 }

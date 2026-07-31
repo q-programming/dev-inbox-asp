@@ -1,5 +1,7 @@
 using DevInbox.Web.Features.Audit.Domain;
+using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity.Domain;
+using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Features.Settings.Domain;
 using DevInbox.Web.Infrastructure.Security;
 
@@ -10,6 +12,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
     public DbSet<User> Users => Set<User>();
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+    public DbSet<GitHubProfile> GitHubProfiles => Set<GitHubProfile>();
+    public DbSet<Inbox> Inboxes => Set<Inbox>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,10 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
         var encryptedString = new EncryptedStringConverter(encryption);
         modelBuilder.Entity<User>(entity =>
         {
-            entity.Property(user => user.GitHubAccessToken).HasConversion(encryptedString);
             entity.Property(user => user.Type).HasConversion<string>();
-            entity.Property(user => user.Type).HasConversion<string>();
-
         });
         modelBuilder.Entity<UserSettings>(entity =>
         {
@@ -33,6 +34,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
         {
             entity.Property(audit => audit.EventType).HasConversion<string>();
         });
+        modelBuilder.Entity<GitHubProfile>(entity =>
+        {
+            entity.Property(profile => profile.AccessToken).HasConversion(encryptedString);
+        });
+        modelBuilder.Entity<Inbox>(entity =>
+        {
+            entity.Property(inbox => inbox.SyncStatus).HasConversion<string>();
+        });
+
 
         base.OnModelCreating(modelBuilder);
     }

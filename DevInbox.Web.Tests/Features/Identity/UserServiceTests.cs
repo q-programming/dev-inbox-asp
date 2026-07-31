@@ -1,10 +1,11 @@
 using System.Security.Claims;
 using DevInbox.Web.Common;
+using DevInbox.Web.Features.GitHub.Client.DTO;
+using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Identity.Events;
 using DevInbox.Web.Features.Identity.Exceptions;
-using DevInbox.Web.Features.Identity.OAuth;
 using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using Microsoft.AspNetCore.Http;
@@ -190,7 +191,7 @@ public class UserServiceTests
     public async Task LoginOrCreateGitHubUserAsyncShouldCreateUserAsync()
     {
         _ = _userRepository.FindByEmailAsync(TestEmail).Returns((User?)null);
-        var result = await _service.LoginOrCreateGitHubUserAsync(new GitHubUserProfile
+        var result = await _service.LoginOrCreateGitHubUserAsync(new GitHubUserProfileDTO
         {
             Email = TestEmail,
             Name = $"{FirstName} {LastName}"
@@ -211,7 +212,7 @@ public class UserServiceTests
     public async Task LoginOrCreateGitHubUserAsyncShouldCreateUserNoEmailAsync()
     {
         _ = _userRepository.FindByEmailAsync(InvalidEmail).Returns((User?)null);
-        var result = await _service.LoginOrCreateGitHubUserAsync(new GitHubUserProfile
+        var result = await _service.LoginOrCreateGitHubUserAsync(new GitHubUserProfileDTO
         {
             Login = "login",
             Name = $"{FirstName} {LastName}"
@@ -236,7 +237,7 @@ public class UserServiceTests
             LastName = LastName,
         };
         _ = _userRepository.FindByEmailAsync(TestEmail).Returns(user);
-        var result = await _service.LoginOrCreateGitHubUserAsync(new GitHubUserProfile
+        var result = await _service.LoginOrCreateGitHubUserAsync(new GitHubUserProfileDTO
         {
             Email = TestEmail,
             Name = $"{FirstName} {LastName}"

@@ -1,16 +1,14 @@
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
-import Button from '@mui/material/Button';
-import Tooltip from '@mui/material/Tooltip';
-import SyncIcon from '@mui/icons-material/Sync';
-import SettingsIcon from '@mui/icons-material/Settings';
+import { AppRoute } from '@app/routes.ts';
 import AddIcon from '@mui/icons-material/Add';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import SettingsIcon from '@mui/icons-material/Settings';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import { Link as RouterLink } from 'react-router-dom';
-import { AppRoute } from '@app/routes.ts';
 import ProfileMenu from '../profile/ProfileMenu.tsx';
-import useAlertStore, { AlertType } from '@shared/store/alert.store.ts';
+import { InboxSyncStatus } from './InboxSyncStatus';
 
 /**
  * Right-hand side of the app header: sync status, settings link, add-note split
@@ -18,23 +16,11 @@ import useAlertStore, { AlertType } from '@shared/store/alert.store.ts';
  * Extracted so AppHeader stays thin and each action group can be tested in isolation.
  */
 const HeaderActions = () => {
-  const { addAlert } = useAlertStore();
+
   return (
     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1, flexShrink: 0 }}>
       {/* Sync status */}
-      <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 0.5 }}>
-        <IconButton
-          size="small"
-          aria-label="sync"
-          onClick={() => addAlert({ type: AlertType.INFO, message: `Triggering manual sync...` })}
-        >
-          <SyncIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-        </IconButton>
-        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-          Synced just now
-        </Typography>
-      </Box>
-
+      <InboxSyncStatus />
       {/* Settings */}
       <Tooltip title="Settings">
         <IconButton

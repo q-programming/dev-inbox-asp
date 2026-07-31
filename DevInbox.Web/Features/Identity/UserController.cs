@@ -31,7 +31,7 @@ public class UserController(
     public async Task<UserDto> LoginAsync(LoginRequest body)
     {
         var user = await userService.LoginAsync(body);
-        jwtTokenService.IssueAccessToken(user.Email);
+        jwtTokenService.IssueAccessToken(user);
         var dto = _mapper.ToDto(user);
         dto.Integrations =
         [
@@ -75,7 +75,7 @@ public class UserController(
         var (profile, accessToken) = await githubAuthService.AuthenticateAsync(httpContext, code, state);
 
         var user = await userService.LoginOrCreateGitHubUserAsync(profile, accessToken);
-        jwtTokenService.IssueAccessToken(user.Email);
+        jwtTokenService.IssueAccessToken(user);
         httpContext.Response.Redirect(githubAuthService.GetPostLoginRedirectUrl());
     }
 }

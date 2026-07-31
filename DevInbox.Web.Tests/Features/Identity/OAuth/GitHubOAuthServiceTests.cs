@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using DevInbox.Web.Common;
+using DevInbox.Web.Features.GitHub.Client;
 using DevInbox.Web.Features.Identity.OAuth;
 using DevInbox.Web.Infrastructure.Auth;
 using Microsoft.AspNetCore.Http;
@@ -33,11 +34,15 @@ public class GitHubOAuthServiceTests
 
     private readonly MockHttpMessageHandler _mockHttp;
     private readonly GitHubOAuthService _service;
+    private readonly IGitHubClient _gitHubClient;
 
     public GitHubOAuthServiceTests()
     {
         _mockHttp = new MockHttpMessageHandler();
-        _service = new GitHubOAuthService(BuildFactory(_mockHttp), BuildOptions());
+        var httpClient = _mockHttp.ToHttpClient();
+        httpClient.BaseAddress = new Uri("https://api.github.com");
+        _gitHubClient = new GitHubClient(httpClient);
+        _service = new GitHubOAuthService(BuildFactory(_mockHttp), BuildOptions(), _gitHubClient);
     }
 
     // -------------------------------------------------------------------------
@@ -116,7 +121,7 @@ public class GitHubOAuthServiceTests
         Assert.Equal(FakeAccessToken, token);
         Assert.Equal(GithubLogin, profile.Login);
         Assert.Equal(GithubEmail, profile.Email);
-        Assert.Equal(FakeAccessToken, profile.AccessToken);
+        Assert.Equal(FakeAccessToken, token);
     }
 
     // -------------------------------------------------------------------------
@@ -160,7 +165,10 @@ public class GitHubOAuthServiceTests
     [Fact(DisplayName = "GetPostLoginRedirectUrl should return FrontendUrl/inbox when FrontendUrl is set")]
     public void GetPostLoginRedirectUrlShouldReturnAbsoluteWhenFrontendUrlSet()
     {
-        var service = new GitHubOAuthService(BuildFactory(_mockHttp), BuildOptions(FrontendUrl));
+        var httpClient = _mockHttp.ToHttpClient();
+        httpClient.BaseAddress = new Uri("https://api.github.com");
+        var gitHubClient = new GitHubClient(httpClient);
+        var service = new GitHubOAuthService(BuildFactory(_mockHttp), BuildOptions(FrontendUrl), gitHubClient);
 
         Assert.Equal($"{FrontendUrl}/inbox", service.GetPostLoginRedirectUrl());
     }

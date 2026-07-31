@@ -77,12 +77,14 @@ public sealed class EventPublisher(
 
         foreach (var handlerType in handlerTypes)
         {
-            _ = ExecuteHandlerAsync(
-                message,
-                handlerType,
-                CancellationToken.None);
+            _ = Task.Run(() =>
+            {
+                _ = ExecuteHandlerAsync(
+                    message,
+                    handlerType,
+                    cancellationToken);
+            }, cancellationToken);
         }
-
         return Task.CompletedTask;
     }
 

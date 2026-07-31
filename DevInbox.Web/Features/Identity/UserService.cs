@@ -1,9 +1,11 @@
 using System.Security.Claims;
 using DevInbox.Web.Common.Utils;
+using DevInbox.Web.Features.GitHub.Client.DTO;
+using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Identity.Events;
 using DevInbox.Web.Features.Identity.Exceptions;
-using DevInbox.Web.Features.Identity.OAuth;
+using DevInbox.Web.Features.Sync.Events;
 using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
@@ -35,7 +37,9 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
             LastName = body.LastName,
             Email = email!,
             Password = BCrypt.Net.BCrypt.HashPassword(body.Password),
-            Type = User.AccountType.REGULAR
+            Type = User.AccountType.REGULAR,
+            Inbox = Inbox.Domain.Inbox.CreateDefault()
+
         };
         await userRepository.AddAsync(user);
         await publisher.PublishAsync(new UserCreatedEvent(user.Id, user.Email, user.FirstName, user.LastName, User.AccountType.REGULAR.ToString()));
@@ -57,7 +61,8 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
             throw new UnauthorizedException("Authentication failed");
 
         }
-        await publisher.PublishAsync(new UserAuthenticatedEvent(user.Id, user.Email, user.GitHubAccessToken));
+        await publisher.PublishAsync(new UserAuthenticatedEvent(user.Id, user.Email));
+        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email));
         return user;
     }
 
@@ -67,16 +72,16 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
     /// </summary>
     public async Task<User> GetCurrentUserAsync()
     {
-        var email = httpContextAccessor.HttpContext?
+        var userId = httpContextAccessor.HttpContext?
             .User
             .FindFirstValue(ClaimTypes.NameIdentifier);
 
-        if (string.IsNullOrEmpty(email))
+        if (string.IsNullOrEmpty(userId))
         {
             throw new UnauthorizedException("No authenticated user.");
         }
 
-        return await userRepository.FindByEmailAsync(email)
+        return await userRepository.FindByIdAsync(long.Parse(userId))
             ?? throw new UnauthorizedException("Authenticated user no longer exists.");
     }
 
@@ -90,17 +95,19 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
         return Task.CompletedTask;
     }
 
-    public async Task<User> LoginOrCreateGitHubUserAsync(GitHubUserProfile profile, string accessToken)
+    public async Task<User> LoginOrCreateGitHubUserAsync(GitHubUserProfileDTO profile, string accessToken)
     {
         var email = string.IsNullOrEmpty(profile.Email)
             ? profile.Login + GitHubInvalidSuffix
             : profile.Email;
 
-        var user = await userRepository.FindByEmailAsync(email);
+        var user = await userRepository.FindByEmailWithGitHubProfileAsync(email);
         if (user != null)
         {
             logger.LogDebug("Refreshing GitHub token for {Email}", email);
-            user.GitHubAccessToken = accessToken;
+            user.GitHubProfile!.AccessToken = accessToken;
+            user.GitHubProfile.AvatarUrl = profile.AvatarUrl;
+            user.GitHubProfile.GitHubLogin = profile.Login;
             await userRepository.UpdateAsync(user);
         }
         else
@@ -114,15 +121,21 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
                 LastName = lastName,
                 Email = email,
                 Type = User.AccountType.OAUTH_GITHUB,
-                GitHubAccessToken = accessToken
-
-
+                GitHubProfile = new GitHubProfile
+                {
+                    GitHubLogin = profile.Login,
+                    GitHubUserId = profile.Id,
+                    AccessToken = accessToken,
+                    AvatarUrl = profile.AvatarUrl
+                },
+                Inbox = Inbox.Domain.Inbox.CreateDefault()
             };
             await userRepository.AddAsync(user);
             await publisher.PublishAsync(new UserCreatedEvent(user.Id, user.Email, user.FirstName, user.LastName, User.AccountType.OAUTH_GITHUB.ToString()));
             logger.LogDebug("Created new user for GitHub for {Email}", email);
         }
-        await publisher.PublishAsync(new UserAuthenticatedEvent(user.Id, user.Email, user.GitHubAccessToken));
+        await publisher.PublishAsync(new UserAuthenticatedEvent(user.Id, user.Email));
+        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email));
         return user;
     }
 }

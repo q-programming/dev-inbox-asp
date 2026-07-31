@@ -204,7 +204,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InboxPage"
-
+  /inbox/status:
+    get:
+      operationId: getInboxStatus
+      tags: [inbox]
+      summary: Get the status of the inbox
+      responses:
+        "200":
+          description: Inbox item status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxStatus"
+        "404":
+          description: Not found
   /inbox/{id}:
     get:
       operationId: getInboxItem
@@ -437,6 +450,10 @@ components:
       type: string
       enum: [REGULAR, OAUTH_GITHUB]
 
+    SyncStatus:
+      type: string
+      enum: [Idle, Running, Failed]
+
     IntegrationDto:
       type: object
       required: [status, type]
@@ -508,6 +525,23 @@ components:
           type: integer
         size:
           type: integer
+    InboxStatus:
+      type: object
+      properties:
+        lastUpdatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+        syncStatus:
+          $ref: "#/components/schemas/SyncStatus"
+        lastSyncStartedAt:
+          type: string
+          format: date-time
+        lastSyncCompletedAt:
+          type: string
+          format: date-time
 
     InboxItemSummary:
       type: object

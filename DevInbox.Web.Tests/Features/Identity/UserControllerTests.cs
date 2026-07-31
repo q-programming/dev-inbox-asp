@@ -1,4 +1,5 @@
 using DevInbox.Web.Common;
+using DevInbox.Web.Features.GitHub.Client.DTO;
 using DevInbox.Web.Features.Identity;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Identity.OAuth;
@@ -60,7 +61,7 @@ public class UserControllerTests
 
             await _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = StrongPassword });
 
-            _jwtTokenService.Received(1).IssueAccessToken(TestEmail);
+            _jwtTokenService.Received(1).IssueAccessToken(new User { Email = TestEmail, Id = 0 });
         }
 
         [Fact(DisplayName = "LoginAsync should return user dto on success")]
@@ -83,7 +84,7 @@ public class UserControllerTests
             await Assert.ThrowsAsync<UnauthorizedException>(() =>
                 _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = "wrong" }));
 
-            _jwtTokenService.DidNotReceive().IssueAccessToken(Arg.Any<string>());
+            _jwtTokenService.DidNotReceive().IssueAccessToken(Arg.Any<User>());
         }
 
         [Fact(DisplayName = "MeAsync should return dto for currently authenticated user")]
@@ -161,7 +162,7 @@ public class UserControllerTests
         [Fact(DisplayName = "GithubAuthCallbackAsync should issue JWT and redirect after successful authentication")]
         public async Task GithubAuthCallbackAsyncShouldIssueTokenAndRedirectOnSuccessAsync()
         {
-            var profile = new GitHubUserProfile { Login = "octocat", Email = TestEmail };
+            var profile = new GitHubUserProfileDTO { Login = "octocat", Email = TestEmail };
             _githubAuthService.AuthenticateAsync(Arg.Any<HttpContext>(), GithubCode, GithubState)
                 .Returns((profile, GithubToken));
             _githubAuthService.GetPostLoginRedirectUrl().Returns(RedirectUrl);
@@ -169,7 +170,7 @@ public class UserControllerTests
 
             await _controller.GithubAuthCallbackAsync(GithubCode, GithubState);
 
-            _jwtTokenService.Received(1).IssueAccessToken(TestEmail);
+            _jwtTokenService.Received(1).IssueAccessToken(new User { Email = TestEmail, Id = 0 });
             Assert.Equal(302, _httpContext.Response.StatusCode);
             Assert.Equal(RedirectUrl, _httpContext.Response.Headers.Location.ToString());
         }
@@ -178,7 +179,7 @@ public class UserControllerTests
         public async Task GithubAuthCallbackAsyncShouldPropagateExceptionOnInvalidStateAsync()
         {
             _githubAuthService.AuthenticateAsync(Arg.Any<HttpContext>(), Arg.Any<string>(), Arg.Any<string>())
-                .Returns<(GitHubUserProfile, string)>(_ => throw new BadRequestException("Invalid OAuth state"));
+                .Returns<(GitHubUserProfileDTO, string)>(_ => throw new BadRequestException("Invalid OAuth state"));
 
             await Assert.ThrowsAsync<BadRequestException>(() =>
                 _controller.GithubAuthCallbackAsync("bad-code", "bad-state"));
