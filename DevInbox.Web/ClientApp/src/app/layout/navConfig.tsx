@@ -4,7 +4,6 @@ import RateReviewIcon from '@mui/icons-material/RateReview';
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import StickyNote2Icon from '@mui/icons-material/StickyNote2';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
@@ -39,21 +38,18 @@ export const CORE_FOCUS_ITEMS: SidebarNavItem[] = [
     label: 'Inbox',
     icon: <InboxIcon fontSize="small" />,
     route: AppRoute.INBOX,
-    count: 18,
   },
   {
     id: 'reviews',
     label: 'Review requests',
     icon: <RateReviewIcon fontSize="small" />,
     route: AppRoute.INBOX,
-    count: 5,
   },
   {
     id: 'mentions',
     label: 'Mentions',
     icon: <AlternateEmailIcon fontSize="small" />,
     route: AppRoute.INBOX,
-    count: 3,
   },
 ];
 
@@ -69,7 +65,6 @@ export const INTEGRATION_FOCUS_ITEMS: SidebarNavItem[] = [
     label: 'ADO items',
     icon: IntegrationType.Ado,
     route: AppRoute.INBOX,
-    count: 4,
   },
 ];
 
@@ -79,19 +74,16 @@ export const BOTTOM_FOCUS_ITEMS: SidebarNavItem[] = [
     label: 'Notes',
     icon: <StickyNote2Icon fontSize="small" />,
     route: AppRoute.NOTES,
-    count: 6,
   },
   {
     id: 'saved',
     label: 'Saved',
     icon: <BookmarkIcon fontSize="small" />,
     route: AppRoute.INBOX,
-    count: 9,
   },
 ];
 
 export const FILTER_ITEMS: SidebarNavItem[] = [
-  { id: 'unread', label: 'Unread', icon: <FiberManualRecordIcon fontSize="small" />, count: 18 },
   { id: 'needs-attention', label: 'Needs attention', icon: <ErrorOutlineIcon fontSize="small" /> },
   { id: 'stale', label: 'Stale', icon: <AccessTimeIcon fontSize="small" /> },
   {

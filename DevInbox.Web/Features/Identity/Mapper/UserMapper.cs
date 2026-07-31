@@ -12,5 +12,6 @@ public partial class UserMapper
     [MapperIgnoreSource(nameof(User.Password))]
     [MapperIgnoreTarget(nameof(UserDto.Integrations))]
     [MapperIgnoreTarget(nameof(UserDto.AdditionalProperties))]
+    [MapperIgnoreSource(nameof(User.Inbox))]
     public partial UserDto ToDto(User user);
 }

@@ -14,6 +14,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<GitHubProfile> GitHubProfiles => Set<GitHubProfile>();
     public DbSet<Inbox> Inboxes => Set<Inbox>();
+    public DbSet<InboxItem> InboxItems => Set<InboxItem>();
+    public DbSet<InboxItemState> InboxItemStates => Set<InboxItemState>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,6 +44,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
         modelBuilder.Entity<Inbox>(entity =>
         {
             entity.Property(inbox => inbox.SyncStatus).HasConversion<string>();
+        });
+        modelBuilder.Entity<InboxItem>(entity =>
+        {
+            entity.Property(inbox => inbox.Type).HasConversion<string>();
+            entity.Property(inbox => inbox.Source).HasConversion<string>();
+            entity.Property(inbox => inbox.Reason).HasConversion<string>();
+            entity.Property(inbox => inbox.Title).HasConversion(encryptedString);
         });
 
 

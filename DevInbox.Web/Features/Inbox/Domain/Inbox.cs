@@ -15,6 +15,7 @@ public sealed class Inbox
     public DateTimeOffset? LastSyncStartedAt { get; set; }
     public DateTimeOffset? LastSyncCompletedAt { get; set; }
     public SyncStatus SyncStatus { get; set; }
+    public ICollection<InboxItem> Items { get; set; } = [];
 
     public static Inbox CreateDefault()
     {

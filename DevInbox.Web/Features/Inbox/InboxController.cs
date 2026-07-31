@@ -5,16 +5,10 @@ namespace DevInbox.Web.Features.Inbox;
 
 public class InboxController(IInboxService inboxService) : IInboxBaseController, IComponent
 {
-    private InboxMapper _inboxMapper = new InboxMapper();
-    public Task<InboxPage> ListInboxItemsAsync(ItemSource? source, ItemType? itemType, ItemStatus? status, int page, int size)
+    private InboxMapper _inboxMapper = new();
+    public Task<InboxPage> ListInboxItemsAsync(int page, int size, ItemSource? source, ItemType? itemType, ItemStatus? status)
     {
-        return Task.FromResult(new InboxPage
-        {
-            Items = [],
-            Page = 0,
-            Size = 20,
-            TotalElements = 0
-        });
+        return inboxService.ListInboxItemsAsync(page, size, source, itemType, status);
     }
 
     public Task<InboxItemDetail> GetInboxItemAsync(System.Guid id)
@@ -31,5 +25,15 @@ public class InboxController(IInboxService inboxService) : IInboxBaseController,
     {
         var inbox = await inboxService.GetUserInboxAsync();
         return _inboxMapper.ToStatus(inbox);
+    }
+
+    public Task<InboxSummary> GetInboxSummaryAsync()
+    {
+        return inboxService.GetInboxSummaryAsync();
+    }
+
+    public Task PutInboxSeedAsync()
+    {
+        return inboxService.PutInboxSeedAsync();
     }
 }

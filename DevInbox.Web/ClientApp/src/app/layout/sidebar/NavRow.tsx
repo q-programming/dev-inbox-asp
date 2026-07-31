@@ -73,7 +73,7 @@ const NavRow = memo(({ item, activeId, collapsed }: NavRowProps) => {
           {item.expandable && (
             <ChevronRightIcon fontSize="small" sx={{ color: 'text.disabled', fontSize: '1rem' }} />
           )}
-          {item.count !== undefined && !item.expandable && (
+          {(item.count !== undefined && item.count !== 0) && !item.expandable && (
             <ListItemSecondaryAction>
               <Typography
                 variant="caption"

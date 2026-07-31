@@ -93,6 +93,7 @@ paths:
                 $ref: "#/components/schemas/UserDto"
         "204":
           description: No user found
+
   /auth/github:
     get:
       operationId: githubAuth
@@ -107,6 +108,7 @@ paths:
               schema:
                 type: string
                 format: uri
+
   /auth/github/callback:
     get:
       operationId: githubAuthCallback
@@ -175,6 +177,16 @@ paths:
       tags: [inbox]
       summary: List inbox items with optional filtering
       parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 50
         - name: source
           in: query
           schema:
@@ -187,16 +199,7 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/ItemStatus"
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 0
-        - name: size
-          in: query
-          schema:
-            type: integer
-            default: 50
+
       responses:
         "200":
           description: Paginated list of inbox items
@@ -204,6 +207,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InboxPage"
+
   /inbox/status:
     get:
       operationId: getInboxStatus
@@ -218,6 +222,32 @@ paths:
                 $ref: "#/components/schemas/InboxStatus"
         "404":
           description: Not found
+  /inbox/summary:
+    get:
+      operationId: getInboxSummary
+      tags: [inbox]
+      summary: Get the summary of the inbox
+      responses:
+        "200":
+          description: Inbox summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxSummary"
+        "404":
+          description: Not found
+  /inbox/seed:
+    put:
+      operationId: putInboxSeed
+      tags: [inbox]
+      depreciated: true
+      summary: Seeds inbox with random elements for testing
+      responses:
+        "204":
+          description: Inbox items created
+        "404":
+          description: Not found
+
   /inbox/{id}:
     get:
       operationId: getInboxItem
@@ -543,24 +573,60 @@ components:
           type: string
           format: date-time
 
+    InboxSummary:
+        type: object
+        description: Aggregated status/counts calculated while loading the inbox page. This is not used
+        properties:
+          total:
+            type: integer
+            format: int64
+          unread:
+            type: integer
+            format: int64
+          read:
+            type: integer
+            format: int64
+          saved:
+            type: integer
+            format: int64
+          needsAttention:
+            type: integer
+            format: int64
+          stale:
+            type: integer
+            format: int64
+          reviewRequests:
+            type: integer
+            format: int64
+          mentions:
+            type: integer
+            format: int64
+          myPullRequests:
+            type: integer
+            format: int64
+          adoItems:
+            type: integer
+            format: int64
+          notes:
+            type: integer
+            format: int64
+
     InboxItemSummary:
       type: object
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
         sourceType:
           $ref: "#/components/schemas/ItemSource"
         itemType:
           $ref: "#/components/schemas/ItemType"
         title:
           type: string
-        subtitle:
-          type: string
         repository:
           type: string
         reason:
-          type: string
+          $ref: "#/components/schemas/InboxReason"
         isUnread:
           type: boolean
         isSaved:
@@ -571,7 +637,13 @@ components:
           type: boolean
         priority:
           $ref: "#/components/schemas/Priority"
-        lastActivityAt:
+        activityAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
           type: string
           format: date-time
 
@@ -635,19 +707,23 @@ components:
 
     ItemSource:
       type: string
-      enum: [GITHUB, ADO, NOTE]
+      enum: [Github, Ado, Note]
 
     ItemType:
       type: string
-      enum: [PR, ISSUE, WORK_ITEM, NOTE]
+      enum: [PR, Issue, WorkItem, Note]
 
     ItemStatus:
       type: string
-      enum: [UNREAD, SAVED, DONE, PINNED]
+      enum: [Unread, Saved, Done, Pinned]
 
     Priority:
       type: string
-      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+      enum: [None, Low, Medium, High, Critical]
+
+    InboxReason:
+      type: string
+      enum: [Unknown, ReviewRequested, Mentioned, Assigned, Authored, FollowUp, Note]
 
     # ── Notes ──────────────────────────────────────────────────
     NoteDto:

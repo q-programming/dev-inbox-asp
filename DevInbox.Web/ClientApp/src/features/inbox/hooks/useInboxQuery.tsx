@@ -9,12 +9,19 @@ export const inboxApi = new InboxClient(BASE_URL, { fetch: apiFetch });
 export const inboxKeys = {
   all: ['inbox'] as const,
   items: ['inbox', 'items'] as const,
+  summary: ['inbox', 'summary'] as const,
 } as const;
 
 export const useInboxQuery = () =>
   useQuery({
     queryKey: inboxKeys.items,
-    queryFn: () => inboxApi.listInboxItems(undefined, undefined, undefined, undefined, undefined),
+    queryFn: () => inboxApi.listInboxItems(0, 20, undefined, undefined, undefined),
+  });
+
+export const useInboxSummaryQuery = () =>
+  useQuery({
+    queryKey: inboxKeys.summary,
+    queryFn: () => inboxApi.getInboxSummary(),
   });
 
 export const useSyncMutation = () =>
@@ -25,7 +32,20 @@ export const useSyncMutation = () =>
       onSuccess: () => {
         // Invalidate the inbox query to refetch the latest items after a successful sync.
         queryClient.invalidateQueries({ queryKey: inboxKeys.items });
+        queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
         queryClient.invalidateQueries({ queryKey: heartbeatKeys.status });
       },
+    });
+  };
+
+  /**
+   * Seeds inbox with random items, useful for testing and development.
+   * Do not invalidate queries after seeding, as the server will automatically trigger a sync and update the inbox.
+   * @deprecated
+   */
+  export const useSeedMutation = () =>
+  {
+    return useMutation<void, ApiError, void>({
+      mutationFn: () => inboxApi.putInboxSeed()
     });
   };

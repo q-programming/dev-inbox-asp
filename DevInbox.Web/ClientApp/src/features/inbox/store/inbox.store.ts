@@ -1,6 +1,6 @@
+import { InboxStatus } from '@api';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { InboxStatus, SyncStatus } from '@api';
 
 export const INBOX_STORAGE_KEY = 'devInbox.inbox';
 

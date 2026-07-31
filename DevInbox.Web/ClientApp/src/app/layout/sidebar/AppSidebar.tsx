@@ -16,6 +16,8 @@ import useSettingsStore from '@feature/settings/store/settings.store';
 import NavRow from './NavRow.tsx';
 import SectionLabel from './SectionLabel.tsx';
 import { useLocation } from 'react-router-dom';
+import { useInboxSummaryQuery } from '@feature/inbox/hooks/useInboxQuery.tsx';
+import type { InboxSummary } from '@api';
 
 export const SIDEBAR_WIDTH = 220;
 export const SIDEBAR_COLLAPSED_WIDTH = 56;
@@ -35,6 +37,62 @@ const AppSidebar = memo(() => {
   const { toggleSideBar } = useSettingsStore();
 
   const activeId = useMemo(() => pathname.split('/').filter(Boolean)[0] ?? '', [pathname]);
+  const { data: summary } = useInboxSummaryQuery();
+
+    
+
+  const getCountForItem = (
+    id: string,
+    summary?: InboxSummary,
+  ): number | undefined => {
+    if (!summary) {
+      return undefined;
+    }
+
+    switch (id) {
+      case 'inbox':
+        return summary.unread;
+      case 'reviews':
+        return summary.reviewRequests;
+      case 'mentions':
+        return summary.mentions;
+      case 'my-prs':
+        return summary.myPullRequests;
+      case 'ado-items':
+        return summary.adoItems;
+      case 'notes':
+        return summary.notes;
+      case 'saved':
+        return summary.saved;
+      case 'needs-attention':
+        return summary.needsAttention;
+      case 'stale':
+        return summary.stale;
+      default:
+        return undefined;
+    }
+  };
+
+  const focusItems = useMemo(
+    () =>
+      [
+        ...CORE_FOCUS_ITEMS,
+        ...INTEGRATION_FOCUS_ITEMS,
+        ...BOTTOM_FOCUS_ITEMS,
+      ].map(item => ({
+        ...item,
+        count: getCountForItem(item.id, summary),
+      })),
+    [summary],
+  );
+  const filterItems = useMemo(
+  () =>
+    FILTER_ITEMS.map(item => ({
+      ...item,
+      count: getCountForItem(item.id, summary),
+    })),
+  [summary],
+);
 
   return (
     <Box
@@ -57,13 +115,7 @@ const AppSidebar = memo(() => {
     >
       <SectionLabel label="Focus" collapsed={collapsed} />
       <List disablePadding dense>
-        {CORE_FOCUS_ITEMS.map((item) => (
-          <NavRow key={item.id} item={item} activeId={activeId} collapsed={collapsed} />
-        ))}
-        {INTEGRATION_FOCUS_ITEMS.map((item) => (
-          <NavRow key={item.id} item={item} activeId={activeId} collapsed={collapsed} />
-        ))}
-        {BOTTOM_FOCUS_ITEMS.map((item) => (
+        {focusItems.map((item) => (
           <NavRow key={item.id} item={item} activeId={activeId} collapsed={collapsed} />
         ))}
       </List>
@@ -72,8 +124,8 @@ const AppSidebar = memo(() => {
 
       <SectionLabel label="Filters" collapsed={collapsed} />
       <List disablePadding dense>
-        {FILTER_ITEMS.map((item) => (
-          <NavRow key={item.id} item={item} collapsed={collapsed} />
+        {filterItems.map((item) => (
+          <NavRow key={item.id} item={item} activeId={activeId} collapsed={collapsed} />
         ))}
       </List>
 

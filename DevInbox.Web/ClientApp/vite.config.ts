@@ -16,6 +16,7 @@ export default defineConfig({
       '@app': path.resolve(__dirname, './src/app'),
       '@feature': path.resolve(__dirname, './src/features'),
       '@test': path.resolve(__dirname, './src/test'),
+      '@utils': path.resolve(__dirname, './src/shared/utils'),
       // Generated API client — regenerated on every dotnet build from openapi/api.yml
       '@api': path.resolve(__dirname, './generated/api-client'),
     },

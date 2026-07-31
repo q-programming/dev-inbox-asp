@@ -10,6 +10,9 @@ interface IIntegrationIcon {
 
 const IntegrationIcon = memo(({ integration, size = 16 }: IIntegrationIcon) => {
   const theme = useTheme();
+  if(!integration) {
+    return null;
+  }
   return (
     <Box
       component="img"

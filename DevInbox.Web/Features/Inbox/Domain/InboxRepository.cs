@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using DevInbox.Web.Infrastructure.Persistence;
 
 namespace DevInbox.Web.Features.Inbox.Domain;
