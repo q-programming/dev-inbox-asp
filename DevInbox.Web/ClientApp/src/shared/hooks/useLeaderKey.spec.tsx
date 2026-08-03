@@ -28,7 +28,9 @@ function renderLeaderKey() {
 }
 
 function fireKey(key: string, modifiers: Partial<KeyboardEventInit> = {}) {
-  document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...modifiers }));
+  act(() => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...modifiers }));
+  });
 }
 
 beforeEach(() => {
@@ -91,7 +93,9 @@ describe('useLeaderKey', () => {
       renderLeaderKey();
       const input = document.createElement('input');
       document.body.appendChild(input);
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true }));
+      act(() => {
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true }));
+      });
       // Even if we fire i globally the pending flag should not be set
       fireKey('i');
       expect(lastNavigatedPath).toBe('');

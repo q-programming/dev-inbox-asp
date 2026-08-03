@@ -16,6 +16,7 @@ namespace DevInbox.Web.Tests.Features.Identity;
 public class UserServiceTests
 {
     private const string TestEmail = "jan@example.com";
+    private const long TestUserId = 42;
     private const string FirstName = "Jan";
     private const string LastName = "Kowalski";
     private const string StrongPassword = "strongpassword123";
@@ -141,9 +142,10 @@ public class UserServiceTests
     [Fact(DisplayName = "GetCurrentUserAsync should return user when NameIdentifier claim is present")]
     public async Task GetCurrentUserAsyncShouldReturnUserForAuthenticatedRequestAsync()
     {
-        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestEmail), Substitute.For<ILogger<UserService>>(), _asyncPublisher);
-        _ = _userRepository.FindByEmailAsync(TestEmail).Returns(new User
+        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestUserId), Substitute.For<ILogger<UserService>>(), _asyncPublisher);
+        _ = _userRepository.FindByIdAsync(TestUserId).Returns(new User
         {
+            Id = TestUserId,
             FirstName = FirstName,
             LastName = LastName,
             Email = TestEmail,
@@ -181,8 +183,8 @@ public class UserServiceTests
     [Fact(DisplayName = "GetCurrentUserAsync should throw when user no longer exists in the database")]
     public async Task GetCurrentUserAsyncShouldThrowWhenUserNoLongerExistsAsync()
     {
-        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestEmail), Substitute.For<ILogger<UserService>>(), _asyncPublisher);
-        _ = _userRepository.FindByEmailAsync(TestEmail).Returns((User?)null);
+        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestUserId), Substitute.For<ILogger<UserService>>(), _asyncPublisher);
+        _ = _userRepository.FindByIdAsync(TestUserId).Returns((User?)null);
 
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetCurrentUserAsync());
     }
@@ -235,8 +237,14 @@ public class UserServiceTests
             Email = TestEmail,
             FirstName = FirstName,
             LastName = LastName,
+            GitHubProfile = new GitHubProfile
+            {
+                GitHubLogin = "octocat",
+                GitHubUserId = 1,
+                AccessToken = "old-token"
+            }
         };
-        _ = _userRepository.FindByEmailAsync(TestEmail).Returns(user);
+        _ = _userRepository.FindByEmailWithGitHubProfileAsync(TestEmail).Returns(user);
         var result = await _service.LoginOrCreateGitHubUserAsync(new GitHubUserProfileDTO
         {
             Email = TestEmail,
@@ -249,10 +257,10 @@ public class UserServiceTests
         Assert.Equal(LastName, result.LastName);
     }
 
-    private static IHttpContextAccessor CreateAccessorWithClaim(string email)
+    private static IHttpContextAccessor CreateAccessorWithClaim(long userId)
     {
         var principal = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim(ClaimTypes.NameIdentifier, email)
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
         ]));
         var httpContext = Substitute.For<HttpContext>();
         httpContext.User.Returns(principal);

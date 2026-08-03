@@ -87,6 +87,17 @@ public class GitHubService(
                 Body = "I'll address the naming comments in a follow-up commit.",
                 CreatedAt = item.UpdatedAt.AddMinutes(-10)
             }
+            ],
+
+            LinkedWorkItems =
+            [
+                new LinkedItem
+            {
+                Id = "ACME-1234",
+                Title = "Implement caching for user profile",
+                Type = "AdoWorkItem",
+                Url = "https://dev.azure.com/acme/_workitems/edit/1234"
+            }
             ]
         });
     }

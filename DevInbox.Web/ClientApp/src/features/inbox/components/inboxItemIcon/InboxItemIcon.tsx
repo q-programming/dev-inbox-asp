@@ -25,6 +25,7 @@ const InboxItemIcon = ({ item }: IInboxItemIcon) => {
 
     return (
         <ListItemIcon
+            data-testid="inbox-item-icon"
             sx={{
                 minWidth: 36,
                 mt: 0.25,

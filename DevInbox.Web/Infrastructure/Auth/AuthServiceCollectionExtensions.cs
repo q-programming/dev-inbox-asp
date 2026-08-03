@@ -75,8 +75,8 @@ public static class AuthServiceCollectionExtensions
             throw new InvalidOperationException("GitHub:ClientSecret is required.");
         }
         _ = services.Configure<GithubOptions>(ghSection);
-        // HTTP client
-        services.AddHttpClient<IGitHubClient, GitHubClient>((sp, client) =>
+        // HTTP client — named "github" so it can also be resolved via IHttpClientFactory.CreateClient("github")
+        services.AddHttpClient<IGitHubClient, GitHubClient>("github", (sp, client) =>
         {
             client.BaseAddress = new Uri("https://api.github.com");
             client.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");

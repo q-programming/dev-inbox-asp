@@ -6,12 +6,14 @@ import StickyNote2Icon from '@mui/icons-material/StickyNote2';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import GroupIcon from '@mui/icons-material/Group';
 import LabelIcon from '@mui/icons-material/Label';
 import TuneIcon from '@mui/icons-material/Tune';
 import { AppRoute } from '@app/routes';
-import { IntegrationType } from '@api';
+import { InboxReason, IntegrationType, ItemSource, ItemType } from '@api';
+import type { InboxFilter } from '@feature/inbox/utils/inboxFilter';
 
 export interface SidebarNavItem {
   id: string;
@@ -19,6 +21,8 @@ export interface SidebarNavItem {
   icon: ReactNode | IntegrationType;
   /** Route to navigate to. Omit for non-routed items (filters). */
   route?: AppRoute;
+  /** Inbox filter criteria applied via query params when navigating to this item. */
+  filter?: InboxFilter;
   /** Optional static badge count — will be replaced with live data later. */
   count?: number;
   /** If true the item is a section heading, not clickable. */
@@ -44,12 +48,14 @@ export const CORE_FOCUS_ITEMS: SidebarNavItem[] = [
     label: 'Review requests',
     icon: <RateReviewIcon fontSize="small" />,
     route: AppRoute.INBOX,
+    filter: { reason: InboxReason.ReviewRequested },
   },
   {
     id: 'mentions',
     label: 'Mentions',
     icon: <AlternateEmailIcon fontSize="small" />,
     route: AppRoute.INBOX,
+    filter: { reason: InboxReason.Mentioned },
   },
 ];
 
@@ -59,12 +65,19 @@ export const CORE_FOCUS_ITEMS: SidebarNavItem[] = [
  * Icons are rendered inline — the consuming component handles theme-aware SVG styling.
  */
 export const INTEGRATION_FOCUS_ITEMS: SidebarNavItem[] = [
-  { id: 'my-prs', label: 'My PRs', icon: 'git-pull-request', route: AppRoute.INBOX, count: 7 },
+  {
+    id: 'my-prs',
+    label: 'My PRs',
+    icon: 'git-pull-request',
+    route: AppRoute.INBOX,
+    filter: { itemType: ItemType.PR, reason: InboxReason.Authored },
+  },
   {
     id: 'ado-items',
     label: 'ADO items',
     icon: IntegrationType.Ado,
     route: AppRoute.INBOX,
+    filter: { source: ItemSource.Ado },
   },
 ];
 
@@ -73,7 +86,8 @@ export const BOTTOM_FOCUS_ITEMS: SidebarNavItem[] = [
     id: 'notes',
     label: 'Notes',
     icon: <StickyNote2Icon fontSize="small" />,
-    route: AppRoute.NOTES,
+    route: AppRoute.INBOX,
+    filter: { itemType: ItemType.Note },
   },
   {
     id: 'saved',
@@ -84,6 +98,7 @@ export const BOTTOM_FOCUS_ITEMS: SidebarNavItem[] = [
 ];
 
 export const FILTER_ITEMS: SidebarNavItem[] = [
+  { id: 'unread', label: 'Unread', icon: <MarkEmailUnreadIcon fontSize="small" /> },
   { id: 'needs-attention', label: 'Needs attention', icon: <ErrorOutlineIcon fontSize="small" /> },
   { id: 'stale', label: 'Stale', icon: <AccessTimeIcon fontSize="small" /> },
   {

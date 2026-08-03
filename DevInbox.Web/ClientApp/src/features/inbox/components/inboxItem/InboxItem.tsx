@@ -14,10 +14,13 @@ interface IInboxItem {
 }
 
 const InboxItem = ({ item }: IInboxItem) => {
-  const { openItem } = useInboxStore();
+  const { openItem, selectedItemId } = useInboxStore();
+  const isSelected = selectedItemId === item.id;
 
   return (
     <ListItemButton
+      data-testid="inbox-item"
+      selected={isSelected}
       onClick={() => openItem(item?.id)}
       divider
       sx={{
@@ -26,12 +29,37 @@ const InboxItem = ({ item }: IInboxItem) => {
         py: 1.25,
         gap: 1.5,
         minHeight: 68,
+        borderLeft: '3px solid',
+        borderLeftColor: isSelected ? 'primary.main' : 'transparent',
+        bgcolor: isSelected ? 'action.selected' : 'background.paper',
 
         '&:hover': {
-          bgcolor: 'action.hover',
+          bgcolor: isSelected ? 'action.selected' : 'action.hover',
         },
       }}
     >
+      <Box
+        sx={{
+          width: 8,
+          minWidth: 8,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {item.isUnread && (
+          <Box
+            data-testid="inbox-item-unread-dot"
+            sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              bgcolor: 'primary.main',
+            }}
+          />
+        )}
+      </Box>
+
       <Box
         sx={{
           width: 24,

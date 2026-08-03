@@ -10,6 +10,6 @@ public interface IInboxService
     Task UpdateAsync(Domain.Inbox inbox);
     Task<InboxSummary> GetInboxSummaryAsync();
     Task PutInboxSeedAsync();
-    Task<InboxPage> ListInboxItemsAsync(int page, int size, ItemSource? source, ItemType? itemType, ItemStatus? status);
+    Task<InboxPage> ListInboxItemsAsync(int page, int size, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason);
     Task<InboxItemDetail> GetInboxItemByIdAsync(long id);
 }

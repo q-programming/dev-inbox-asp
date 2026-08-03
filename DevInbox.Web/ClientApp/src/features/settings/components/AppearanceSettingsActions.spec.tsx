@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@test/setupBrowserTests';
@@ -86,7 +86,9 @@ describe('AppearanceSettingsActions', () => {
 
       renderWithProviders(<AppearanceSettingsActions />);
       // Simulate the user changing something locally without saving yet.
-      useSettingsStore.setState({ theme: Theme.Dark, density: Density.Tight, fontSize: 18 });
+      act(() => {
+        useSettingsStore.setState({ theme: Theme.Dark, density: Density.Tight, fontSize: 18 });
+      });
 
       await user.click(screen.getByTestId('settings-cancel-btn'));
 
@@ -105,7 +107,9 @@ describe('AppearanceSettingsActions', () => {
       await waitFor(() => expect(useAlertStore.getState().alerts).toHaveLength(1));
 
       // Make further unsaved local edits after the save completed.
-      useSettingsStore.setState({ theme: Theme.Light, sideBarCollapsed: false });
+      act(() => {
+        useSettingsStore.setState({ theme: Theme.Light, sideBarCollapsed: false });
+      });
 
       await user.click(screen.getByTestId('settings-cancel-btn'));
 

@@ -4,7 +4,6 @@ using DevInbox.Web.Features.Inbox.Details;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Features.Inbox.Mapper;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
-using DevInbox.Web.Infrastructure.Persistence;
 using InboxReason = DevInbox.Web.Features.Inbox.Domain.InboxReason;
 using ItemSource = DevInbox.Web.Features.Inbox.Domain.ItemSource;
 using ItemType = DevInbox.Web.Features.Inbox.Domain.ItemType;
@@ -14,10 +13,9 @@ namespace DevInbox.Web.Features.Inbox;
 
 public class InboxService(
     IInboxRepository inboxRepository,
-    InboxItemRepository inboxItemRepository,
+    IInboxItemRepository inboxItemRepository,
     IInboxDetailService inboxDetailService,
-    IHttpContextAccessor httpContextAccessor,
-    AppDbContext dbContext) : IInboxService, IService
+    IHttpContextAccessor httpContextAccessor) : IInboxService, IService
 {
     InboxMapper _inboxMapper = new();
 
@@ -27,37 +25,35 @@ public class InboxService(
         var now = DateTimeOffset.UtcNow;
         var staleBefore = now.AddDays(-7);
 
-        return await dbContext.InboxItems
-            .AsNoTracking()
-            .Where(item => item.InboxId == userId)
-            .GroupBy(_ => 1)
-            .Select(group => new InboxSummary
-            {
-                Total = group.LongCount(),
-                Unread = group.LongCount(item => item.State.IsUnread),
-                Read = group.LongCount(item => !item.State.IsUnread),
-                Saved = group.LongCount(item => item.State.IsSaved),
-                NeedsAttention = group.LongCount(item =>
-                    item.State.Priority == Priority.High ||
-                    item.State.Priority == Priority.Critical ||
-                    (item.State.FollowUpAt != null && item.State.FollowUpAt <= now)),
-                Stale = group.LongCount(item =>
-                    !item.State.IsDone &&
-                    item.ActivityAt < staleBefore),
-                ReviewRequests = group.LongCount(item =>
-                    item.Reason == InboxReason.ReviewRequested),
-                Mentions = group.LongCount(item =>
-                    item.Reason == InboxReason.Mentioned),
-                MyPullRequests = group.LongCount(item =>
-                    item.Source == ItemSource.GitHub &&
-                    item.Type == ItemType.PR &&
-                    item.Reason == InboxReason.Authored),
-                AdoItems = group.LongCount(item =>
-                    item.Source == ItemSource.Ado),
-                Notes = group.LongCount(item =>
-                    item.Type == ItemType.Note)
-            })
-            .SingleOrDefaultAsync() ?? new InboxSummary();
+        return await inboxItemRepository.GetInboxSummaryAsync(userId, group => new InboxSummary
+        {
+            Total = group.LongCount(),
+            Unread = group.LongCount(item => item.State.IsUnread),
+            Read = group.LongCount(item => !item.State.IsUnread),
+            Saved = group.LongCount(item => item.State.IsSaved),
+            NeedsAttention = group.LongCount(item =>
+                item.State.Priority == Priority.High ||
+                item.State.Priority == Priority.Critical ||
+                (item.State.FollowUpAt != null && item.State.FollowUpAt <= now)),
+            Stale = group.LongCount(item =>
+                !item.State.IsDone &&
+                item.ActivityAt < staleBefore),
+            ReviewRequests = group.LongCount(item =>
+                item.Reason == InboxReason.ReviewRequested &&
+                item.State.IsUnread),
+            Mentions = group.LongCount(item =>
+                item.Reason == InboxReason.Mentioned &&
+                item.State.IsUnread),
+            MyPullRequests = group.LongCount(item =>
+                item.Source == ItemSource.GitHub &&
+                item.Type == ItemType.PR &&
+                item.Reason == InboxReason.Authored),
+            AdoItems = group.LongCount(item =>
+                item.Source == ItemSource.Ado &&
+                item.State.IsUnread),
+            Notes = group.LongCount(item =>
+                item.Type == ItemType.Note)
+        }) ?? new InboxSummary();
     }
 
     public async Task<Domain.Inbox> GetUserInboxAsync()
@@ -133,10 +129,10 @@ public class InboxService(
         }
     }
 
-    public async Task<InboxPage> ListInboxItemsAsync(int page, int size, Infrastructure.OpenApi.Generated.ItemSource? source, Infrastructure.OpenApi.Generated.ItemType? itemType, ItemStatus? status)
+    public async Task<InboxPage> ListInboxItemsAsync(int page, int size, Infrastructure.OpenApi.Generated.ItemSource? source, Infrastructure.OpenApi.Generated.ItemType? itemType, ItemStatus? status, Infrastructure.OpenApi.Generated.InboxReason? reason)
     {
         var userId = GetCurrentUserId();
-        var (items, totalElements) = await inboxItemRepository.GetInboxItemsFilteredAsync(page, size, userId, (ItemSource?)source, (ItemType?)itemType, status);
+        var (items, totalElements) = await inboxItemRepository.GetInboxItemsFilteredAsync(page, size, userId, (ItemSource?)source, (ItemType?)itemType, status, (InboxReason?)reason);
 
         return new InboxPage
         {

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using DevInbox.Web.Infrastructure.Persistence;
 
@@ -10,7 +11,17 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
         return Set;
     }
 
-    public async Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(int page, int size, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status)
+    public async Task<TResult?> GetInboxSummaryAsync<TResult>(long userId, Expression<Func<IGrouping<int, InboxItem>, TResult>> selector) where TResult : class
+    {
+        return await Set
+            .AsNoTracking()
+            .Where(item => item.InboxId == userId)
+            .GroupBy(_ => 1)
+            .Select(selector)
+            .SingleOrDefaultAsync();
+    }
+
+    public async Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(int page, int size, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason)
     {
         var query = Set
             .AsNoTracking()
@@ -25,6 +36,11 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
         if (itemType.HasValue)
         {
             query = query.Where(i => i.Type == itemType.Value);
+        }
+
+        if (reason.HasValue)
+        {
+            query = query.Where(i => i.Reason == reason.Value);
         }
 
         if (status is not null)
@@ -54,6 +70,7 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
     {
         return dbContext.InboxItems
             .AsNoTracking()
+            .Include(i => i.State)
             .FirstOrDefaultAsync(i => i.Id == id && i.InboxId == userId);
     }
 }

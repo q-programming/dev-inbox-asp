@@ -6,9 +6,9 @@ namespace DevInbox.Web.Features.Inbox;
 public class InboxController(IInboxService inboxService) : IInboxBaseController, IComponent
 {
     private InboxMapper _inboxMapper = new();
-    public Task<InboxPage> ListInboxItemsAsync(int page, int size, ItemSource? source, ItemType? itemType, ItemStatus? status)
+    public Task<InboxPage> ListInboxItemsAsync(int page, int size, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason)
     {
-        return inboxService.ListInboxItemsAsync(page, size, source, itemType, status);
+        return inboxService.ListInboxItemsAsync(page, size, source, itemType, status, reason);
     }
 
     public Task<InboxItemDetail> GetInboxItemAsync(long id)

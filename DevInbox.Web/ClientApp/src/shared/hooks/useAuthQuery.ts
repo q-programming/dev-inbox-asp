@@ -1,4 +1,5 @@
 import { AuthClient, LoginRequest, RegisterRequest, UserDto } from '@api';
+import { inboxKeys } from '@feature/inbox/hooks/useInboxQuery';
 import { useInboxStore } from '@feature/inbox/store/inbox.store';
 import { settingsKeys, useSettingsQuery } from '@feature/settings/hooks/useSettingsQuery';
 import useSettingsStore from '@feature/settings/store/settings.store';
@@ -126,6 +127,7 @@ export const useLogoutMutation = () => {
       clear();
       queryClient.removeQueries({ queryKey: authKeys.all });
       queryClient.removeQueries({ queryKey: settingsKeys.all });
+      queryClient.removeQueries({ queryKey: inboxKeys.all });
     },
     meta: { silent: true },
   });

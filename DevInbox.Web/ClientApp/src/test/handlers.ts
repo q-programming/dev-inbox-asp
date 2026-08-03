@@ -20,6 +20,24 @@ export const handlers = [
     }),
   ),
 
+  // Default no-op summary/status responses so components rendering AppSidebar/heartbeat
+  // (e.g. Layout, AppSidebar specs) don't fall through to the Vite dev proxy — override
+  // per-test with server.use() when specific summary/status data is needed.
+  http.get('/api/inbox/summary', () => HttpResponse.json({})),
+  http.get('/api/inbox/status', () => HttpResponse.json({})),
+
+  // Default settings response so any component reading settings (e.g. AppThemeProvider,
+  // SettingsActions) during unrelated tests doesn't fall through to the Vite dev proxy —
+  // override per-test with server.use() when specific settings data is needed.
+  http.get('/api/settings', () =>
+    HttpResponse.json({
+      theme: 'LIGHT',
+      density: 'COMFORTABLE',
+      fontSize: 14,
+      sideBarCollapsed: false,
+    }),
+  ),
+
   // Auth defaults — override per-test with server.use()
   http.post('/api/auth/me', () => new HttpResponse(null, { status: 204 })),
   http.post('/api/auth/login', () => HttpResponse.json(mockUser)),

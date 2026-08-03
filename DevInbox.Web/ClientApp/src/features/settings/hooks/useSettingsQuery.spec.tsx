@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { http, HttpResponse } from 'msw';
@@ -91,7 +91,9 @@ describe('useSettingsMutation', () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useSettingsMutation(), { wrapper: Wrapper });
 
-    result.current.mutate(mockSettings);
+    act(() => {
+      result.current.mutate(mockSettings);
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(queryClient.getQueryData(settingsKeys.get)).toMatchObject(mockSettings);
@@ -103,7 +105,9 @@ describe('useSettingsMutation', () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useSettingsMutation(), { wrapper: Wrapper });
 
-    result.current.mutate(mockSettings);
+    act(() => {
+      result.current.mutate(mockSettings);
+    });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(queryClient.getQueryData(settingsKeys.get)).toBeUndefined();

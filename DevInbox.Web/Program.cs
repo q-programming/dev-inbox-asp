@@ -62,8 +62,7 @@ builder.Services.Scan(scan => scan
 
 // Add DbContext with PostgreSQL provider and connection string from configuration
 builder.Services.AddDbContext<AppDbContext>(opt =>
-     opt.UseNpgsql(builder.Configuration.GetConnectionString("Default"))
-        .UseSnakeCaseNamingConvention());
+     opt.UseAppNpgsql(builder.Configuration.GetConnectionString("Default")));
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("database");

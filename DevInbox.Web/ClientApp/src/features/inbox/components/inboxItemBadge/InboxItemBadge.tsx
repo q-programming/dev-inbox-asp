@@ -1,41 +1,35 @@
 import { InboxItemSummary, InboxReason, Priority } from "@api";
-import Chip from "@mui/material/Chip";
+import Chip, { ChipProps } from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import { useMemo } from "react";
+import { REASON_CHIP_COLOR, translateInboxReason } from "@feature/inbox/utils/reason";
 
 interface IInboxItemBadges {
     item: InboxItemSummary;
 }
 
+/** Maps a priority level to the chip colour that best conveys its urgency. */
+const PRIORITY_COLOR: Partial<Record<Priority, ChipProps["color"]>> = {
+    [Priority.Critical]: "error",
+    [Priority.High]: "warning",
+    [Priority.Medium]: "info",
+    [Priority.Low]: "default",
+};
+
 const InboxItemBadges: React.FC<IInboxItemBadges> = ({ item }) => {
 
     const ReasonChip = useMemo(() => {
-        const translateReason = (): string => {
-            switch (item.reason) {
-                case InboxReason.Assigned:
-                    return "Assigned to me";
-                case InboxReason.Mentioned:
-                    return "Mentioned";
-                case InboxReason.ReviewRequested:
-                    return "Review requested";
-                case InboxReason.Authored:
-                    return "Authored by me";
-                case InboxReason.FollowUp:
-                    return "Follow up";
-                case InboxReason.Note:
-                    return "Note";
-                default:
-                    return ""
-            }
-        };
         if(!item.reason || item.reason === InboxReason.Unknown) {
             return null;
         }
         else {
             return (
                 <Chip
+                    data-testid="inbox-reason-chip"
+                    data-reason={item.reason}
                     size="small"
-                    label={translateReason()}
+                    color={REASON_CHIP_COLOR[item.reason] ?? "default"}
+                    label={translateInboxReason(item.reason)}
                 />
             );
         }
@@ -50,8 +44,10 @@ const InboxItemBadges: React.FC<IInboxItemBadges> = ({ item }) => {
             {ReasonChip}
             {item.priority && item.priority !== Priority.None && (
                 <Chip
+                    data-testid="inbox-priority-chip"
+                    data-priority={item.priority}
                     size="small"
-                    color="warning"
+                    color={PRIORITY_COLOR[item.priority] ?? "default"}
                     label={item.priority}
                 />
             )}

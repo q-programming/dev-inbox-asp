@@ -41,7 +41,7 @@ public class SettingsServiceIT : DatabaseIntegrationTest
         await DataBase.Users.AddAsync(_user);
         await DataBase.SaveChangesAsync();
 
-        var claimsIdentity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, TestEmail)], "TestAuth");
+        var claimsIdentity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, _user.Id.ToString())], "TestAuth");
         var httpContextAccessor = Substitute.For<IHttpContextAccessor>();
         httpContextAccessor.HttpContext.Returns(new DefaultHttpContext { User = new ClaimsPrincipal(claimsIdentity) });
 

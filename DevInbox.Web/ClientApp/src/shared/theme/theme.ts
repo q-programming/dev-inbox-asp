@@ -1,5 +1,5 @@
 import { Theme } from '@api';
-import { createTheme, type PaletteMode } from '@mui/material';
+import { alpha, createTheme, type PaletteMode } from '@mui/material';
 
 // ── TypeScript palette augmentation ─────────────────────────────────────────
 declare module '@mui/material/styles' {
@@ -160,6 +160,43 @@ export function buildTheme(mode: PaletteMode, fontSize: number = DEFAULT_FONT_SI
         styleOverrides: { root: { backgroundImage: 'none' } },
       },
       MuiButton: { defaultProps: { disableElevation: true } },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            borderRadius: 4,
+            height: 22,
+            fontSize: '0.7rem',
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+            textTransform: 'uppercase',
+          },
+          label: { paddingLeft: 8, paddingRight: 8 },
+          colorDefault: ({ theme }) => ({
+            backgroundColor: theme.palette.mode === 'light' ? '#e4e6ef' : '#3a3c46',
+            color: theme.palette.text.secondary,
+          }),
+          colorSuccess: ({ theme }) => ({
+            backgroundColor: alpha(theme.palette.success.main, theme.palette.mode === 'light' ? 0.15 : 0.28),
+            color: theme.palette.mode === 'light' ? theme.palette.success.dark : theme.palette.success.light,
+          }),
+          colorInfo: ({ theme }) => ({
+            backgroundColor: alpha(theme.palette.info.main, theme.palette.mode === 'light' ? 0.15 : 0.28),
+            color: theme.palette.mode === 'light' ? theme.palette.info.dark : theme.palette.info.light,
+          }),
+          colorWarning: ({ theme }) => ({
+            backgroundColor: alpha(theme.palette.warning.main, theme.palette.mode === 'light' ? 0.18 : 0.3),
+            color: theme.palette.mode === 'light' ? WARNING_DARK : theme.palette.warning.light,
+          }),
+          colorError: ({ theme }) => ({
+            backgroundColor: alpha(theme.palette.error.main, theme.palette.mode === 'light' ? 0.15 : 0.28),
+            color: theme.palette.mode === 'light' ? theme.palette.error.dark : theme.palette.error.light,
+          }),
+          colorSecondary: ({ theme }) => ({
+            backgroundColor: alpha(theme.palette.secondary.main, theme.palette.mode === 'light' ? 0.15 : 0.28),
+            color: theme.palette.mode === 'light' ? theme.palette.secondary.dark : theme.palette.secondary.light,
+          }),
+        },
+      },
     },
     cssVariables: false,
   });

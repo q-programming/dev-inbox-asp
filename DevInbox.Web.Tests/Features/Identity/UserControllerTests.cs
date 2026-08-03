@@ -61,7 +61,7 @@ public class UserControllerTests
 
             await _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = StrongPassword });
 
-            _jwtTokenService.Received(1).IssueAccessToken(new User { Email = TestEmail, Id = 0 });
+            _jwtTokenService.Received(1).IssueAccessToken(Arg.Is<User>(u => u.Email == TestEmail && u.Id == 0));
         }
 
         [Fact(DisplayName = "LoginAsync should return user dto on success")]
@@ -170,7 +170,7 @@ public class UserControllerTests
 
             await _controller.GithubAuthCallbackAsync(GithubCode, GithubState);
 
-            _jwtTokenService.Received(1).IssueAccessToken(new User { Email = TestEmail, Id = 0 });
+            _jwtTokenService.Received(1).IssueAccessToken(Arg.Is<User>(u => u.Email == TestEmail && u.Id == 0));
             Assert.Equal(302, _httpContext.Response.StatusCode);
             Assert.Equal(RedirectUrl, _httpContext.Response.Headers.Location.ToString());
         }

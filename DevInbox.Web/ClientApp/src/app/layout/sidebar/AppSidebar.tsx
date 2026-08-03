@@ -17,6 +17,7 @@ import NavRow from './NavRow.tsx';
 import SectionLabel from './SectionLabel.tsx';
 import { useLocation } from 'react-router-dom';
 import { useInboxSummaryQuery } from '@feature/inbox/hooks/useInboxQuery.tsx';
+import { buildInboxSearch } from '@feature/inbox/utils/inboxFilter';
 import type { InboxSummary } from '@api';
 
 export const SIDEBAR_WIDTH = 220;
@@ -32,11 +33,21 @@ export const SIDEBAR_COLLAPSED_WIDTH = 56;
  * animates in sync with the sidebar.
  */
 const AppSidebar = memo(() => {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
   const collapsed = useSettingsStore((state) => state.sideBarCollapsed);
   const { toggleSideBar } = useSettingsStore();
 
-  const activeId = useMemo(() => pathname.split('/').filter(Boolean)[0] ?? '', [pathname]);
+  const activeId = useMemo(() => {
+    // Several nav items share the same /inbox route and are only
+    // distinguished by their filter query params — match on both.
+    const candidates = [...CORE_FOCUS_ITEMS, ...INTEGRATION_FOCUS_ITEMS, ...BOTTOM_FOCUS_ITEMS];
+    const match = candidates.find(
+      (item) => item.route === pathname && buildInboxSearch(item.filter) === location.search,
+    );
+
+    return match?.id ?? pathname.split('/').filter(Boolean)[0] ?? '';
+  }, [pathname, location.search]);
   const { data: summary } = useInboxSummaryQuery();
 
     
@@ -51,6 +62,7 @@ const AppSidebar = memo(() => {
 
     switch (id) {
       case 'inbox':
+      case 'unread':
         return summary.unread;
       case 'reviews':
         return summary.reviewRequests;

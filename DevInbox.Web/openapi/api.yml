@@ -199,6 +199,10 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/ItemStatus"
+        - name: reason
+          in: query
+          schema:
+            $ref: "#/components/schemas/InboxReason"
 
       responses:
         "200":
@@ -660,6 +664,9 @@ components:
       type: object
       additionalProperties: false
       properties:
+        id:
+          type: integer
+          format: int64
         privateNote:
           type: string
         title:
@@ -673,6 +680,18 @@ components:
           format: date-time
         source:
           $ref: "#/components/schemas/ItemSource"
+        itemType:
+          $ref: "#/components/schemas/ItemType"
+        reason:
+          $ref: "#/components/schemas/InboxReason"
+        priority:
+          $ref: "#/components/schemas/Priority"
+        isUnread:
+          type: boolean
+        isSaved:
+          type: boolean
+        isDone:
+          type: boolean
         github:
           $ref: "#/components/schemas/GitHubPullRequestDetail"
         ado:

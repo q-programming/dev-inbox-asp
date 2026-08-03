@@ -1,7 +1,8 @@
-import { InboxClient, SyncClient } from '@api';
+import { InboxClient, InboxReason, ItemSource, ItemType, SyncClient } from '@api';
 import { ApiError, apiFetch, BASE_URL } from '@shared/api/httpClient';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { heartbeatKeys } from './useInboxHeartBeat';
+import type { InboxFilter } from '../utils/inboxFilter';
 
 export const syncApi = new SyncClient(BASE_URL, { fetch: apiFetch });
 export const inboxApi = new InboxClient(BASE_URL, { fetch: apiFetch });
@@ -13,10 +14,18 @@ export const inboxKeys = {
   summary: ['inbox', 'summary'] as const,
 } as const;
 
-export const useInboxQuery = () =>
+export const useInboxQuery = (filter?: InboxFilter) =>
   useQuery({
-    queryKey: inboxKeys.items,
-    queryFn: () => inboxApi.listInboxItems(0, 20, undefined, undefined, undefined),
+    queryKey: [...inboxKeys.items, filter?.source, filter?.itemType, filter?.reason],
+    queryFn: () =>
+      inboxApi.listInboxItems(
+        0,
+        20,
+        filter?.source as ItemSource | undefined,
+        filter?.itemType as ItemType | undefined,
+        undefined,
+        filter?.reason as InboxReason | undefined,
+      ),
   });
 
 export const useInboxSummaryQuery = () =>
