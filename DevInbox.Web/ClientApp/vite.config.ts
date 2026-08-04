@@ -7,6 +7,10 @@ import pkg from './package.json';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Vitest (browser mode) needs its own static assets directory for the MSW
+  // service worker script. Keep it out of `public/` so it never ships to
+  // `wwwroot` via `vite build`.
+  publicDir: process.env.VITEST ? 'src/test/public' : 'public',
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
@@ -16,6 +20,7 @@ export default defineConfig({
       '@app': path.resolve(__dirname, './src/app'),
       '@feature': path.resolve(__dirname, './src/features'),
       '@test': path.resolve(__dirname, './src/test'),
+      '@utils': path.resolve(__dirname, './src/shared/utils'),
       // Generated API client — regenerated on every dotnet build from openapi/api.yml
       '@api': path.resolve(__dirname, './generated/api-client'),
     },
@@ -38,6 +43,11 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    // Registers the MSW browser worker (start/resetHandlers/stop) for every
+    // spec file. Previously only files that manually imported
+    // `@test/setupBrowserTests` got mocking — all others left `/api` requests
+    // unintercepted, which is why they leaked to the (disabled) dev proxy.
+    setupFiles: ['./src/test/setupBrowserTests.tsx'],
     fileParallelism: true,
     testTimeout: 15000,
     browser: {

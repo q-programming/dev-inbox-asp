@@ -1,15 +1,5 @@
-import { createTheme, type PaletteMode } from '@mui/material';
-
-export enum Theme {
-  LIGHT = 'light',
-  DARK = 'dark',
-}
-
-export enum Density {
-  RELAXED = 'relaxed',
-  TIGHT = 'tight',
-  SUPER_TIGHT = 'super-tight',
-}
+import { Theme } from '@api';
+import { alpha, createTheme, type PaletteMode } from '@mui/material';
 
 // ── TypeScript palette augmentation ─────────────────────────────────────────
 declare module '@mui/material/styles' {
@@ -67,13 +57,13 @@ export const FONT_SIZE_MAX = 18;
  * always matches the real theme without running the full MUI theme factory.
  */
 export const THEME_PREVIEW_TOKENS = {
-  [Theme.LIGHT]: {
+  [Theme.Light]: {
     bg: BG_DEFAULT_LIGHT,
     paper: BG_PAPER_LIGHT,
     primary: PRIMARY_LIGHT,
     divider: DIVIDER_LIGHT,
   },
-  [Theme.DARK]: {
+  [Theme.Dark]: {
     bg: BG_DEFAULT_DARK,
     paper: BG_PAPER_DARK,
     primary: PRIMARY_DARK,
@@ -82,7 +72,7 @@ export const THEME_PREVIEW_TOKENS = {
 } as const;
 
 export function buildTheme(mode: PaletteMode, fontSize: number = DEFAULT_FONT_SIZE) {
-  const light = mode === Theme.LIGHT;
+  const light = mode === Theme.Light;
   // MUI's `typography.fontSize` is the rem base (in px). Scaling it shifts all
   // rem-based sizes proportionally — headlines, body copy, captions, buttons.
   const htmlFontSize = 16; // browser default — keep fixed
@@ -170,6 +160,43 @@ export function buildTheme(mode: PaletteMode, fontSize: number = DEFAULT_FONT_SI
         styleOverrides: { root: { backgroundImage: 'none' } },
       },
       MuiButton: { defaultProps: { disableElevation: true } },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            borderRadius: 4,
+            height: 22,
+            fontSize: '0.7rem',
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+            textTransform: 'uppercase',
+          },
+          label: { paddingLeft: 8, paddingRight: 8 },
+          colorDefault: ({ theme }) => ({
+            backgroundColor: theme.palette.mode === 'light' ? '#e4e6ef' : '#3a3c46',
+            color: theme.palette.text.secondary,
+          }),
+          colorSuccess: ({ theme }) => ({
+            backgroundColor: alpha(theme.palette.success.main, theme.palette.mode === 'light' ? 0.15 : 0.28),
+            color: theme.palette.mode === 'light' ? theme.palette.success.dark : theme.palette.success.light,
+          }),
+          colorInfo: ({ theme }) => ({
+            backgroundColor: alpha(theme.palette.info.main, theme.palette.mode === 'light' ? 0.15 : 0.28),
+            color: theme.palette.mode === 'light' ? theme.palette.info.dark : theme.palette.info.light,
+          }),
+          colorWarning: ({ theme }) => ({
+            backgroundColor: alpha(theme.palette.warning.main, theme.palette.mode === 'light' ? 0.18 : 0.3),
+            color: theme.palette.mode === 'light' ? WARNING_DARK : theme.palette.warning.light,
+          }),
+          colorError: ({ theme }) => ({
+            backgroundColor: alpha(theme.palette.error.main, theme.palette.mode === 'light' ? 0.15 : 0.28),
+            color: theme.palette.mode === 'light' ? theme.palette.error.dark : theme.palette.error.light,
+          }),
+          colorSecondary: ({ theme }) => ({
+            backgroundColor: alpha(theme.palette.secondary.main, theme.palette.mode === 'light' ? 0.15 : 0.28),
+            color: theme.palette.mode === 'light' ? theme.palette.secondary.dark : theme.palette.secondary.light,
+          }),
+        },
+      },
     },
     cssVariables: false,
   });

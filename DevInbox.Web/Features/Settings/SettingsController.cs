@@ -1,16 +1,21 @@
+using DevInbox.Web.Features.Settings.Mapping;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
 namespace DevInbox.Web.Features.Settings;
 
-public class SettingsController : ISettingsBaseController, IComponent
+public class SettingsController(ISettingsService settingsService) : ISettingsBaseController, IComponent
 {
-    public Task<UserSettingsDto> GetSettingsAsync()
+
+    private static readonly SettingsMapper _mapper = new();
+    public async Task<UserSettingsDto> GetSettingsAsync()
     {
-        throw new ServiceNotImplementedException();
+        var userSettings = await settingsService.GetSettingsAsync();
+        return _mapper.ToDto(userSettings);
     }
 
-    public Task<UserSettingsDto> UpdateSettingsAsync(UpdateSettingsRequest body)
+    public async Task<UserSettingsDto> UpdateSettingsAsync(UserSettingsDto body)
     {
-        throw new ServiceNotImplementedException();
+        var updated = await settingsService.SaveSettingsAsync(body);
+        return _mapper.ToDto(updated);
     }
 }

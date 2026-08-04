@@ -1,20 +1,23 @@
+import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import Footer from '@app/common/footer/Footer.tsx';
+import { AppRoute } from '@app/routes';
+import GitHubIcon from '@mui/icons-material/GitHub';
+import LoginIcon from '@mui/icons-material/Login';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import LoginIcon from '@mui/icons-material/Login';
-import GitHubIcon from '@mui/icons-material/GitHub';
-import Footer from '@app/common/footer/Footer.tsx';
-import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import { useLoginMutation } from '@shared/hooks/useAuthQuery';
-import { AppRoute } from '@app/routes';
+import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
+import { redirectTo } from '@shared/utils/navigation';
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -27,6 +30,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const status = useUserStore((state) => state.status);
   const loginMutation = useLoginMutation();
+  const [githubLoading, setGithubLoading] = useState(false);
   const {
     register,
     handleSubmit,
@@ -36,6 +40,8 @@ export default function LoginPage() {
   if (status === AuthStatus.AUTHENTICATED) {
     return <Navigate to={AppRoute.INBOX} replace />;
   }
+
+  const isBusy = loginMutation.isPending || githubLoading;
 
   const onSubmit = async (data: LoginFormData) => {
     loginMutation.mutate(data, {
@@ -119,8 +125,14 @@ export default function LoginPage() {
               variant="contained"
               fullWidth
               size="large"
-              disabled={loginMutation.isPending}
-              endIcon={<LoginIcon />}
+              disabled={isBusy}
+              endIcon={
+                loginMutation.isPending ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  <LoginIcon />
+                )
+              }
               sx={{ mt: 1 }}
             >
               {loginMutation.isPending ? 'Signing in…' : 'Sign in'}
@@ -135,15 +147,20 @@ export default function LoginPage() {
 
           <Button
             data-testid="login-github"
-            component="a"
-            href={`${import.meta.env.VITE_API_BASE_URL ?? ''}/oauth2/authorization/github`}
             variant="outlined"
             fullWidth
             size="large"
-            startIcon={<GitHubIcon />}
+            disabled={isBusy}
+            startIcon={
+              githubLoading ? <CircularProgress size={18} color="inherit" /> : <GitHubIcon />
+            }
             color="inherit"
+            onClick={() => {
+              setGithubLoading(true);
+              redirectTo(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/auth/github`);
+            }}
           >
-            Continue with GitHub
+            {githubLoading ? 'Redirecting…' : 'Continue with GitHub'}
           </Button>
         </Paper>
 

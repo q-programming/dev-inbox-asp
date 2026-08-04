@@ -11,11 +11,14 @@ import { AccountType } from '@api';
 
 // Hoist navigate mock so it is available inside the vi.mock factory.
 const mockNavigate = vi.hoisted(() => vi.fn());
+const mockRedirectTo = vi.hoisted(() => vi.fn());
 
 vi.mock('react-router-dom', async (importOriginal) => {
   const mod = await importOriginal<typeof import('react-router-dom')>();
   return { ...mod, useNavigate: () => mockNavigate };
 });
+
+vi.mock('@shared/utils/navigation', () => ({ redirectTo: mockRedirectTo }));
 
 const mockUser = {
   id: 2,
@@ -32,6 +35,7 @@ beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   mockNavigate.mockClear();
+  mockRedirectTo.mockClear();
   useUserStore.setState({
     status: AuthStatus.UNAUTHENTICATED,
     identity: null,
@@ -151,16 +155,50 @@ describe('RegisterPage', () => {
     });
   });
 
-  describe('GitHub OAuth link', () => {
-    it('should render the Continue with GitHub link', () => {
+  describe('GitHub OAuth', () => {
+    it('should render the Continue with GitHub button', () => {
       renderRegisterPage();
-      expect(screen.getByText(/continue with github/i)).toBeTruthy();
+      expect(screen.getByRole('button', { name: /continue with github/i })).toBeTruthy();
     });
 
-    it('should point to the GitHub OAuth authorization URL', () => {
+    it('should show spinner and Redirecting text after GitHub button is clicked', async () => {
+      const user = userEvent.setup();
       renderRegisterPage();
-      const link = screen.getByRole('link', { name: /continue with github/i });
-      expect(link.getAttribute('href')).toContain('/oauth2/authorization/github');
+
+      await user.click(screen.getByRole('button', { name: /continue with github/i }));
+
+      expect(await screen.findByText(/redirecting/i)).toBeTruthy();
+    });
+
+    it('should disable the GitHub button after it is clicked', async () => {
+      const user = userEvent.setup();
+      renderRegisterPage();
+
+      await user.click(screen.getByRole('button', { name: /continue with github/i }));
+
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /redirecting/i })).toBeDisabled(),
+      );
+    });
+
+    it('should disable the Create Account button when GitHub redirect is in progress', async () => {
+      const user = userEvent.setup();
+      renderRegisterPage();
+
+      await user.click(screen.getByRole('button', { name: /continue with github/i }));
+
+      await waitFor(() => expect(screen.getByTestId('register-submit')).toBeDisabled());
+    });
+
+    it('should call redirectTo with the GitHub OAuth URL', async () => {
+      const user = userEvent.setup();
+      renderRegisterPage();
+
+      await user.click(screen.getByRole('button', { name: /continue with github/i }));
+
+      await waitFor(() =>
+        expect(mockRedirectTo).toHaveBeenCalledWith(expect.stringContaining('/api/auth/github')),
+      );
     });
   });
 });

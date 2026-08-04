@@ -94,6 +94,51 @@ paths:
         "204":
           description: No user found
 
+  /auth/github:
+    get:
+      operationId: githubAuth
+      tags: [auth]
+      summary: Starts GitHub login flow
+      responses:
+        "302":
+          description: Redirect to GitHub OAuth authorization endpoint
+          headers:
+            Location:
+              description: GitHub authorization URL
+              schema:
+                type: string
+                format: uri
+
+  /auth/github/callback:
+    get:
+      operationId: githubAuthCallback
+      tags: [auth]
+      summary: Handles GitHub OAuth callback and redirects to inbox
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirects the authenticated user to the inbox
+          headers:
+            Location:
+              description: Relative URL of the application inbox
+              schema:
+                type: string
+                example: /inbox
+        "400":
+          description: Missing or invalid OAuth callback parameters
+        "401":
+          description: Authentication failed
+
   # ── Settings ─────────────────────────────────────────────────
   /settings:
     get:
@@ -116,7 +161,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateSettingsRequest"
+              $ref: "#/components/schemas/UserSettingsDto"
       responses:
         "200":
           description: Updated settings
@@ -132,6 +177,16 @@ paths:
       tags: [inbox]
       summary: List inbox items with optional filtering
       parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 50
         - name: source
           in: query
           schema:
@@ -144,16 +199,11 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/ItemStatus"
-        - name: page
+        - name: reason
           in: query
           schema:
-            type: integer
-            default: 0
-        - name: size
-          in: query
-          schema:
-            type: integer
-            default: 50
+            $ref: "#/components/schemas/InboxReason"
+
       responses:
         "200":
           description: Paginated list of inbox items
@@ -162,7 +212,47 @@ paths:
               schema:
                 $ref: "#/components/schemas/InboxPage"
 
-  /inbox/{id}:
+  /inbox/status:
+    get:
+      operationId: getInboxStatus
+      tags: [inbox]
+      summary: Get the status of the inbox
+      responses:
+        "200":
+          description: Inbox item status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxStatus"
+        "404":
+          description: Not found
+  /inbox/summary:
+    get:
+      operationId: getInboxSummary
+      tags: [inbox]
+      summary: Get the summary of the inbox
+      responses:
+        "200":
+          description: Inbox summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxSummary"
+        "404":
+          description: Not found
+  /inbox/seed:
+    put:
+      operationId: putInboxSeed
+      tags: [inbox]
+      depreciated: true
+      summary: Seeds inbox with random elements for testing
+      responses:
+        "204":
+          description: Inbox items created
+        "404":
+          description: Not found
+
+  /inbox/item/{id}:
     get:
       operationId: getInboxItem
       tags: [inbox]
@@ -172,8 +262,8 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            type: integer
+            format: int64
       responses:
         "200":
           description: Inbox item detail
@@ -184,7 +274,7 @@ paths:
         "404":
           description: Not found
 
-  /inbox/{id}/overlay:
+  /inbox/item/{id}/overlay:
     put:
       operationId: updateItemOverlay
       tags: [inbox]
@@ -194,8 +284,8 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            type: integer
+            format: int64
       requestBody:
         required: true
         content:
@@ -348,6 +438,7 @@ components:
     # ── Auth ───────────────────────────────────────────────────
     RegisterRequest:
       type: object
+      additionalProperties: false
       required: [email, password, firstName, lastName]
       properties:
         email:
@@ -363,6 +454,7 @@ components:
 
     LoginRequest:
       type: object
+      additionalProperties: false
       required: [email, password]
       properties:
         email:
@@ -373,6 +465,7 @@ components:
 
     UserDto:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: integer
@@ -394,8 +487,13 @@ components:
       type: string
       enum: [REGULAR, OAUTH_GITHUB]
 
+    SyncStatus:
+      type: string
+      enum: [Idle, Running, Failed]
+
     IntegrationDto:
       type: object
+      additionalProperties: false
       required: [status, type]
       properties:
         id:
@@ -416,25 +514,30 @@ components:
       enum: [ACTIVE, EXPIRED, INACTIVE]
 
     # ── Settings ───────────────────────────────────────────────
+    Theme:
+      type: string
+      enum: [light, dark]
+      x-enumNames: [Light, Dark]
+
+    Density:
+      type: string
+      enum: [relaxed, tight, super-tight]
+      # x-enumNames: NSwag extension — lets us keep hyphenated wire values (e.g. "super-tight")
+      # while generating valid C#/TS identifiers (SuperTight) for the enum members.
+      x-enumNames: [Relaxed, Tight, SuperTight]
+
     UserSettingsDto:
       type: object
+      additionalProperties: false
       properties:
-        githubRepos:
-          type: array
-          items:
-            type: string
-        adoOrganization:
-          type: string
-        adoProject:
-          type: string
-        syncIntervalMinutes:
+        theme:
+          $ref: "#/components/schemas/Theme"
+        density:
+          $ref: "#/components/schemas/Density"
+        fontSize:
           type: integer
-
-    UpdateSettingsRequest:
-      type: object
-      properties:
-        githubPat:
-          type: string
+        sideBarCollapsed:
+          type: boolean
         githubRepos:
           type: array
           items:
@@ -442,8 +545,6 @@ components:
         adoOrganization:
           type: string
         adoProject:
-          type: string
-        adoPat:
           type: string
         syncIntervalMinutes:
           type: integer
@@ -451,6 +552,7 @@ components:
     # ── Inbox ──────────────────────────────────────────────────
     InboxPage:
       type: object
+      additionalProperties: false
       properties:
         items:
           type: array
@@ -463,25 +565,81 @@ components:
           type: integer
         size:
           type: integer
+    InboxStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        lastUpdatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+        syncStatus:
+          $ref: "#/components/schemas/SyncStatus"
+        lastSyncStartedAt:
+          type: string
+          format: date-time
+        lastSyncCompletedAt:
+          type: string
+          format: date-time
+
+    InboxSummary:
+        type: object
+        additionalProperties: false
+        description: Aggregated status/counts calculated while loading the inbox page. This is not used
+        properties:
+          total:
+            type: integer
+            format: int64
+          unread:
+            type: integer
+            format: int64
+          read:
+            type: integer
+            format: int64
+          saved:
+            type: integer
+            format: int64
+          needsAttention:
+            type: integer
+            format: int64
+          stale:
+            type: integer
+            format: int64
+          reviewRequests:
+            type: integer
+            format: int64
+          mentions:
+            type: integer
+            format: int64
+          myPullRequests:
+            type: integer
+            format: int64
+          adoItems:
+            type: integer
+            format: int64
+          notes:
+            type: integer
+            format: int64
 
     InboxItemSummary:
       type: object
+      additionalProperties: false
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
         sourceType:
           $ref: "#/components/schemas/ItemSource"
         itemType:
           $ref: "#/components/schemas/ItemType"
         title:
           type: string
-        subtitle:
-          type: string
         repository:
           type: string
         reason:
-          type: string
+          $ref: "#/components/schemas/InboxReason"
         isUnread:
           type: boolean
         isSaved:
@@ -492,27 +650,214 @@ components:
           type: boolean
         priority:
           $ref: "#/components/schemas/Priority"
-        lastActivityAt:
+        activityAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
           type: string
           format: date-time
 
     InboxItemDetail:
-      allOf:
-        - $ref: "#/components/schemas/InboxItemSummary"
-        - type: object
-          properties:
-            privateNote:
-              type: string
-            tags:
-              type: array
-              items:
-                type: string
-            followUpAt:
-              type: string
-              format: date-time
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          format: int64
+        privateNote:
+          type: string
+        title:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        followUpAt:
+          type: string
+          format: date-time
+        source:
+          $ref: "#/components/schemas/ItemSource"
+        itemType:
+          $ref: "#/components/schemas/ItemType"
+        reason:
+          $ref: "#/components/schemas/InboxReason"
+        priority:
+          $ref: "#/components/schemas/Priority"
+        isUnread:
+          type: boolean
+        isSaved:
+          type: boolean
+        isDone:
+          type: boolean
+        github:
+          $ref: "#/components/schemas/GitHubPullRequestDetail"
+        ado:
+          $ref: "#/components/schemas/AdoWorkItemDetail"
+        note:
+          $ref: "#/components/schemas/NoteDetail"
+
+    GitHubPullRequestDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        pullRequestNumber:
+          type: integer
+        repository:
+          type: string
+        title:
+          type: string
+        state:
+          $ref: "#/components/schemas/GitHubPullRequestState"
+        url:
+          type: string
+        author:
+          $ref: "#/components/schemas/PersonReference"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        reviewers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PullRequestReviewer"
+        labels:
+          type: array
+          items:
+            type: string
+        linkedWorkItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/LinkedItem"
+        latestComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommentPreview"
+
+    PullRequestReviewer:
+      type: object
+      additionalProperties: false
+      properties:
+        reviewer:
+          $ref: "#/components/schemas/PersonReference"
+        reviewState:
+          $ref: "#/components/schemas/ReviewState"
+    GitHubPullRequestState:
+      type: string
+      enum:
+        - open
+        - draft
+        - merged
+        - closed
+
+    LinkedItem:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+        url:
+          type: string    
+
+    ReviewState:
+      type: string
+      enum:
+        - waiting
+        - approved
+        - changesRequested
+        - commented
+
+    AdoWorkItemDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        workItemId:
+          type: integer
+        project:
+          type: string
+        title:
+          type: string
+        workItemType:
+          type: string
+        state:
+          type: string
+        assignedTo:
+          $ref: "#/components/schemas/PersonReference"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        parent:
+          $ref: "#/components/schemas/LinkedItem"
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommentPreview"
+
+    NoteDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        noteId:
+          type: integer
+          format: int64
+        title:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        linkedItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/LinkedItem"
+
+    CommentPreview:
+      type: object
+      additionalProperties: false
+      properties:
+        author:
+          $ref: "#/components/schemas/PersonReference"
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    PersonReference:
+      type: object
+      additionalProperties: false
+      properties:
+        login:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
 
     ItemOverlayRequest:
       type: object
+      additionalProperties: false
       properties:
         priority:
           $ref: "#/components/schemas/Priority"
@@ -536,6 +881,7 @@ components:
 
     SavedViewDto:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: string
@@ -547,6 +893,7 @@ components:
 
     CreateSavedViewRequest:
       type: object
+      additionalProperties: false
       required: [name, filterJson]
       properties:
         name:
@@ -556,23 +903,28 @@ components:
 
     ItemSource:
       type: string
-      enum: [GITHUB, ADO, NOTE]
+      enum: [Github, Ado, Note]
 
     ItemType:
       type: string
-      enum: [PR, ISSUE, WORK_ITEM, NOTE]
+      enum: [PR, Issue, WorkItem, Note]
 
     ItemStatus:
       type: string
-      enum: [UNREAD, SAVED, DONE, PINNED]
+      enum: [Unread, Saved, Done, Pinned]
 
     Priority:
       type: string
-      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+      enum: [None, Low, Medium, High, Critical]
+
+    InboxReason:
+      type: string
+      enum: [Unknown, ReviewRequested, Mentioned, Assigned, Authored, FollowUp, Note]
 
     # ── Notes ──────────────────────────────────────────────────
     NoteDto:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: string
@@ -597,6 +949,7 @@ components:
 
     CreateNoteRequest:
       type: object
+      additionalProperties: false
       required: [title]
       properties:
         title:
@@ -614,6 +967,7 @@ components:
     # ── Health ─────────────────────────────────────────────────
     HealthStatus:
       type: object
+      additionalProperties: false
       properties:
         status:
           type: string

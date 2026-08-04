@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http;
-
 namespace DevInbox.Web.Common;
 
 /// <summary>

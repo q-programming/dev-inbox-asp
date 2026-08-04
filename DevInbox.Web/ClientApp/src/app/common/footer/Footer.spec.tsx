@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@test/renderWithProviders.tsx';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import useSettingsStore from '@feature/settings/store/settings.store';
-import { Theme } from '@shared/theme/theme.ts';
+import { Theme } from '@api';
 import { AppRoute } from '@app/routes.ts';
 import Footer from './Footer.tsx';
 
@@ -17,7 +17,7 @@ beforeEach(() => {
     lastName: '',
     identity: null,
   });
-  useSettingsStore.setState({ theme: Theme.LIGHT });
+  useSettingsStore.setState({ theme: Theme.Light });
 });
 
 describe('Footer', () => {
@@ -31,14 +31,14 @@ describe('Footer', () => {
 
   describe('theme toggle', () => {
     it('should show the light mode button selected when theme is LIGHT', () => {
-      useSettingsStore.setState({ theme: Theme.LIGHT });
+      useSettingsStore.setState({ theme: Theme.Light });
       renderFooter();
       expect(screen.getAllByTestId('theme-toggle').length).toBeGreaterThan(0);
       expect(screen.getAllByRole('button', { name: /light mode/i }).length).toBeGreaterThan(0);
     });
 
     it('should show the dark mode button selected when theme is DARK', () => {
-      useSettingsStore.setState({ theme: Theme.DARK });
+      useSettingsStore.setState({ theme: Theme.Dark });
       renderFooter();
       expect(screen.getAllByRole('button', { name: /dark mode/i }).length).toBeGreaterThan(0);
     });
@@ -49,17 +49,17 @@ describe('Footer', () => {
 
       await user.click(screen.getAllByRole('button', { name: /dark mode/i })[0]);
 
-      expect(useSettingsStore.getState().theme).toBe(Theme.DARK);
+      expect(useSettingsStore.getState().theme).toBe(Theme.Dark);
     });
 
     it('should toggle back from DARK to LIGHT when light mode button is clicked', async () => {
-      useSettingsStore.setState({ theme: Theme.DARK });
+      useSettingsStore.setState({ theme: Theme.Dark });
       const user = userEvent.setup();
       renderFooter();
 
       await user.click(screen.getAllByRole('button', { name: /light mode/i })[0]);
 
-      expect(useSettingsStore.getState().theme).toBe(Theme.LIGHT);
+      expect(useSettingsStore.getState().theme).toBe(Theme.Light);
     });
 
     it('should not be visible for authenticated users', () => {

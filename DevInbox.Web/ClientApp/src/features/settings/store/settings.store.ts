@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { DEFAULT_FONT_SIZE, Density, Theme } from '@shared/theme/theme';
+import { DEFAULT_FONT_SIZE } from '@shared/theme/theme';
+import { Density, Theme, UserSettingsDto } from '@api';
 
 export const SETTINGS_STORAGE_KEY = 'devInbox.settings';
 
 function getSystemTheme(): Theme {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? Theme.DARK : Theme.LIGHT;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? Theme.Dark : Theme.Light;
 }
 
 export interface SettingsState {
@@ -36,13 +37,13 @@ const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       theme: getSystemTheme(),
-      density: Density.RELAXED,
+      density: Density.Relaxed,
       fontSize: DEFAULT_FONT_SIZE,
       sideBarCollapsed: false,
 
       toggleTheme: () =>
         set((state) => ({
-          theme: state.theme === Theme.LIGHT ? Theme.DARK : Theme.LIGHT,
+          theme: state.theme === Theme.Light ? Theme.Dark : Theme.Light,
         })),
 
       switchDensity: (density: Density) => set({ density }),
@@ -51,11 +52,12 @@ const useSettingsStore = create<SettingsState>()(
 
       toggleSideBar: () => set((state) => ({ sideBarCollapsed: !state.sideBarCollapsed })),
 
-      applyServerProfile: (partial) =>
+      applyServerProfile: (settingsDto: UserSettingsDto) =>
         set((state) => ({
-          theme: partial.theme ?? state.theme,
-          density: partial.density ?? state.density,
-          fontSize: partial.fontSize ?? state.fontSize,
+          theme: settingsDto.theme ?? state.theme,
+          density: settingsDto.density ?? state.density,
+          fontSize: settingsDto.fontSize ?? state.fontSize,
+          sideBarCollapsed: settingsDto.sideBarCollapsed ?? state.sideBarCollapsed,
         })),
     }),
     {

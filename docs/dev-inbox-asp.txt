@@ -1,31 +1,41 @@
-# Dev Inbox — ASP.NET Core Project Document
+## Dev Inbox — ASP.NET Core Project Document
 
-## Product Overview
-Dev Inbox is a personal engineering workspace that helps a developer triage work from GitHub, Azure DevOps, and private notes in one place. The application is designed around a unified inbox experience: a compact list of things that may need attention, a detail panel for the selected item, and user-owned overlays such as read state, pinning, follow-up, and notes.
+### Product Overview
+
+Dev Inbox is a personal engineering workspace that helps a developer triage work from GitHub, Azure DevOps, and private notes in one place. The application is designed around a unified inbox experience: a compact list of things that may need attention, a detail panel for the selected item, and user-owned overlays such as read state, pinning, follow-up, priority, tags and notes.
 
 The product is intentionally personal. It is not a replacement for GitHub or Azure DevOps, not a workflow engine, not a shared team board, and not a notification delivery platform. Its role is to provide a single daily attention surface over systems that already exist.
 
 This version is designed specifically for an **ASP.NET Core backend** with a simple architecture, low operational complexity, and strong data minimization.
 
-## Product Goals
-- Reduce context switching between GitHub, Azure DevOps, and ad hoc personal note-taking.
+---
+
+### Product Goals
+
+- Reduce context switching between GitHub, Azure DevOps, and personal note-taking.
 - Provide a single inbox that answers what deserves attention now.
 - Preserve user-owned triage state independently from external tools.
 - Keep the backend simple enough to build as a practical .NET learning project.
 - Minimize stored third-party data to reduce data leak risk.
 
-## Product Boundaries
-### In scope
+---
+
+### Product Boundaries
+
+#### In scope
+
 - Unified inbox list.
 - GitHub item ingestion.
 - Azure DevOps item ingestion.
 - Private notes.
-- Personal overlays such as read, saved, pinned, done, tags, priority, and follow-up date.
+- Personal overlays such as read, saved, pinned, done, snoozed, tags, priority, and follow-up date.
 - Saved views and filters.
 - Manual and scheduled synchronization.
 - Live detail loading when an inbox item is opened.
+- Audit logging for system and user activity.
 
-### Out of scope
+#### Out of scope
+
 - Team collaboration.
 - Shared views.
 - Kanban board.
@@ -33,117 +43,261 @@ This version is designed specifically for an **ASP.NET Core backend** with a sim
 - Browser notifications.
 - AI summarization.
 - Mobile-first UX.
-- Replacing the source systems.
+- Replacing source systems.
 
-## Core UX Model
+---
+
+### Core UX Model
+
 The main screen uses a three-pane desktop layout:
+
 - left pane for quick views and saved filters;
 - center pane for the inbox list and summary counters;
 - right pane for item details, overlays, and note interactions.
 
 The center list is the core surface. It should stay fast, compact, and filterable. The right detail panel should open without full navigation and should support lazy loading.
 
-## Architectural Principles
-The backend should optimize for simplicity, explicit flow, and low accidental complexity.
+---
 
-### Principles
+### Architectural Principles
+
+The backend optimizes for simplicity, explicit flow, and low accidental complexity.
+
+#### Principles
+
 - Single deployable web application.
-- No internal event bus.
-- No transactional outbox.
+- Feature-sliced modular structure.
+- Lightweight event-driven communication between modules.
+- No MediatR.
+- No Kafka, RabbitMQ, MassTransit or external broker for MVP.
+- No transactional outbox for MVP.
 - No CQRS split beyond practical query separation in code.
 - No raw archival of third-party item bodies unless explicitly required later.
 - OpenAPI-first or OpenAPI-aligned contract generation for the existing frontend.
 - External details fetched live when needed instead of copied into the local database.
 
-## High-Level Architecture
+---
+
+### Module Communication
+
+Features communicate primarily through lightweight in-process events.
+
+The application uses a custom event infrastructure instead of MediatR or external messaging platforms.
+
+Core contracts:
+
+- `IEvent`
+- `IEventHandler<T>`
+- `IPublisher`
+
+This keeps module boundaries explicit while avoiding heavier mediator frameworks.
+
+Examples:
+
+```text
+Identity -> UserAuthenticatedEvent
+GitHub   -> PullRequestImportedEvent
+ADO      -> WorkItemImportedEvent
+Notes    -> NoteCreatedEvent
+```
+
+Audit subscribes to relevant events and records activity.
+
+Preferred:
+
+```text
+Feature -> Event -> Feature
+```
+
+Avoid:
+
+```text
+Feature -> Service -> Service -> Service
+```
+
+The goal is low coupling and simple evolution of feature boundaries.
+
+---
+
+### Event Publisher
+
+The platform provides a lightweight event publisher supporting two execution modes.
+
+#### `Publish(...)`
+
+- synchronous
+- caller waits for all handlers
+- handlers execute sequentially
+- exceptions propagate to the caller
+- intended for consistency-sensitive workflows
+
+#### `PublishAsync(...)`
+
+- fire-and-forget
+- handlers execute independently
+- each handler receives a dedicated DI scope
+- failures are isolated and logged
+- intended for background workflows
+
+Examples:
+
+```text
+UserAuthenticatedEvent -> PublishAsync()
+SettingsUpdatedEvent   -> Publish()
+ApplicationStartedEvent -> PublishAsync()
+```
+
+This model intentionally favors simplicity over framework abstraction and replaces the need for MediatR in the current scope.
+
+---
+
+### High-Level Architecture
+
 The system consists of:
-- React frontend, unchanged in overall approach;
+
+- React frontend;
 - ASP.NET Core Web API backend;
 - PostgreSQL database;
 - background sync scheduler;
 - GitHub REST integration;
-- Azure DevOps REST integration.
+- Azure DevOps REST integration;
+- custom in-process event publisher.
 
-The backend owns only local application state and lightweight inbox references. Source systems remain the authoritative place for detailed PR or work item content.
+The backend owns only local application state and lightweight inbox references. Source systems remain authoritative for detailed PR or work item content.
 
-## Backend Shape
-The backend is a simple modular-by-folder application, not a strict modular monolith. A practical project structure could look like this:
+---
+
+### Backend Shape
+
+The backend is a practical feature-sliced modular application.
+
+Suggested structure:
 
 ```text
-backend/
-  DevInbox.Web/
-    Features/
-      Inbox/
-      Notes/
-      Settings/
-      SavedViews/
-      Sync/
-      GitHub/
-      AzureDevOps/
-    Infrastructure/
-      Persistence/
-      Security/
-      Scheduling/
-      OpenApi/
-    Program.cs
+DevInbox.Web/
+  Common/
+  Features/
+    Identity/
+    Inbox/
+    Notes/
+    Settings/
+    SavedViews/
+    Sync/
+    GitHub/
+    ADO/
+    Audit/
+  Infrastructure/
+    Auth/
+    Events/
+    Filters/
+    Http/
+    OpenApi/
+    Persistence/
+    Scheduling/
+  Program.cs
 ```
 
 This structure keeps feature ownership visible without introducing complex inter-module rules.
 
-## Functional Areas
-### Inbox
+---
+
+### Functional Areas
+
+#### Identity
+
 Responsible for:
+
+- user authentication;
+- local user account state;
+- login/logout flows;
+- publishing user-related events such as `UserAuthenticatedEvent`.
+
+#### Inbox
+
+Responsible for:
+
 - listing inbox items;
 - filtering and sorting;
 - summary counters;
 - loading a selected item detail by delegating to the proper integration service;
 - updating local item state.
 
-### GitHub integration
+#### GitHub integration
+
 Responsible for:
+
 - reading GitHub user configuration;
 - calling GitHub APIs during sync;
 - mapping lightweight GitHub metadata into local inbox records;
-- loading live detail for a selected GitHub item.
+- loading live detail for a selected GitHub item;
+- reacting to relevant events such as login or manual sync.
 
-### Azure DevOps integration
+#### Azure DevOps integration
+
 Responsible for:
+
 - reading Azure DevOps configuration;
 - calling Azure DevOps APIs during sync;
 - mapping lightweight ADO metadata into local inbox records;
-- loading live detail for a selected ADO item.
+- loading live detail for a selected ADO item;
+- reacting to relevant events such as login or manual sync.
 
-### Notes
+#### Notes
+
 Responsible for:
+
 - creating and editing private notes;
 - linking notes to inbox items;
-- storing user-authored note content.
+- storing user-authored note content;
+- publishing note-related events when needed.
 
-### Settings
+#### Settings
+
 Responsible for:
+
 - GitHub PAT;
 - Azure DevOps PAT;
 - watched repositories or projects;
-- sync preferences.
+- sync preferences;
+- publishing settings-related events when settings change.
 
-### Saved Views
+#### Saved Views
+
 Responsible for persisting named filter presets used by the inbox UI.
 
-### Sync
+#### Audit
+
 Responsible for:
+
+- storing audit entries;
+- listening to audit-worthy events;
+- recording user activity and system activity;
+- avoiding storage of sensitive payloads such as PATs or external API response bodies.
+
+#### Sync
+
+Responsible for:
+
 - scheduled background sync;
 - manual sync trigger;
 - per-source checkpoint tracking;
-- retry and failure logging.
+- retry and failure logging;
+- publishing or handling sync-related events.
 
-## Data Protection Model
+---
+
+### Data Protection Model
+
 A central design requirement is **data minimization**.
 
-### Objective
+#### Objective
+
 The application should persist only the minimum amount of external data needed to render the inbox, preserve user triage state, and later re-fetch the correct source item.
 
-### Persisted external fields
+#### Persisted external fields
+
 For GitHub and Azure DevOps sourced items, the database may store:
+
 - source type;
 - external id;
 - external number or key;
@@ -154,8 +308,10 @@ For GitHub and Azure DevOps sourced items, the database may store:
 - timestamps for activity and sync;
 - local visibility flags such as active or archived.
 
-### Non-persisted external content
+#### Non-persisted external content
+
 The database should avoid storing:
+
 - PR body text;
 - PR review text;
 - comment bodies;
@@ -165,8 +321,10 @@ The database should avoid storing:
 - copied discussion content;
 - user names or rich profile details unless operationally required.
 
-### Persisted local data
+#### Persisted local data
+
 The application should persist:
+
 - unread or read state;
 - saved, pinned, done, snoozed flags;
 - tags;
@@ -174,12 +332,18 @@ The application should persist:
 - follow-up date;
 - private notes;
 - saved views;
-- settings and credentials.
+- settings and credentials;
+- audit entries;
+- sync checkpoints and sync run history.
 
-### Detail loading rule
+#### Detail loading rule
+
 When a user opens an item, the backend should fetch fresh details from GitHub or Azure DevOps and return them to the frontend without persisting the external payload. Local notes and local state are merged into the response at runtime.
 
-## Data Model
+---
+
+### Data Model
+
 A simple database model is enough.
 
 | Table | Purpose |
@@ -193,127 +357,181 @@ A simple database model is enough.
 | `saved_views` | Named filter presets. |
 | `sync_checkpoints` | Last successful sync markers by user and source. |
 | `sync_runs` | Operational history of sync executions. |
+| `audit_entries` | User and system audit history. |
 
-### Inbox item model
+#### Inbox item model
+
 Suggested fields for `inbox_items`:
-- `id`
-- `user_id`
-- `source_type`
-- `item_type`
-- `external_id`
-- `external_key`
-- `source_container_key`
-- `reason_code`
-- `activity_at`
-- `source_url`
-- `is_active`
-- `last_synced_at`
-- `created_at`
-- `updated_at`
 
-### Inbox state model
+- id
+- user_id
+- source_type
+- item_type
+- external_id
+- external_key
+- source_container_key
+- reason_code
+- activity_at
+- source_url
+- is_active
+- last_synced_at
+- created_at
+- updated_at
+
+#### Inbox state model
+
 Suggested fields for `inbox_item_states`:
-- `inbox_item_id`
-- `is_unread`
-- `is_saved`
-- `is_pinned`
-- `is_done`
-- `is_snoozed`
-- `priority`
-- `tags`
-- `follow_up_at`
-- `updated_at`
 
-### Note model
+- inbox_item_id
+- is_unread
+- is_saved
+- is_pinned
+- is_done
+- is_snoozed
+- priority
+- tags
+- follow_up_at
+- updated_at
+
+#### Note model
+
 Suggested fields for `notes`:
-- `id`
-- `user_id`
-- `title`
-- `body`
-- `created_at`
-- `updated_at`
 
-## Synchronization Strategy
+- id
+- user_id
+- title
+- body
+- created_at
+- updated_at
+
+#### Audit entry model
+
+Suggested fields for `audit_entries`:
+
+- id
+- event_type
+- username
+- ip_address
+- details
+- created_at
+
+---
+
+### Synchronization Strategy
+
 Sync should be simple and deterministic.
 
-### Schedule
-A hosted background service runs every few minutes, or on a user-defined interval, and executes per-source sync for the current user or configured users.
+#### Schedule
 
-### GitHub sync
+A hosted background service runs every few minutes, or on a user-defined interval, and executes per-source sync for configured users.
+
+#### GitHub sync
+
 The GitHub sync process should:
-1. load user settings and watched repositories;
-2. fetch only the item categories needed for the inbox;
-3. map each relevant item into a lightweight inbox reference;
-4. upsert records into `inbox_items`;
-5. preserve user-owned state in `inbox_item_states`;
-6. update the sync checkpoint.
 
-### Azure DevOps sync
+- load user settings and watched repositories;
+- fetch only the item categories needed for the inbox;
+- map each relevant item into a lightweight inbox reference;
+- upsert records into `inbox_items`;
+- preserve user-owned state in `inbox_item_states`;
+- update the sync checkpoint.
+
+#### Azure DevOps sync
+
 The Azure DevOps sync process should follow the same model:
-1. load settings;
-2. query assigned or followed items;
-3. capture lightweight metadata only;
-4. upsert inbox references;
-5. update checkpoints.
 
-### No raw import tables
+- load settings;
+- query assigned or followed items;
+- capture lightweight metadata only;
+- upsert inbox references;
+- update checkpoints.
+
+#### Login-triggered sync
+
+A successful authentication event may trigger GitHub or Azure DevOps refresh work using `PublishAsync(...)` so the user is not blocked by synchronization.
+
+#### No raw import tables
+
 There are no raw staging tables such as `github_pull_requests` or `ado_work_items`. The sync process writes directly into lightweight inbox references because the product only needs list-level data locally.
 
-## Detail Retrieval Strategy
+---
+
+### Detail Retrieval Strategy
+
 Detail retrieval is live and on-demand.
 
-### Request flow
-1. User clicks an inbox row.
-2. Frontend calls the detail endpoint.
-3. Backend reads the local inbox reference.
-4. Backend decides which integration client to call.
-5. Backend fetches full source detail from GitHub or Azure DevOps.
-6. Backend merges local state and notes.
-7. Backend returns one DTO to the frontend.
-8. External detail payload is not persisted.
+#### Request flow
 
-### Benefits
+- User clicks an inbox row.
+- Frontend calls the detail endpoint.
+- Backend reads the local inbox reference.
+- Backend decides which integration client to call.
+- Backend fetches full source detail from GitHub or Azure DevOps.
+- Backend merges local state and notes.
+- Backend returns one DTO to the frontend.
+- External detail payload is not persisted.
+
+#### Benefits
+
 - lower local data sensitivity;
 - fresher details;
 - simpler storage model;
 - fewer schema concerns for third-party payloads.
 
-### Trade-off
+#### Trade-off
+
 The detail panel may be slower than the list because it depends on a live external call. The frontend should therefore use loading placeholders and error states.
 
-## API Design
-The frontend remains the same in architectural style, so the backend should continue exposing a typed OpenAPI contract.
+---
 
-### Suggested endpoints
-#### Inbox
-- `GET /api/inbox`
-- `GET /api/inbox/summary`
-- `GET /api/inbox/items/{id}`
-- `PATCH /api/inbox/items/{id}/state`
+### API Design
 
-#### Notes
-- `GET /api/notes`
-- `POST /api/notes`
-- `PUT /api/notes/{id}`
-- `DELETE /api/notes/{id}`
-- `POST /api/notes/{id}/links`
+The frontend remains OpenAPI-aligned, so the backend should continue exposing a typed OpenAPI contract.
 
-#### Saved views
-- `GET /api/saved-views`
-- `POST /api/saved-views`
-- `PUT /api/saved-views/{id}`
-- `DELETE /api/saved-views/{id}`
+#### Suggested endpoints
 
-#### Settings
-- `GET /api/settings`
-- `PUT /api/settings`
+##### Inbox
 
-#### Sync
-- `POST /api/sync/run`
-- `GET /api/sync/status`
+- GET /api/inbox
+- GET /api/inbox/summary
+- GET /api/inbox/items/{id}
+- PATCH /api/inbox/items/{id}/state
 
-## Frontend Compatibility
+##### Notes
+
+- GET /api/notes
+- POST /api/notes
+- PUT /api/notes/{id}
+- DELETE /api/notes/{id}
+- POST /api/notes/{id}/links
+
+##### Saved views
+
+- GET /api/saved-views
+- POST /api/saved-views
+- PUT /api/saved-views/{id}
+- DELETE /api/saved-views/{id}
+
+##### Settings
+
+- GET /api/settings
+- PUT /api/settings
+
+##### Sync
+
+- POST /api/sync/run
+- GET /api/sync/status
+
+##### Audit
+
+- GET /api/audit
+
+---
+
+### Frontend Compatibility
+
 The frontend remains aligned with the current product direction:
+
 - React + TypeScript;
 - Vite;
 - TanStack Query for server state;
@@ -321,81 +539,129 @@ The frontend remains aligned with the current product direction:
 - generated TypeScript client;
 - feature-based frontend organization.
 
-Required frontend behavior for this backend:
+Required frontend behavior:
+
 - list queries should be local-database fast;
 - detail panel should load on demand;
 - state mutations should update immediately in UI;
 - list filters should remain URL-driven;
 - detail query caching should be short-lived and memory-based.
 
-## Security Approach
-### Credential handling
+---
+
+### Security Approach
+
+#### Credential handling
+
 - PATs must be encrypted at rest.
 - Settings endpoints must avoid echoing secrets back to the UI.
 - Secret rotation should be supported by updating settings.
 
-### Logging
+#### Logging
+
 - Avoid logging response payloads from GitHub or Azure DevOps.
 - Avoid logging note bodies in structured logs.
-- Log sync counts, timings, and failures, but not sensitive source content.
+- Avoid logging PATs, OAuth tokens, authorization headers or credentials.
+- Log sync counts, timings and failures, but not sensitive source content.
 
-### Access model
+#### Access model
+
 - Personal single-user or very small internal usage.
 - No public multi-tenant exposure.
 - No shared note visibility between users in the base design.
 
-## Suggested Technology Stack
+---
+
+### Suggested Technology Stack
+
 - ASP.NET Core Web API
-- C#
+- C# 13
+- .NET 10
 - EF Core
 - PostgreSQL
-- Hosted Services or Quartz.NET for scheduling
-- Swashbuckle or NSwag for OpenAPI
-- FluentValidation if desired
+- Hosted Services or BackgroundService for scheduling
+- NSwag / Swashbuckle for OpenAPI
+- Custom in-process event publisher
 - Testcontainers for integration tests
-- xUnit or NUnit for automated tests
+- xUnit for automated tests
+- NSubstitute for mocks
 
-## Testing Strategy
-### Backend tests
+---
+
+### Testing Strategy
+
+#### Backend tests
+
+- unit tests for event publishing behavior;
 - unit tests for sync mapping and state updates;
-- integration tests for persistence and endpoint behavior;
+- integration tests for persistence and endpoints;
 - API contract smoke tests;
 - sync tests against mocked GitHub and ADO responses.
 
-### Frontend contract safety
+#### Event publisher tests
+
+The event infrastructure should be tested as an independent component:
+
+- `Publish(...)` executes registered handlers;
+- `Publish(...)` executes handlers sequentially;
+- `Publish(...)` propagates exceptions;
+- `PublishAsync(...)` returns immediately;
+- `PublishAsync(...)` executes all handlers;
+- `PublishAsync(...)` isolates handler failures;
+- async handlers receive valid scoped dependencies.
+
+#### Frontend contract safety
+
 The generated TypeScript client should be regenerated from the backend OpenAPI definition so the frontend remains aligned with the API surface.
 
-## Delivery Scope for MVP
-The MVP is complete when:
-1. GitHub inbox items appear in the unified list.
-2. Azure DevOps inbox items appear in the unified list.
-3. Notes can be created and linked.
-4. Read, saved, pinned, done, and follow-up states persist.
-5. Saved views work.
-6. The detail panel loads current source data on demand.
-7. Manual and scheduled sync both work.
-8. No unnecessary third-party body content is stored in the database.
+---
 
-## Non-Goals for the Backend
+### Delivery Scope for MVP
+
+The MVP is complete when:
+
+- GitHub inbox items appear in the unified list.
+- Azure DevOps inbox items appear in the unified list.
+- Notes can be created and linked.
+- Read, saved, pinned, done, and follow-up states persist.
+- Saved views work.
+- The detail panel loads current source data on demand.
+- Manual and scheduled sync both work.
+- Audit records important user and system activity.
+- No unnecessary third-party body content is stored in the database.
+
+---
+
+### Non-Goals for the Backend
+
 This backend deliberately does not attempt to be:
+
 - a domain-driven architecture showcase;
-- a message-driven system;
+- a message-driven distributed system;
 - an event-sourced design;
 - a multi-tenant SaaS platform;
 - a replication store of GitHub or Azure DevOps data.
 
 Its value is practical: one clean .NET service that keeps a local attention layer and retrieves full source details only when needed.
 
-## Recommended Implementation Order
-1. Create database schema and EF Core migrations.
-2. Build settings management and secret storage.
-3. Implement inbox list and state update endpoints.
-4. Implement GitHub sync.
-5. Implement GitHub live detail endpoint.
-6. Implement Azure DevOps sync.
-7. Implement Azure DevOps live detail endpoint.
-8. Implement notes and saved views.
-9. Add scheduled sync, logging, and operational polish.
+---
 
-## Summary
-Dev Inbox in this form is a lightweight ASP.NET Core service centered on a local inbox index, local user triage state, and live source detail retrieval. The design deliberately favors simplicity, privacy, and learnability over advanced internal architecture.
+### Recommended Implementation Order
+
+- Create database schema and EF Core migrations.
+- Build settings management and secret storage.
+- Implement custom event publisher.
+- Implement audit events and audit persistence.
+- Implement inbox list and state update endpoints.
+- Implement GitHub sync.
+- Implement GitHub live detail endpoint.
+- Implement Azure DevOps sync.
+- Implement Azure DevOps live detail endpoint.
+- Implement notes and saved views.
+- Add scheduled sync, logging, and operational polish.
+
+---
+
+### Summary
+
+Dev Inbox in this form is a lightweight ASP.NET Core service centered on a local inbox index, local user triage state, live source detail retrieval, and simple event-driven communication between feature modules. The design deliberately favors simplicity, privacy, and learnability over advanced internal architecture.

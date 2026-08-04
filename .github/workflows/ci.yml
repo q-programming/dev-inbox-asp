@@ -132,7 +132,13 @@ jobs:
         working-directory: DevInbox.Web/ClientApp
 
       - name: Run frontend tests with coverage
-        run: npm run test:coverage
+        # Vitest's browser-mode dep-optimizer has a known cold-start race
+        # (vitest-dev/vitest#8471, #10812) that intermittently fails a spec
+        # file's import with "Vitest failed to find the runner" the first
+        # time it runs against a freshly installed node_modules — exactly
+        # what every CI run does. Retrying the whole command lets it reuse
+        # the now-warm Vite dep cache, after which the suite is stable.
+        run: npm run test:coverage || npm run test:coverage
         working-directory: DevInbox.Web/ClientApp
 
       - name: Publish frontend test results

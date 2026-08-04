@@ -5,6 +5,7 @@ import Link from '@mui/material/Link';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import TipsAndUpdatesOutlinedIcon from '@mui/icons-material/TipsAndUpdatesOutlined';
+import { modKeyLabel } from '@shared/utils/platform';
 
 const HELP_LINKS = [
   { label: 'Documentation', href: '#' },
@@ -45,7 +46,7 @@ const SettingsTips = memo(() => (
             bgcolor: 'background.default',
           }}
         >
-          Cmd+,
+          {modKeyLabel} + ,
         </Box>{' '}
         to quickly toggle any setting without leaving your keyboard.
       </Typography>

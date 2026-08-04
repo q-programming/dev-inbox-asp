@@ -2,46 +2,14 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Build",
-      "detail": "dotnet build — compiles the project and regenerates NSwag C# + TypeScript clients",
-      "type": "shell",
-      "command": "dotnet build DevInbox.Web /p:GenerateClients=true",
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared"
-      },
+      "label": "build",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/DevInbox.Web/DevInbox.Web.csproj"
+      ],
       "problemMatcher": "$msCompile"
-    },
-    {
-      "label": "Run UI",
-      "detail": "Start the Vite dev server for the React frontend",
-      "type": "shell",
-      "command": "npm run dev",
-      "options": {
-        "cwd": "${workspaceFolder}/DevInbox.Web/ClientApp"
-      },
-      "isBackground": true,
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "group": "devServers"
-      },
-      "problemMatcher": {
-        "owner": "vite",
-        "pattern": {
-          "regexp": "^(.*)$",
-          "message": 1
-        },
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "VITE",
-          "endsPattern": "ready in"
-        }
-      }
     }
   ]
 }

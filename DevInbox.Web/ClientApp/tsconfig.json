@@ -38,6 +38,9 @@
       ],
       "@api/*": [
         "./generated/api-client/*"
+      ],
+      "@utils/*": [
+        "./src/shared/utils/*"
       ]
     }
   },

@@ -15,4 +15,17 @@
       </DataCollector>
     </DataCollectors>
   </DataCollectionRunSettings>
+
+  <!-- .NET Runtime Settings -->
+  <RunConfiguration>
+    <MaxCpuCount>0</MaxCpuCount>
+    <ResultsDirectory>.\TestResults</ResultsDirectory>
+    <TargetFramework>net10.0</TargetFramework>
+  </RunConfiguration>
+
+  <!-- Environment variables for tests - ensures appsettings.Testing.json is loaded -->
+  <EnvironmentVariables>
+    <ASPNETCORE_ENVIRONMENT>Testing</ASPNETCORE_ENVIRONMENT>
+    <DOTNET_ENVIRONMENT>Testing</DOTNET_ENVIRONMENT>
+  </EnvironmentVariables>
 </RunSettings>

@@ -1,3 +1,5 @@
+using DevInbox.Web.Features.GitHub.Client.DTO;
+using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
 namespace DevInbox.Web.Features.Identity;
@@ -14,6 +16,11 @@ public interface IUserService
     /// <summary>Validates credentials and returns the authenticated user.</summary>
     Task<User> LoginAsync(LoginRequest body);
 
+    Task LogoutAsync();
+
     /// <summary>Returns the currently authenticated user from the JWT sub claim.</summary>
     Task<User> GetCurrentUserAsync();
+
+    /// <summary>Logins or creates new user based on GitHub profile</summary>
+    Task<User> LoginOrCreateGitHubUserAsync(GitHubUserProfileDTO profile, string accessToken);
 }

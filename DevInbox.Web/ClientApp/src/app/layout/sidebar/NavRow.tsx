@@ -9,6 +9,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { NavLink } from 'react-router-dom';
 import { type SidebarNavItem } from '../navConfig.tsx';
 import IntegrationIcon from '@shared/components/integrationIcon/IntegrationIcon.tsx';
+import { buildInboxSearch } from '@feature/inbox/utils/inboxFilter';
 
 export interface NavRowProps {
   item: SidebarNavItem;
@@ -32,13 +33,14 @@ const NavRow = memo(({ item, activeId, collapsed }: NavRowProps) => {
     ) : (
       item.icon
     );
+  const to = item.route ? `${item.route}${buildInboxSearch(item.filter)}` : undefined;
 
   const button = (
     <ListItemButton
       dense
       selected={isActive}
       component={item.route ? NavLink : 'div'}
-      {...(item.route ? { to: item.route } : {})}
+      {...(to ? { to, end: true } : {})}
       sx={{
         borderRadius: 1,
         marginY: 0.25,
@@ -73,7 +75,7 @@ const NavRow = memo(({ item, activeId, collapsed }: NavRowProps) => {
           {item.expandable && (
             <ChevronRightIcon fontSize="small" sx={{ color: 'text.disabled', fontSize: '1rem' }} />
           )}
-          {item.count !== undefined && !item.expandable && (
+          {(item.count !== undefined && item.count !== 0) && !item.expandable && (
             <ListItemSecondaryAction>
               <Typography
                 variant="caption"

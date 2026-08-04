@@ -1,3 +1,4 @@
+using DevInbox.Web.Features.Identity.OAuth;
 using DevInbox.Web.Infrastructure.Auth;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
@@ -9,7 +10,9 @@ namespace DevInbox.Web.Features.Identity;
 /// </summary>
 public class UserController(
     IUserService userService,
-    IJwtTokenService jwtTokenService) : IAuthBaseController, IComponent
+    IJwtTokenService jwtTokenService,
+    IHttpContextAccessor httpContextAccessor,
+    IGitHubOAuthService githubAuthService) : IAuthBaseController, IComponent
 {
     private static readonly UserMapper _mapper = new();
 
@@ -28,7 +31,7 @@ public class UserController(
     public async Task<UserDto> LoginAsync(LoginRequest body)
     {
         var user = await userService.LoginAsync(body);
-        jwtTokenService.IssueAccessToken(user.Email);
+        jwtTokenService.IssueAccessToken(user);
         var dto = _mapper.ToDto(user);
         dto.Integrations =
         [
@@ -38,7 +41,7 @@ public class UserController(
         return dto;
     }
 
-    /// <summary>Clears the JWT cookie, ending the user's session.</summary>
+    /// <summary>Clears the JWT cookie, ending the session. Integration tokens are managed separately.</summary>
     public Task LogoutAsync()
     {
         jwtTokenService.RevokeAccessToken();
@@ -51,6 +54,28 @@ public class UserController(
         var user = await userService.GetCurrentUserAsync();
         var dto = _mapper.ToDto(user);
         dto.Integrations = []; // TODO: load real integrations
+        if (dto.AccountType == AccountType.OAUTH_GITHUB)
+        {
+            dto.Integrations = [new() { Type = IntegrationType.Github, Status = IntegrationStatus.ACTIVE }];
+        }
         return dto;
+    }
+
+    public Task GithubAuthAsync()
+    {
+        var httpContext = httpContextAccessor.HttpContext!;
+        var githubOAuthUrl = githubAuthService.CreateAuthorizationUrl(httpContext);
+        httpContext.Response.Redirect(githubOAuthUrl);
+        return Task.CompletedTask;
+    }
+
+    public async Task GithubAuthCallbackAsync(string code, string state)
+    {
+        var httpContext = httpContextAccessor.HttpContext!;
+        var (profile, accessToken) = await githubAuthService.AuthenticateAsync(httpContext, code, state);
+
+        var user = await userService.LoginOrCreateGitHubUserAsync(profile, accessToken);
+        jwtTokenService.IssueAccessToken(user);
+        httpContext.Response.Redirect(githubAuthService.GetPostLoginRedirectUrl());
     }
 }

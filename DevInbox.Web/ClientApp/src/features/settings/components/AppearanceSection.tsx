@@ -13,9 +13,11 @@ import ThemeCard from './ThemeCard';
 import DensityCard from './DensityCard';
 import { DENSITY_LABELS } from '@feature/settings/types/settings.types';
 import useSettingsStore from '@feature/settings/store/settings.store';
-import { Density, FONT_SIZE_MAX, FONT_SIZE_MIN, Theme } from '@shared/theme/theme';
+import { FONT_SIZE_MAX, FONT_SIZE_MIN } from '@shared/theme/theme';
+import { Density, Theme } from '@api';
+import AppearanceSettingsActions from './AppearanceSettingsActions';
 
-const ALL_DENSITIES = [Density.RELAXED, Density.TIGHT, Density.SUPER_TIGHT] as const;
+const ALL_DENSITIES = [Density.Relaxed, Density.Tight, Density.SuperTight] as const;
 
 /**
  * Appearance settings section — theme, density, and typography controls.
@@ -75,14 +77,14 @@ const AppearanceSection = memo(() => {
         </Box>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <ThemeCard
-            mode={Theme.LIGHT}
-            selected={theme === Theme.LIGHT}
-            onSelect={() => handleThemeSelect(Theme.LIGHT)}
+            mode={Theme.Light}
+            selected={theme === Theme.Light}
+            onSelect={() => handleThemeSelect(Theme.Light)}
           />
           <ThemeCard
-            mode={Theme.DARK}
-            selected={theme === Theme.DARK}
-            onSelect={() => handleThemeSelect(Theme.DARK)}
+            mode={Theme.Dark}
+            selected={theme === Theme.Dark}
+            onSelect={() => handleThemeSelect(Theme.Dark)}
           />
         </Box>
       </Paper>
@@ -163,6 +165,7 @@ const AppearanceSection = memo(() => {
           <Divider orientation="vertical" flexItem />
         </Box>
       </Paper>
+      <AppearanceSettingsActions />
     </Box>
   );
 });

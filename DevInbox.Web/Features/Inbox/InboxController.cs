@@ -1,21 +1,39 @@
+using DevInbox.Web.Features.Inbox.Mapper;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
 namespace DevInbox.Web.Features.Inbox;
 
-public class InboxController : IInboxBaseController, IComponent
+public class InboxController(IInboxService inboxService) : IInboxBaseController, IComponent
 {
-    public Task<InboxPage> ListInboxItemsAsync(ItemSource? source, ItemType? itemType, ItemStatus? status, int page, int size)
+    private InboxMapper _inboxMapper = new();
+    public Task<InboxPage> ListInboxItemsAsync(int page, int size, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason)
+    {
+        return inboxService.ListInboxItemsAsync(page, size, source, itemType, status, reason);
+    }
+
+    public Task<InboxItemDetail> GetInboxItemAsync(long id)
+    {
+        return inboxService.GetInboxItemByIdAsync(id);
+    }
+
+    public Task UpdateItemOverlayAsync(long id, ItemOverlayRequest body)
     {
         throw new ServiceNotImplementedException();
     }
 
-    public Task<InboxItemDetail> GetInboxItemAsync(System.Guid id)
+    public async Task<InboxStatus> GetInboxStatusAsync()
     {
-        throw new ServiceNotImplementedException();
+        var inbox = await inboxService.GetUserInboxAsync();
+        return _inboxMapper.ToStatus(inbox);
     }
 
-    public Task UpdateItemOverlayAsync(System.Guid id, ItemOverlayRequest body)
+    public Task<InboxSummary> GetInboxSummaryAsync()
     {
-        throw new ServiceNotImplementedException();
+        return inboxService.GetInboxSummaryAsync();
+    }
+
+    public Task PutInboxSeedAsync()
+    {
+        return inboxService.PutInboxSeedAsync();
     }
 }

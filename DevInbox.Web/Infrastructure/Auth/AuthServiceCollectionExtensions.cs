@@ -1,4 +1,6 @@
 using System.Text;
+using DevInbox.Web.Features.GitHub.Client;
+using DevInbox.Web.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -15,16 +17,17 @@ public static class AuthServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
-        var jwtOptions = configuration.GetSection("Jwt").Get<JwtOptions>()
+        // JWT
+        var jwtSection = configuration.GetSection("Jwt");
+        var jwtOptions = jwtSection.Get<JwtOptions>()
             ?? throw new InvalidOperationException("Jwt configuration section is missing.");
 
         if (string.IsNullOrWhiteSpace(jwtOptions.SigningKey))
+        {
             throw new InvalidOperationException("Jwt:SigningKey is required.");
-
-        services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
-
+        }
+        services.Configure<JwtOptions>(jwtSection);
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey));
-
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -47,14 +50,60 @@ public static class AuthServiceCollectionExtensions
                     OnMessageReceived = ctx =>
                     {
                         if (ctx.Request.Cookies.TryGetValue("jwt", out var token))
+                        {
                             ctx.Token = token;
+                        }
+
                         return Task.CompletedTask;
                     }
                 };
             });
+        _ = services.AddAuthorization();
+        return services;
+    }
+    public static IServiceCollection AddGitHubOAuth(this IServiceCollection services, IConfiguration configuration)
+    {
+        // GitHub
+        var ghSection = configuration.GetSection("GitHub");
+        var ghOptions = ghSection.Get<GithubOptions>() ?? throw new InvalidOperationException("GitHub configuration section is missing.");
+        if (string.IsNullOrWhiteSpace(ghOptions.ClientId))
+        {
+            throw new InvalidOperationException("GitHub:ClientId is required.");
+        }
+        if (string.IsNullOrWhiteSpace(ghOptions.ClientSecret))
+        {
+            throw new InvalidOperationException("GitHub:ClientSecret is required.");
+        }
+        _ = services.Configure<GithubOptions>(ghSection);
+        // HTTP client — named "github" so it can also be resolved via IHttpClientFactory.CreateClient("github")
+        services.AddHttpClient<IGitHubClient, GitHubClient>("github", (sp, client) =>
+        {
+            client.BaseAddress = new Uri("https://api.github.com");
+            client.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");
+            client.DefaultRequestHeaders.Add("User-Agent", "DevInbox");
+            client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+        }).AddStandardResilienceHandler();
+        return services;
+    }
 
-        services.AddAuthorization();
+    /// <summary>
+    /// Registers <see cref="EncryptionService"/> as a singleton.
+    /// The AES-256 key is derived once at startup from <c>Encryption:Password</c> and
+    /// <c>Encryption:Salt</c> via PBKDF2 — equivalent to a Spring <c>@PostConstruct</c> init.
+    /// </summary>
+    public static IServiceCollection AddEncryption(this IServiceCollection services, IConfiguration configuration)
+    {
+        if (string.IsNullOrWhiteSpace(configuration["Encryption:Password"]))
+        {
+            throw new InvalidOperationException("Encryption:Password is required.");
+        }
 
+        if (string.IsNullOrWhiteSpace(configuration["Encryption:Salt"]))
+        {
+            throw new InvalidOperationException("Encryption:Salt is required.");
+        }
+
+        services.AddSingleton<EncryptionService>();
         return services;
     }
 }

@@ -1,7 +1,11 @@
 using DevInbox.Web.Common;
+using DevInbox.Web.Features.GitHub.Client.DTO;
 using DevInbox.Web.Features.Identity;
+using DevInbox.Web.Features.Identity.Domain;
+using DevInbox.Web.Features.Identity.OAuth;
 using DevInbox.Web.Infrastructure.Auth;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
+using Microsoft.AspNetCore.Http;
 using NSubstitute;
 
 namespace DevInbox.Web.Tests.Features.Identity;
@@ -13,88 +17,6 @@ public class UserControllerTests
     private const string LastName = "Kowalski";
     private const string StrongPassword = "strongpassword123";
 
-    private readonly IUserService _userService;
-    private readonly IJwtTokenService _jwtTokenService;
-    private readonly UserController _controller;
-
-    public UserControllerTests()
-    {
-        _userService = Substitute.For<IUserService>();
-        _jwtTokenService = Substitute.For<IJwtTokenService>();
-        _controller = new UserController(_userService, _jwtTokenService);
-    }
-
-    [Fact(DisplayName = "LogoutAsync should revoke the JWT token")]
-    public async Task LogoutAsyncShouldRevokeTokenAsync()
-    {
-        await _controller.LogoutAsync();
-
-        _jwtTokenService.Received(1).RevokeAccessToken();
-    }
-
-    [Fact(DisplayName = "LoginAsync should issue JWT token for authenticated user email")]
-    public async Task LoginAsyncShouldIssueTokenForAuthenticatedUserAsync()
-    {
-        _ = _userService.LoginAsync(Arg.Any<LoginRequest>()).Returns(BuildUser());
-
-        await _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = StrongPassword });
-
-        _jwtTokenService.Received(1).IssueAccessToken(TestEmail);
-    }
-
-    [Fact(DisplayName = "LoginAsync should return user dto on success")]
-    public async Task LoginAsyncShouldReturnUserDtoAsync()
-    {
-        _ = _userService.LoginAsync(Arg.Any<LoginRequest>()).Returns(BuildUser());
-
-        var result = await _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = StrongPassword });
-
-        Assert.Equal(TestEmail, result.Email);
-        Assert.Equal(FirstName, result.FirstName);
-        Assert.Equal(LastName, result.LastName);
-    }
-
-    [Fact(DisplayName = "LoginAsync should propagate UnauthorizedException and not issue token")]
-    public async Task LoginAsyncShouldPropagateUnauthorizedExceptionAsync()
-    {
-        _ = _userService.LoginAsync(Arg.Any<LoginRequest>()).Returns<User>(_ => throw new UnauthorizedException("Authentication failed"));
-
-        _ = await Assert.ThrowsAsync<UnauthorizedException>(() =>
-            _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = "wrong" }));
-
-        _jwtTokenService.DidNotReceive().IssueAccessToken(Arg.Any<string>());
-    }
-
-    [Fact(DisplayName = "MeAsync should return dto for currently authenticated user")]
-    public async Task MeAsyncShouldReturnCurrentUserDtoAsync()
-    {
-        _ = _userService.GetCurrentUserAsync().Returns(BuildUser());
-
-        var result = await _controller.MeAsync();
-
-        Assert.Equal(TestEmail, result.Email);
-        Assert.Equal(FirstName, result.FirstName);
-        Assert.Equal(LastName, result.LastName);
-    }
-
-    [Fact(DisplayName = "RegisterAsync should return dto for newly registered user")]
-    public async Task RegisterAsyncShouldReturnUserDtoAsync()
-    {
-        _ = _userService.RegisterAsync(Arg.Any<RegisterRequest>()).Returns(BuildUser());
-
-        var result = await _controller.RegisterAsync(new RegisterRequest
-        {
-            FirstName = FirstName,
-            LastName = LastName,
-            Email = TestEmail,
-            Password = StrongPassword
-        });
-
-        Assert.Equal(TestEmail, result.Email);
-        Assert.Equal(FirstName, result.FirstName);
-        Assert.Equal(LastName, result.LastName);
-    }
-
     private static User BuildUser() => new()
     {
         FirstName = FirstName,
@@ -102,4 +24,165 @@ public class UserControllerTests
         Email = TestEmail,
         Password = "hashed"
     };
+
+    /// <summary>
+    /// Tests for endpoints that don't need a real HttpContext (login, logout, register, me).
+    /// HttpContextAccessor is stubbed — equivalent to @Nested in JUnit 5.
+    /// </summary>
+    public class StandardEndpoints
+    {
+        private readonly IUserService _userService;
+        private readonly IJwtTokenService _jwtTokenService;
+        private readonly UserController _controller;
+
+        public StandardEndpoints()
+        {
+            _userService = Substitute.For<IUserService>();
+            _jwtTokenService = Substitute.For<IJwtTokenService>();
+            _controller = new UserController(
+                _userService,
+                _jwtTokenService,
+                Substitute.For<IHttpContextAccessor>(),
+                Substitute.For<IGitHubOAuthService>());
+        }
+
+        [Fact(DisplayName = "LogoutAsync should revoke the JWT token")]
+        public async Task LogoutAsyncShouldRevokeTokenAsync()
+        {
+            await _controller.LogoutAsync();
+
+            _jwtTokenService.Received(1).RevokeAccessToken();
+        }
+
+        [Fact(DisplayName = "LoginAsync should issue JWT token for authenticated user email")]
+        public async Task LoginAsyncShouldIssueTokenForAuthenticatedUserAsync()
+        {
+            _userService.LoginAsync(Arg.Any<LoginRequest>()).Returns(BuildUser());
+
+            await _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = StrongPassword });
+
+            _jwtTokenService.Received(1).IssueAccessToken(Arg.Is<User>(u => u.Email == TestEmail && u.Id == 0));
+        }
+
+        [Fact(DisplayName = "LoginAsync should return user dto on success")]
+        public async Task LoginAsyncShouldReturnUserDtoAsync()
+        {
+            _userService.LoginAsync(Arg.Any<LoginRequest>()).Returns(BuildUser());
+
+            var result = await _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = StrongPassword });
+
+            Assert.Equal(TestEmail, result.Email);
+            Assert.Equal(FirstName, result.FirstName);
+            Assert.Equal(LastName, result.LastName);
+        }
+
+        [Fact(DisplayName = "LoginAsync should propagate UnauthorizedException and not issue token")]
+        public async Task LoginAsyncShouldPropagateUnauthorizedExceptionAsync()
+        {
+            _userService.LoginAsync(Arg.Any<LoginRequest>()).Returns<User>(_ => throw new UnauthorizedException("Authentication failed"));
+
+            await Assert.ThrowsAsync<UnauthorizedException>(() =>
+                _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = "wrong" }));
+
+            _jwtTokenService.DidNotReceive().IssueAccessToken(Arg.Any<User>());
+        }
+
+        [Fact(DisplayName = "MeAsync should return dto for currently authenticated user")]
+        public async Task MeAsyncShouldReturnCurrentUserDtoAsync()
+        {
+            _userService.GetCurrentUserAsync().Returns(BuildUser());
+
+            var result = await _controller.MeAsync();
+
+            Assert.Equal(TestEmail, result.Email);
+            Assert.Equal(FirstName, result.FirstName);
+            Assert.Equal(LastName, result.LastName);
+        }
+
+        [Fact(DisplayName = "RegisterAsync should return dto for newly registered user")]
+        public async Task RegisterAsyncShouldReturnUserDtoAsync()
+        {
+            _userService.RegisterAsync(Arg.Any<RegisterRequest>()).Returns(BuildUser());
+
+            var result = await _controller.RegisterAsync(new RegisterRequest
+            {
+                FirstName = FirstName,
+                LastName = LastName,
+                Email = TestEmail,
+                Password = StrongPassword
+            });
+
+            Assert.Equal(TestEmail, result.Email);
+            Assert.Equal(FirstName, result.FirstName);
+            Assert.Equal(LastName, result.LastName);
+        }
+    }
+
+    /// <summary>
+    /// Tests for GitHub OAuth endpoints that require a real HttpContext to assert on redirect responses.
+    /// </summary>
+    public class GitHubOAuthEndpoints
+    {
+        private const string GithubCode = "gh-code";
+        private const string GithubState = "gh-state";
+        private const string GithubToken = "gho_token";
+        private const string RedirectUrl = "/inbox";
+        private const string AuthorizationUrl = "https://github.com/login/oauth/authorize?client_id=x&state=abc";
+
+        private readonly DefaultHttpContext _httpContext;
+        private readonly IGitHubOAuthService _githubAuthService;
+        private readonly IUserService _userService;
+        private readonly IJwtTokenService _jwtTokenService;
+        private readonly UserController _controller;
+
+        public GitHubOAuthEndpoints()
+        {
+            _httpContext = new DefaultHttpContext();
+            var accessor = Substitute.For<IHttpContextAccessor>();
+            accessor.HttpContext.Returns(_httpContext);
+
+            _githubAuthService = Substitute.For<IGitHubOAuthService>();
+            _userService = Substitute.For<IUserService>();
+            _jwtTokenService = Substitute.For<IJwtTokenService>();
+
+            _controller = new UserController(_userService, _jwtTokenService, accessor, _githubAuthService);
+        }
+
+        [Fact(DisplayName = "GithubAuthAsync should redirect to the authorization URL returned by the service")]
+        public async Task GithubAuthAsyncShouldRedirectToAuthorizationUrlAsync()
+        {
+            _githubAuthService.CreateAuthorizationUrl(Arg.Any<HttpContext>()).Returns(AuthorizationUrl);
+
+            await _controller.GithubAuthAsync();
+
+            Assert.Equal(302, _httpContext.Response.StatusCode);
+            Assert.Equal(AuthorizationUrl, _httpContext.Response.Headers.Location.ToString());
+        }
+
+        [Fact(DisplayName = "GithubAuthCallbackAsync should issue JWT and redirect after successful authentication")]
+        public async Task GithubAuthCallbackAsyncShouldIssueTokenAndRedirectOnSuccessAsync()
+        {
+            var profile = new GitHubUserProfileDTO { Login = "octocat", Email = TestEmail };
+            _githubAuthService.AuthenticateAsync(Arg.Any<HttpContext>(), GithubCode, GithubState)
+                .Returns((profile, GithubToken));
+            _githubAuthService.GetPostLoginRedirectUrl().Returns(RedirectUrl);
+            _userService.LoginOrCreateGitHubUserAsync(profile, GithubToken).Returns(BuildUser());
+
+            await _controller.GithubAuthCallbackAsync(GithubCode, GithubState);
+
+            _jwtTokenService.Received(1).IssueAccessToken(Arg.Is<User>(u => u.Email == TestEmail && u.Id == 0));
+            Assert.Equal(302, _httpContext.Response.StatusCode);
+            Assert.Equal(RedirectUrl, _httpContext.Response.Headers.Location.ToString());
+        }
+
+        [Fact(DisplayName = "GithubAuthCallbackAsync should propagate BadRequestException on invalid state")]
+        public async Task GithubAuthCallbackAsyncShouldPropagateExceptionOnInvalidStateAsync()
+        {
+            _githubAuthService.AuthenticateAsync(Arg.Any<HttpContext>(), Arg.Any<string>(), Arg.Any<string>())
+                .Returns<(GitHubUserProfileDTO, string)>(_ => throw new BadRequestException("Invalid OAuth state"));
+
+            await Assert.ThrowsAsync<BadRequestException>(() =>
+                _controller.GithubAuthCallbackAsync("bad-code", "bad-state"));
+        }
+    }
 }

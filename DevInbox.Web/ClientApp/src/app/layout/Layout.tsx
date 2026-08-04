@@ -10,6 +10,7 @@ import Footer from '@app/common/footer/Footer.tsx';
 import useSettingsStore from '@feature/settings/store/settings.store';
 import { useGlobalShortcuts } from '@shared/hooks/useGlobalShortcuts.ts';
 import { useLeaderKey } from '@shared/hooks/useLeaderKey.ts';
+import { useInboxHeartbeat } from '@feature/inbox/hooks/useInboxHeartBeat.ts';
 
 const TRANSITION = 'width 200ms ease, margin-left 200ms ease';
 
@@ -22,6 +23,7 @@ const TRANSITION = 'width 200ms ease, margin-left 200ms ease';
 const AppLayout = () => {
   useGlobalShortcuts();
   useLeaderKey();
+  useInboxHeartbeat()
   const sideBarCollapsed = useSettingsStore((state) => state.sideBarCollapsed);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const sidebarWidth = sideBarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;

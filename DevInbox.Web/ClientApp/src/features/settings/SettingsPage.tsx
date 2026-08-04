@@ -7,6 +7,7 @@ import AppearanceSection from './components/AppearanceSection';
 import DangerZoneSection from './components/DangerZoneSection';
 import IntegrationsSection from './components/IntegrationsSection';
 import SettingsTips from './components/SettingsTips';
+import SeedDataSection from './components/SeedDataSection';
 
 /**
  * Settings page — long-form layout with anchored sections.
@@ -43,9 +44,12 @@ const SettingsPage = () => {
             Configure your developer experience, integrations, and notification preferences.
           </Typography>
         </Box>
+        <Divider />
+        <SeedDataSection/>
 
         <Divider />
         <AppearanceSection />
+
 
         <Divider />
         <IntegrationsSection />

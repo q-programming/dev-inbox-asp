@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Infrastructure.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
@@ -12,7 +13,7 @@ namespace DevInbox.Web.Tests.Infrastructure;
 public class JwtTokenServiceTests
 {
     private const string ValidSigningKey = "super-secret-signing-key-min-32-chars!!";
-    private const string Subject = "user@example.com";
+    private const string TestEmail = "user@example.com";
 
     private static JwtTokenService BuildService(
         string signingKey = ValidSigningKey,
@@ -36,7 +37,7 @@ public class JwtTokenServiceTests
         var context = new DefaultHttpContext();
         var service = BuildService(httpContext: context);
 
-        service.IssueAccessToken(Subject);
+        service.IssueAccessToken(new User { Email = TestEmail, Id = 1 });
 
         Assert.Contains("jwt", context.Response.Headers.SetCookie.ToString());
     }
@@ -47,7 +48,7 @@ public class JwtTokenServiceTests
         var context = new DefaultHttpContext();
         var service = BuildService(httpContext: context);
 
-        service.IssueAccessToken(Subject);
+        service.IssueAccessToken(new User { Email = TestEmail, Id = 1 });
 
         var setCookie = context.Response.Headers.SetCookie.ToString();
         var tokenValue = setCookie.Split('=', 2)[1].Split(';')[0];
@@ -64,7 +65,7 @@ public class JwtTokenServiceTests
         }, out var validatedToken);
 
         var jwt = (JwtSecurityToken)validatedToken;
-        Assert.Equal(Subject, jwt.Subject);
+        Assert.Equal("1", jwt.Subject);
     }
 
     [Fact(DisplayName = "IssueAccessToken includes additional claims in token")]
@@ -74,7 +75,7 @@ public class JwtTokenServiceTests
         var service = BuildService(httpContext: context);
         var extra = new[] { new Claim("role", "admin") };
 
-        service.IssueAccessToken(Subject, extra);
+        service.IssueAccessToken(new User { Email = TestEmail, Id = 1 }, extra);
 
         var setCookie = context.Response.Headers.SetCookie.ToString();
         var tokenValue = setCookie.Split('=', 2)[1].Split(';')[0];
@@ -89,7 +90,7 @@ public class JwtTokenServiceTests
         var service = BuildService(httpContext: null);
 
         // Should not throw
-        service.IssueAccessToken(Subject);
+        service.IssueAccessToken(new User { Email = TestEmail, Id = 1 });
     }
 
     [Fact(DisplayName = "RevokeAccessToken deletes jwt cookie from response")]
@@ -117,7 +118,7 @@ public class JwtTokenServiceTests
     {
         var service = BuildService(httpContext: new DefaultHttpContext());
 
-        Assert.Throws<ArgumentException>(() => service.IssueAccessToken(""));
+        Assert.Throws<ArgumentException>(() => service.IssueAccessToken(new User { Email = "", Id = 1 }));
     }
 
     [Fact(DisplayName = "IssueAccessToken throws InvalidOperationException when signing key is missing")]
@@ -125,6 +126,6 @@ public class JwtTokenServiceTests
     {
         var service = BuildService(signingKey: "", httpContext: new DefaultHttpContext());
 
-        Assert.Throws<InvalidOperationException>(() => service.IssueAccessToken(Subject));
+        Assert.Throws<InvalidOperationException>(() => service.IssueAccessToken(new User { Email = TestEmail, Id = 1 }));
     }
 }
