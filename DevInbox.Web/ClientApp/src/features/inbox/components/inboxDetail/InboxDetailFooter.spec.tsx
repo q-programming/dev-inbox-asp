@@ -98,7 +98,7 @@ describe('InboxDetailFooter', () => {
 
       await user.click(screen.getByTestId('inbox-detail-add-note-button'));
 
-      expect(open).toHaveBeenCalledWith(77);
+      expect(open).toHaveBeenCalledWith(details);
     });
   });
 });

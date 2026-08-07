@@ -1,5 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ItemSource, ItemType, type InboxItemDetail } from '@api';
 import { useNoteModalStore } from './noteModal.store';
+
+const makeDetails = (overrides: Partial<InboxItemDetail> = {}): InboxItemDetail => ({
+  id: 42,
+  title: 'Test item',
+  source: ItemSource.Github,
+  itemType: ItemType.PR,
+  isDone: false,
+  isSaved: false,
+  ...overrides,
+});
 
 describe('useNoteModalStore', () => {
   beforeEach(() => {
@@ -20,16 +31,17 @@ describe('useNoteModalStore', () => {
     expect(state.attachedToInboxItemId).toBeUndefined();
   });
 
-  it('should open attached to an inbox item when called with an id', () => {
-    useNoteModalStore.getState().open(42);
+  it('should open attached to an inbox item when called with details', () => {
+    useNoteModalStore.getState().open(makeDetails({ id: 42, title: 'PR #42' }));
 
     const state = useNoteModalStore.getState();
     expect(state.isOpen).toBe(true);
     expect(state.attachedToInboxItemId).toBe(42);
+    expect(state.title).toBe('PR #42');
   });
 
   it('should reset isOpen and attachedToInboxItemId when closed', () => {
-    useNoteModalStore.getState().open(7);
+    useNoteModalStore.getState().open(makeDetails({ id: 7 }));
     expect(useNoteModalStore.getState().isOpen).toBe(true);
 
     useNoteModalStore.getState().close();

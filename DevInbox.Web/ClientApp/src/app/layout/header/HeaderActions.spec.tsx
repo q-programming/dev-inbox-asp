@@ -15,7 +15,8 @@ vi.mock('@feature/notes/store/noteModal.store', () => ({
 }));
 
 vi.mock('@feature/inbox/store/inbox.store', () => ({
-  useInboxStore: (selector: (state: typeof inboxStoreState) => unknown) => selector(inboxStoreState),
+  useInboxStore: (selector?: (state: typeof inboxStoreState) => unknown) =>
+    selector ? selector(inboxStoreState) : inboxStoreState,
 }));
 
 vi.mock('@feature/inbox/hooks/useInboxQuery', () => ({
@@ -60,18 +61,19 @@ describe('HeaderActions', () => {
   it('shows add-note options when selected item has no attached note and opens attached modal', async () => {
     const user = userEvent.setup();
     inboxStoreState.selectedItemId = 101;
-    inboxItemQueryState.data = makeDetails({
+    const details = makeDetails({
       id: 101,
       source: ItemSource.Github,
       attachedNote: undefined,
     });
+    inboxItemQueryState.data = details;
 
     renderWithProviders(<HeaderActions />);
 
     await user.click(screen.getByTestId('header-add-note-options-btn'));
     await user.click(screen.getByTestId('header-add-note-menu-attached'));
 
-    expect(openNoteModalMock).toHaveBeenCalledWith(101);
+    expect(openNoteModalMock).toHaveBeenCalledWith(details);
   });
 
   it('hides add-note options when selected item already has attached note', () => {
