@@ -4,6 +4,7 @@ using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Inbox;
 using DevInbox.Web.Features.Inbox.Details;
 using DevInbox.Web.Features.Inbox.Domain;
+using DevInbox.Web.Features.Notes;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
     private User _otherUser = default!;
     private InboxService _service = default!;
     private readonly IInboxDetailService _detailService = Substitute.For<IInboxDetailService>();
+    private readonly INotesService _notesService = Substitute.For<INotesService>();
 
     public override async Task InitializeAsync()
     {
@@ -48,6 +50,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
             new InboxRepository(DataBase),
             new InboxItemRepository(DataBase),
             _detailService,
+            _notesService,
             accessor);
     }
 

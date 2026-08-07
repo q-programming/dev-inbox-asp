@@ -17,5 +17,10 @@ public interface IInboxItemRepository : IRepository<InboxItem>
     /// item into memory — the repository stays agnostic of the caller's DTO shape.
     /// </summary>
     Task<TResult?> GetInboxSummaryAsync<TResult>(long userId, Expression<Func<IGrouping<int, InboxItem>, TResult>> selector) where TResult : class;
+
+    /// <summary>Total notes (standalone + attached to another item) belonging to <paramref name="userId"/>.
+    /// Kept separate from GetInboxSummaryAsync because attached notes are excluded from that grouped
+    /// query's "visible" set (they're surfaced inline on their target item, not as their own row).</summary>
+    Task<long> CountNotesAsync(long userId);
 }
 

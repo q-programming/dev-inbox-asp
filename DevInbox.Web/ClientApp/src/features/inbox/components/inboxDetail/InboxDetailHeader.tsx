@@ -2,6 +2,7 @@ import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import NoteAddOutlinedIcon from '@mui/icons-material/NoteAddOutlined';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
@@ -12,6 +13,7 @@ import Typography from '@mui/material/Typography';
 import { InboxItemDetail, IntegrationType, ItemSource } from '@api';
 import { useInboxStore } from '@feature/inbox/store/inbox.store';
 import { translateItemType } from '@feature/inbox/utils/reason';
+import { useNoteModalStore } from '@feature/notes/store/noteModal.store';
 import IntegrationIcon from '@shared/components/integrationIcon/IntegrationIcon';
 import { useMemo } from 'react';
 
@@ -35,6 +37,7 @@ const SOURCE_INTEGRATION: Partial<Record<ItemSource, IntegrationType | string>> 
  */
 const InboxDetailHeader = ({ details, url }: IInboxDetailHeader) => {
     const { closeItem } = useInboxStore();
+    const openNoteModal = useNoteModalStore((state) => state.open);
 
     const integration = useMemo(
         () => (details.source ? SOURCE_INTEGRATION[details.source] ?? '' : ''),
@@ -109,6 +112,16 @@ const InboxDetailHeader = ({ details, url }: IInboxDetailHeader) => {
                             rel="noopener noreferrer"
                         >
                             <OpenInNewIcon fontSize="small" />
+                        </IconButton>
+                    )}
+                    {details.source !== ItemSource.Note && !details.attachedNote && (
+                        <IconButton
+                            data-testid="inbox-detail-add-note-btn"
+                            size="small"
+                            title="Add note"
+                            onClick={() => openNoteModal(details)}
+                        >
+                            <NoteAddOutlinedIcon fontSize="small" />
                         </IconButton>
                     )}
                     <IconButton

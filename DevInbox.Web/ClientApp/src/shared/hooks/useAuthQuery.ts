@@ -42,7 +42,7 @@ export const useMeQuery = () =>
     // has changed since the last cached /me response.
     refetchOnMount: 'always',
     retry: false,
-    meta: { silent: true },
+    meta: { silent: true, skipAuthRedirect: true },
   });
 
 // ─── Bootstrap hook ───────────────────────────────────────────────────────────
@@ -104,6 +104,7 @@ export const useLoginMutation = () => {
         error instanceof ApiError && error.status === 401
           ? 'Invalid email or password.'
           : 'Sign-in failed. Please try again.',
+      skipAuthRedirect: true,
     },
   });
 };
@@ -146,5 +147,6 @@ export const useRegisterMutation = () =>
         error instanceof ApiError && error.status === 409
           ? 'An account with this email already exists.'
           : 'Registration failed. Please try again.',
+      skipAuthRedirect: true,
     },
   });

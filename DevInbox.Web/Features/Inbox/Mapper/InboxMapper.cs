@@ -29,7 +29,6 @@ public partial class InboxMapper
     [MapProperty($"{nameof(InboxItem.State)}.{nameof(InboxItemState.IsSaved)}", nameof(InboxItemDetail.IsSaved))]
     [MapProperty($"{nameof(InboxItem.State)}.{nameof(InboxItemState.IsDone)}", nameof(InboxItemDetail.IsDone))]
     [MapProperty($"{nameof(InboxItem.State)}.{nameof(InboxItemState.Priority)}", nameof(InboxItemDetail.Priority))]
-    [MapProperty($"{nameof(InboxItem.State)}.{nameof(InboxItemState.PrivateNote)}", nameof(InboxItemDetail.PrivateNote))]
     [MapProperty($"{nameof(InboxItem.State)}.{nameof(InboxItemState.FollowUpAt)}", nameof(InboxItemDetail.FollowUpAt))]
     [MapProperty($"{nameof(InboxItem.State)}.{nameof(InboxItemState.Tags)}", nameof(InboxItemDetail.Tags))]
     public partial InboxItemDetail ToInboxItemDetail(InboxItem source);

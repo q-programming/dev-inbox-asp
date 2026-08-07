@@ -29,7 +29,7 @@ export const useInboxStore = create<InboxStore>()(
             : undefined,
         })),
       openItem: (itemId) => set({ selectedItemId: itemId }),
-      closeItem: () => set({ selectedItemId: undefined }),  
+      closeItem: () => set({ selectedItemId: undefined }),
       clear: () => set({ status: undefined, selectedItemId: undefined }),
     }),
     {

@@ -15,10 +15,19 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
     {
         return await Set
             .AsNoTracking()
-            .Where(item => item.InboxId == userId)
+            .Where(item => item.InboxId == userId &&
+                (item.Source != ItemSource.Note || item.Note!.AttachedToInboxItemId == null))
             .GroupBy(_ => 1)
             .Select(selector)
             .SingleOrDefaultAsync();
+    }
+
+    public Task<long> CountNotesAsync(long userId)
+    {
+        return Set
+            .AsNoTracking()
+            .Where(item => item.InboxId == userId && item.Type == ItemType.Note)
+            .LongCountAsync();
     }
 
     public async Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(int page, int size, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason)
@@ -36,6 +45,13 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
         if (itemType.HasValue)
         {
             query = query.Where(i => i.Type == itemType.Value);
+        }
+
+        // Notes attached to another item aren't their own inbox entry — they're surfaced inline on the
+        // item they annotate — unless the caller explicitly asked for the dedicated Notes view.
+        if (itemType != ItemType.Note)
+        {
+            query = query.Where(i => i.Source != ItemSource.Note || i.Note!.AttachedToInboxItemId == null);
         }
 
         if (reason.HasValue)
@@ -63,14 +79,46 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
             .Take(size)
             .ToListAsync();
 
+        await PopulateHasNoteAsync(items);
+
         return (items, totalElements);
     }
 
-    public Task<InboxItem?> GetByIdForUserAsync(long id, long userId)
+    public async Task<InboxItem?> GetByIdForUserAsync(long id, long userId)
     {
-        return dbContext.InboxItems
+        var item = await dbContext.InboxItems
             .AsNoTracking()
             .Include(i => i.State)
             .FirstOrDefaultAsync(i => i.Id == id && i.InboxId == userId);
+
+        if (item is not null)
+        {
+            await PopulateHasNoteAsync([item]);
+        }
+
+        return item;
+    }
+
+    /// <summary>Batches the "does this item have a note attached" lookup into a single query for the
+    /// whole page/item set, instead of a per-item existence check (N+1). An item can have at most one
+    /// attached note (enforced in NotesService), so a Contains-based set lookup is enough.</summary>
+    private async Task PopulateHasNoteAsync(List<InboxItem> items)
+    {
+        var ids = items.Select(i => i.Id).ToArray();
+        if (ids.Length == 0)
+        {
+            return;
+        }
+
+        var idsWithNotes = await dbContext.Notes
+            .AsNoTracking()
+            .Where(note => note.AttachedToInboxItemId != null && ids.Contains(note.AttachedToInboxItemId.Value))
+            .Select(note => note.AttachedToInboxItemId!.Value)
+            .ToHashSetAsync();
+
+        foreach (var item in items)
+        {
+            item.HasNote = idsWithNotes.Contains(item.Id);
+        }
     }
 }

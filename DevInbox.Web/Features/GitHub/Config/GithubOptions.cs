@@ -1,4 +1,4 @@
-namespace DevInbox.Web.Infrastructure.Auth;
+namespace DevInbox.Web.Features.GitHub.Config;
 
 public class GithubOptions
 {

@@ -1,5 +1,4 @@
 using System.Text;
-using DevInbox.Web.Features.GitHub.Client;
 using DevInbox.Web.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -59,30 +58,6 @@ public static class AuthServiceCollectionExtensions
                 };
             });
         _ = services.AddAuthorization();
-        return services;
-    }
-    public static IServiceCollection AddGitHubOAuth(this IServiceCollection services, IConfiguration configuration)
-    {
-        // GitHub
-        var ghSection = configuration.GetSection("GitHub");
-        var ghOptions = ghSection.Get<GithubOptions>() ?? throw new InvalidOperationException("GitHub configuration section is missing.");
-        if (string.IsNullOrWhiteSpace(ghOptions.ClientId))
-        {
-            throw new InvalidOperationException("GitHub:ClientId is required.");
-        }
-        if (string.IsNullOrWhiteSpace(ghOptions.ClientSecret))
-        {
-            throw new InvalidOperationException("GitHub:ClientSecret is required.");
-        }
-        _ = services.Configure<GithubOptions>(ghSection);
-        // HTTP client — named "github" so it can also be resolved via IHttpClientFactory.CreateClient("github")
-        services.AddHttpClient<IGitHubClient, GitHubClient>("github", (sp, client) =>
-        {
-            client.BaseAddress = new Uri("https://api.github.com");
-            client.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");
-            client.DefaultRequestHeaders.Add("User-Agent", "DevInbox");
-            client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
-        }).AddStandardResilienceHandler();
         return services;
     }
 

@@ -37,31 +37,24 @@
     "dotnet nswag" command isn't available yet. This runs on every build but is a fast no-op once
     the tools are already restored.
   -->
-  <Target Name="RestoreLocalDotnetTools" BeforeTargets="BootstrapGenerateCsClients;GenerateClients">
+  <Target Name="RestoreLocalDotnetTools" BeforeTargets="GenerateClients">
     <Exec Command="dotnet tool restore" WorkingDirectory="$(MSBuildProjectDirectory)/.." />
   </Target>
 
   <!--
-    Bootstrap: generate C# controller file if missing (e.g. after git clean or fresh clone).
-    Always runs when the file is absent regardless of GenerateClients — the file must exist to compile.
+    Always regenerate the C# controller bases/DTOs and the TypeScript client from api.yml on every build.
+    The Compile item is only added explicitly when the file didn't already exist — the SDK's default glob
+    already includes it once it's on disk, so adding it unconditionally would cause NETSDK1022 (duplicate item).
   -->
-	<Target Name="BootstrapGenerateCsClients" BeforeTargets="BeforeBuild">
-		<Exec Command="dotnet nswag run openapi/nswag-cscontroller.json" />
-		<ItemGroup>
-			<Compile Include="Infrastructure/OpenApi/Generated/Controllers.cs" />
-		</ItemGroup>
-	</Target>
-
-  <!--
-    On-demand regeneration: delete and regenerate both generated files from api.yml.
-    C# controller bases + DTOs for the backend, TypeScript fetch client for React.
-    Only runs when GenerateClients=true — e.g. `dotnet build /p:GenerateClients=true` or `make generate-api`.
-  -->
-	<Target Name="GenerateClients" AfterTargets="Build">
-		<Delete Files="Infrastructure/OpenApi/Generated/Controllers.cs" />
-		<Delete Files="ClientApp/generated/api-client/index.ts" />
+	<Target Name="GenerateClients" BeforeTargets="BeforeBuild">
+		<PropertyGroup>
+			<_GeneratedControllersExisted Condition="Exists('Infrastructure/OpenApi/Generated/Controllers.cs')">true</_GeneratedControllersExisted>
+		</PropertyGroup>
 		<Exec Command="dotnet nswag run openapi/nswag-cscontroller.json" />
 		<Exec Command="dotnet nswag run openapi/nswag-tsclient.json" />
+		<ItemGroup Condition="'$(_GeneratedControllersExisted)' != 'true'">
+			<Compile Include="Infrastructure/OpenApi/Generated/Controllers.cs" />
+		</ItemGroup>
 	</Target>
 
   <!--

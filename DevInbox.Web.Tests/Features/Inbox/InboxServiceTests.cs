@@ -3,6 +3,7 @@ using System.Security.Claims;
 using DevInbox.Web.Common;
 using DevInbox.Web.Features.Inbox.Details;
 using DevInbox.Web.Features.Inbox.Domain;
+using DevInbox.Web.Features.Notes;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using InboxEntity = DevInbox.Web.Features.Inbox.Domain.Inbox;
@@ -27,6 +28,7 @@ public class InboxServiceTests
     private readonly IInboxRepository _inboxRepository;
     private readonly IInboxItemRepository _inboxItemRepository;
     private readonly IInboxDetailService _inboxDetailService;
+    private readonly INotesService _notesService;
     private readonly Web.Features.Inbox.InboxService _service;
 
     public InboxServiceTests()
@@ -34,10 +36,12 @@ public class InboxServiceTests
         _inboxRepository = Substitute.For<IInboxRepository>();
         _inboxItemRepository = Substitute.For<IInboxItemRepository>();
         _inboxDetailService = Substitute.For<IInboxDetailService>();
+        _notesService = Substitute.For<INotesService>();
         _service = new Web.Features.Inbox.InboxService(
             _inboxRepository,
             _inboxItemRepository,
             _inboxDetailService,
+            _notesService,
             CreateAccessorWithClaim(UserId));
     }
 
@@ -109,6 +113,7 @@ public class InboxServiceTests
             _inboxRepository,
             _inboxItemRepository,
             _inboxDetailService,
+            _notesService,
             CreateAccessorWithClaim(null));
 
         _ = await Assert.ThrowsAsync<NotFoundException>(() => service.GetUserInboxAsync());

@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using DevInbox.Web.Features.ADO.Configuration;
+using DevInbox.Web.Features.GitHub.Config;
 using DevInbox.Web.Infrastructure.Auth;
 using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.Filters;
@@ -68,7 +70,10 @@ builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("database");
 
 builder.Services.AddJwtAuthentication(builder.Configuration);
-builder.Services.AddGitHubOAuth(builder.Configuration);
+//integrations
+builder.Services.AddGitHubClient(builder.Configuration);
+builder.Services.AddAdoClient(builder.Configuration);
+
 builder.Services.AddEncryption(builder.Configuration);
 
 // Event handling

@@ -8,6 +8,7 @@ import AppSidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './sidebar/Ap
 import MobileBottomNav from '@app/layout/mobilebar/MobileBottomNav.tsx';
 import Footer from '@app/common/footer/Footer.tsx';
 import useSettingsStore from '@feature/settings/store/settings.store';
+import NoteFormModal from '@feature/notes/components/NoteFormModal';
 import { useGlobalShortcuts } from '@shared/hooks/useGlobalShortcuts.ts';
 import { useLeaderKey } from '@shared/hooks/useLeaderKey.ts';
 import { useInboxHeartbeat } from '@feature/inbox/hooks/useInboxHeartBeat.ts';
@@ -105,6 +106,7 @@ const AppLayout = () => {
         <Footer />
       </Box>
       <MobileBottomNav />
+      <NoteFormModal />
     </Box>
   );
 };

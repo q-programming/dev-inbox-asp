@@ -1,3 +1,4 @@
+using DevInbox.Web.Features.GitHub.Config;
 using DevInbox.Web.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
@@ -88,7 +89,7 @@ public class AuthServiceCollectionExtensionsTests
             ["GitHub:ClientSecret"] = ValidClientSecret
         });
 
-        services.AddGitHubOAuth(config);
+        services.AddGitHubClient(config);
 
         var provider = services.BuildServiceProvider();
         var options = provider.GetService<Microsoft.Extensions.Options.IOptions<GithubOptions>>();
@@ -106,7 +107,7 @@ public class AuthServiceCollectionExtensionsTests
             ["GitHub:ClientSecret"] = ValidClientSecret
         });
 
-        services.AddGitHubOAuth(config);
+        services.AddGitHubClient(config);
 
         var provider = services.BuildServiceProvider();
         var factory = provider.GetRequiredService<IHttpClientFactory>();
@@ -120,7 +121,7 @@ public class AuthServiceCollectionExtensionsTests
         var services = new ServiceCollection();
         var config = BuildConfig([]);
 
-        Assert.Throws<InvalidOperationException>(() => services.AddGitHubOAuth(config));
+        Assert.Throws<InvalidOperationException>(() => services.AddGitHubClient(config));
     }
 
     [Fact(DisplayName = "AddGitHubOAuth should throw when ClientId is empty")]
@@ -133,7 +134,7 @@ public class AuthServiceCollectionExtensionsTests
             ["GitHub:ClientSecret"] = ValidClientSecret
         });
 
-        Assert.Throws<InvalidOperationException>(() => services.AddGitHubOAuth(config));
+        Assert.Throws<InvalidOperationException>(() => services.AddGitHubClient(config));
     }
 
     [Fact(DisplayName = "AddGitHubOAuth should throw when ClientSecret is empty")]
@@ -146,7 +147,7 @@ public class AuthServiceCollectionExtensionsTests
             ["GitHub:ClientSecret"] = ""
         });
 
-        Assert.Throws<InvalidOperationException>(() => services.AddGitHubOAuth(config));
+        Assert.Throws<InvalidOperationException>(() => services.AddGitHubClient(config));
     }
 
     // -------------------------------------------------------------------------

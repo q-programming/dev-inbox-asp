@@ -18,7 +18,11 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...mod, useNavigate: () => mockNavigate };
 });
 
-vi.mock('@shared/utils/navigation', () => ({ redirectTo: mockRedirectTo }));
+vi.mock('@shared/utils/navigation', () => ({
+  redirectTo: mockRedirectTo,
+  consumeReturnPath: () => null,
+  saveReturnPath: vi.fn(),
+}));
 
 const mockUser = {
   id: 1,

@@ -13,7 +13,6 @@ public class InboxItemState
     public bool IsPinned { get; set; }
     public bool IsDone { get; set; }
     public Priority Priority { get; set; }
-    public string? PrivateNote { get; set; }
     public string[] Tags { get; set; } = [];
     public DateTimeOffset? FollowUpAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

@@ -1,26 +1,33 @@
+using DevInbox.Web.Features.Notes.Mapper;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
 namespace DevInbox.Web.Features.Notes;
 
-public class NotesController : INotesBaseController, IComponent
+// Notes are inbox items — browse/list them via GET /inbox/items?source=Note or GET /inbox/item/{id}
+// (see NoteDetailsProvider). This controller only covers note-specific write actions.
+public class NotesController(INotesService notesService) : INotesBaseController, IComponent
 {
-    public Task<ICollection<NoteDto>> ListNotesAsync()
+    private readonly NotesMapper _mapper = new();
+
+    public async Task<NoteDetail> CreateNoteAsync(CreateNoteRequest note)
     {
-        throw new ServiceNotImplementedException();
+        var createdNote = await notesService.CreateNoteAsync(
+            note.Title,
+            note.Body,
+            note.Tags,
+            note.FollowUpAt,
+            note.AttachedToInboxItemId);
+        return _mapper.ToDetail(createdNote);
     }
 
-    public Task<NoteDto> CreateNoteAsync(CreateNoteRequest note)
+    public async Task<NoteDetail> UpdateNoteAsync(long id, CreateNoteRequest note)
     {
-        throw new ServiceNotImplementedException();
+        var updatedNote = await notesService.UpdateNoteAsync(id, note.Title, note.Body, note.Tags, note.FollowUpAt);
+        return _mapper.ToDetail(updatedNote);
     }
 
-    public Task<NoteDto> UpdateNoteAsync(System.Guid id, CreateNoteRequest note)
+    public Task DeleteNoteAsync(long id)
     {
-        throw new ServiceNotImplementedException();
-    }
-
-    public Task DeleteNoteAsync(System.Guid id)
-    {
-        throw new ServiceNotImplementedException();
+        return notesService.DeleteNoteAsync(id);
     }
 }

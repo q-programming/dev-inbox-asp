@@ -111,4 +111,77 @@ describe('InboxItem', () => {
       expect(screen.getByTestId('inbox-item').className).not.toMatch(/Mui-selected/);
     });
   });
+
+  describe('comment count and note indicators', () => {
+    it('renders the comment count indicator with the count and pluralized tooltip text', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<InboxItem item={makeInboxItem({ commentCount: 3 })} />);
+
+      const commentCountEl = screen.getByTestId('inbox-item-comment-count');
+      expect(commentCountEl).toBeTruthy();
+      expect(commentCountEl.textContent).toContain('3');
+
+      await user.hover(commentCountEl);
+
+      const tooltip = await screen.findByRole('tooltip');
+      expect(tooltip.textContent).toBe('3 comments');
+    });
+
+    it('uses singular tooltip text when commentCount is 1', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<InboxItem item={makeInboxItem({ commentCount: 1 })} />);
+
+      const commentCountEl = screen.getByTestId('inbox-item-comment-count');
+      await user.hover(commentCountEl);
+
+      const tooltip = await screen.findByRole('tooltip');
+      expect(tooltip.textContent).toBe('1 comment');
+    });
+
+    it('hides the comment count indicator when commentCount is 0', () => {
+      renderWithProviders(<InboxItem item={makeInboxItem({ commentCount: 0 })} />);
+
+      expect(screen.queryByTestId('inbox-item-comment-count')).toBeNull();
+    });
+
+    it('hides the comment count indicator when commentCount is undefined', () => {
+      renderWithProviders(<InboxItem item={makeInboxItem({ commentCount: undefined })} />);
+
+      expect(screen.queryByTestId('inbox-item-comment-count')).toBeNull();
+    });
+
+    it('renders the hasNote indicator with the "Has a note" tooltip when hasNote is true', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<InboxItem item={makeInboxItem({ hasNote: true })} />);
+
+      const hasNoteEl = screen.getByTestId('inbox-item-has-note');
+      expect(hasNoteEl).toBeTruthy();
+
+      await user.hover(hasNoteEl);
+
+      const tooltip = await screen.findByRole('tooltip');
+      expect(tooltip.textContent).toBe('Has a note');
+    });
+
+    it('hides the hasNote indicator when hasNote is false', () => {
+      renderWithProviders(<InboxItem item={makeInboxItem({ hasNote: false })} />);
+
+      expect(screen.queryByTestId('inbox-item-has-note')).toBeNull();
+    });
+
+    it('hides the hasNote indicator when hasNote is undefined', () => {
+      renderWithProviders(<InboxItem item={makeInboxItem({ hasNote: undefined })} />);
+
+      expect(screen.queryByTestId('inbox-item-has-note')).toBeNull();
+    });
+
+    it('renders both indicators together when commentCount > 0 and hasNote is true', () => {
+      renderWithProviders(
+        <InboxItem item={makeInboxItem({ commentCount: 5, hasNote: true })} />
+      );
+
+      expect(screen.getByTestId('inbox-item-comment-count')).toBeTruthy();
+      expect(screen.getByTestId('inbox-item-has-note')).toBeTruthy();
+    });
+  });
 });

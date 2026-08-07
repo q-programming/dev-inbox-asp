@@ -13,7 +13,6 @@ function makeInboxItemDetail(
     source: ItemSource.Github,
     itemType: ItemType.PR,
     isUnread: false,
-    privateNote: undefined,
     github: {
       repository: 'octo-org/dev-inbox',
       pullRequestNumber: 42,
@@ -275,7 +274,7 @@ describe('GithubDetail', () => {
   });
 
   describe('latest comment and private note', () => {
-    it('renders only the last latest comment entry', () => {
+    it('renders every comment entry, not just the latest one', () => {
       renderWithProviders(
         <GithubDetail
           details={makeInboxItemDetail({
@@ -283,7 +282,7 @@ describe('GithubDetail', () => {
               latestComments: [
                 {
                   author: { displayName: 'First Commenter', login: 'first' },
-                  body: 'This should not be shown',
+                  body: 'An earlier comment',
                   createdAt: new Date('2026-08-01T08:00:00.000Z'),
                 },
                 {
@@ -298,10 +297,13 @@ describe('GithubDetail', () => {
       );
 
       const latestCommentSection = screen.getByTestId('github-detail-latest-comment');
-      expect(within(latestCommentSection).getByTestId('github-detail-latest-comment-author').textContent).toBe('Last Commenter');
-      expect(within(latestCommentSection).getByTestId('github-detail-latest-comment-body').textContent).toBe('This is the latest comment');
-      expect(within(latestCommentSection).queryByText('First Commenter')).toBeNull();
-      expect(within(latestCommentSection).queryByText('This should not be shown')).toBeNull();
+      const authors = within(latestCommentSection).getAllByTestId('github-detail-latest-comment-author');
+      const bodies = within(latestCommentSection).getAllByTestId('github-detail-latest-comment-body');
+
+      expect(authors).toHaveLength(2);
+      expect(bodies).toHaveLength(2);
+      expect(authors.map((el) => el.textContent)).toEqual(['First Commenter', 'Last Commenter']);
+      expect(bodies.map((el) => el.textContent)).toEqual(['An earlier comment', 'This is the latest comment']);
     });
 
     it('hides the latest comment section when comments are absent or empty', () => {
@@ -330,17 +332,21 @@ describe('GithubDetail', () => {
       expect(screen.queryByTestId('github-detail-latest-comment')).toBeNull();
     });
 
-    it('renders private note only when present', () => {
+    it('renders the attached note card only when present', () => {
       const { rerender } = renderWithProviders(
-        <GithubDetail details={makeInboxItemDetail({ privateNote: 'Remember to follow up' })} />,
+        <GithubDetail
+          details={makeInboxItemDetail({
+            attachedNote: { noteId: 5, inboxItemId: 99, title: 'Follow up soon', body: 'Remember to follow up' },
+          })}
+        />,
       );
 
-      const privateNoteSection = screen.getByTestId('github-detail-private-note');
-      expect(within(privateNoteSection).getByText('Remember to follow up')).toBeTruthy();
+      const attachedNoteSection = screen.getByTestId('inbox-detail-attached-note');
+      expect(within(attachedNoteSection).getByText('Remember to follow up')).toBeTruthy();
 
-      rerender(<GithubDetail details={makeInboxItemDetail({ privateNote: undefined })} />);
+      rerender(<GithubDetail details={makeInboxItemDetail({ attachedNote: undefined })} />);
 
-      expect(screen.queryByTestId('github-detail-private-note')).toBeNull();
+      expect(screen.queryByTestId('inbox-detail-attached-note')).toBeNull();
     });
   });
 });

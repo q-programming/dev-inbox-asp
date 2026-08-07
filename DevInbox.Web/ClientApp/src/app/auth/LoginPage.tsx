@@ -17,7 +17,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useLoginMutation } from '@shared/hooks/useAuthQuery';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
-import { redirectTo } from '@shared/utils/navigation';
+import { redirectTo, consumeReturnPath } from '@shared/utils/navigation';
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -45,7 +45,7 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     loginMutation.mutate(data, {
-      onSuccess: () => navigate(AppRoute.INBOX),
+      onSuccess: () => navigate(consumeReturnPath() ?? AppRoute.INBOX),
     });
   };
 

@@ -2,6 +2,8 @@ import type { Mutation, Query } from '@tanstack/react-query';
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import useAlertStore, { AlertType } from '@shared/store/alert.store';
 import { ApiError, NetworkError } from '@shared/api/httpClient';
+import { redirectTo, saveReturnPath } from '@shared/utils/navigation';
+import { AppRoute } from '@app/routes';
 
 // ─── TanStack Query meta augmentation ────────────────────────────────────────
 
@@ -35,12 +37,25 @@ declare module '@tanstack/react-query' {
        * meta: { silent: true }
        */
       silent?: boolean;
+      /**
+       * When `true`, a 401 response is treated as a normal error (alert shown as usual)
+       * instead of triggering the global "session expired" redirect to /login.
+       *
+       * Use for endpoints where a 401 is an expected, locally-handled outcome —
+       * e.g. the login/register forms themselves, or the initial /me probe.
+       *
+       * @example
+       * meta: { skipAuthRedirect: true }
+       */
+      skipAuthRedirect?: boolean;
     };
     mutationMeta: {
       /** Same as `queryMeta.errorMessage` but for mutations. */
       errorMessage?: string | ErrorMessageResolver;
       /** Same as `queryMeta.silent` but for mutations. */
       silent?: boolean;
+      /** Same as `queryMeta.skipAuthRedirect` but for mutations. */
+      skipAuthRedirect?: boolean;
     };
   }
 }
@@ -75,10 +90,27 @@ const dispatchErrorAlert = (error: Error, override?: string | ErrorMessageResolv
   });
 };
 
+/**
+ * The session cookie is gone/expired (401) for an endpoint that wasn't expecting it.
+ * Rather than showing a generic error alert, remember where the user was and send
+ * them to /login so they can pick up where they left off after re-authenticating.
+ */
+const handleSessionExpired = (): void => {
+  saveReturnPath();
+  redirectTo(AppRoute.LOGIN);
+};
+
+const isUnhandledSessionExpiry = (error: Error, meta?: { skipAuthRedirect?: boolean }): boolean =>
+  error instanceof ApiError && error.status === 401 && !meta?.skipAuthRedirect;
+
 // ─── Cache error handlers ─────────────────────────────────────────────────────
 
 const onQueryError = (error: Error, query: Query<unknown, unknown, unknown>): void => {
   if (query.meta?.silent) {
+    return;
+  }
+  if (isUnhandledSessionExpiry(error, query.meta)) {
+    handleSessionExpired();
     return;
   }
   dispatchErrorAlert(error, query.meta?.errorMessage);
@@ -91,6 +123,10 @@ const onMutationError = (
   mutation: Mutation<unknown, unknown, unknown, unknown>,
 ): void => {
   if (mutation.meta?.silent) {
+    return;
+  }
+  if (isUnhandledSessionExpiry(error, mutation.meta)) {
+    handleSessionExpired();
     return;
   }
   dispatchErrorAlert(error, mutation.meta?.errorMessage);

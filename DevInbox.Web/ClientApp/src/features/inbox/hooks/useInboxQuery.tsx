@@ -39,6 +39,7 @@ export const useInboxItemQuery = (itemId?: number) =>
     queryKey: [...inboxKeys.detail, itemId],
     queryFn: () => inboxApi.getInboxItem(itemId!),
     enabled: !!itemId,
+    meta: { silent: true },
     staleTime: 30_000, // 30 seconds
     gcTime: 5 * 60_000, // 5 minutes
   });  

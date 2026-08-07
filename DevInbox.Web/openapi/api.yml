@@ -330,20 +330,10 @@ paths:
                 $ref: "#/components/schemas/SavedViewDto"
 
   # ── Notes ─────────────────────────────────────────────────────
+  # Notes are inbox items (Source=Note) — list/browse them via GET /inbox/items?source=Note or
+  # GET /inbox/item/{id}, which returns the same NoteDetail nested under InboxItemDetail.note.
+  # This surface only covers note-specific write actions.
   /notes:
-    get:
-      operationId: listNotes
-      tags: [notes]
-      summary: List personal notes
-      responses:
-        "200":
-          description: List of notes
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/NoteDto"
     post:
       operationId: createNote
       tags: [notes]
@@ -360,7 +350,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/NoteDto"
+                $ref: "#/components/schemas/NoteDetail"
 
   /notes/{id}:
     put:
@@ -372,8 +362,8 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            type: integer
+            format: int64
       requestBody:
         required: true
         content:
@@ -386,7 +376,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/NoteDto"
+                $ref: "#/components/schemas/NoteDetail"
     delete:
       operationId: deleteNote
       tags: [notes]
@@ -396,8 +386,8 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            type: integer
+            format: int64
       responses:
         "204":
           description: Deleted
@@ -650,6 +640,11 @@ components:
           type: boolean
         priority:
           $ref: "#/components/schemas/Priority"
+        commentCount:
+          type: integer
+          format: int64          
+        hasNote:
+          type: boolean  
         activityAt:
           type: string
           format: date-time
@@ -667,8 +662,6 @@ components:
         id:
           type: integer
           format: int64
-        privateNote:
-          type: string
         title:
           type: string
         tags:
@@ -698,6 +691,11 @@ components:
           $ref: "#/components/schemas/AdoWorkItemDetail"
         note:
           $ref: "#/components/schemas/NoteDetail"
+        attachedNote:
+          $ref: "#/components/schemas/NoteDetail"
+        commentCount:
+          type: integer
+          format: int64  
 
     GitHubPullRequestDetail:
       type: object
@@ -780,7 +778,7 @@ components:
       additionalProperties: false
       properties:
         workItemId:
-          type: integer
+          type: string
         project:
           type: string
         title:
@@ -788,6 +786,10 @@ components:
         workItemType:
           type: string
         state:
+          type: string
+        description:
+          type: string
+        area:
           type: string
         assignedTo:
           $ref: "#/components/schemas/PersonReference"
@@ -817,20 +819,29 @@ components:
         noteId:
           type: integer
           format: int64
+        inboxItemId:
+          type: integer
+          format: int64
         title:
           type: string
         body:
           type: string
+        tags:
+          type: array
+          items:
+            type: string
+        followUpAt:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
-        linkedItems:
-          type: array
-          items:
-            $ref: "#/components/schemas/LinkedItem"
+        linkedItem:
+          $ref: "#/components/schemas/LinkedItem"
 
     CommentPreview:
       type: object
@@ -922,31 +933,6 @@ components:
       enum: [Unknown, ReviewRequested, Mentioned, Assigned, Authored, FollowUp, Note]
 
     # ── Notes ──────────────────────────────────────────────────
-    NoteDto:
-      type: object
-      additionalProperties: false
-      properties:
-        id:
-          type: string
-          format: uuid
-        title:
-          type: string
-        body:
-          type: string
-        tags:
-          type: array
-          items:
-            type: string
-        followUpAt:
-          type: string
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
     CreateNoteRequest:
       type: object
       additionalProperties: false
@@ -963,6 +949,12 @@ components:
         followUpAt:
           type: string
           format: date-time
+          nullable: true
+        attachedToInboxItemId:
+          type: integer
+          format: int64
+          nullable: true
+
 
     # ── Health ─────────────────────────────────────────────────
     HealthStatus:

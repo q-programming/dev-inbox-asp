@@ -33,9 +33,8 @@ build:
 publish:
 	dotnet publish $(API)/$(notdir $(API)).csproj -c Release -o ./publish
 
-## generate-api: Regenerate C# controller bases and TypeScript client from api.yml
-generate-api:
-	dotnet build $(API) /p:GenerateClients=true
+## generate-api: Alias for build — every build regenerates C# controllers and TS client from api.yml
+generate-api: build
 
 ## test: Run all tests (backend + frontend)
 test: test-backend test-frontend

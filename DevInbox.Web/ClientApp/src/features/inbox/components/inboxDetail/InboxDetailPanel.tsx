@@ -6,16 +6,27 @@ import { useInboxStore } from '@feature/inbox/store/inbox.store';
 import { ItemSource } from '@api';
 import AdoDetail from './ado/AdoDetail';
 import GithubDetail from './github/GithubDetail';
-import NoteDetail from './note/AdoDetail';
+import NoteDetail from './note/NoteDetail';
+import useAlertStore, { AlertType } from '@shared/store/alert.store';
+import { useEffect } from 'react';
 
 const InboxDetailPanel = () => {
-  const { selectedItemId } = useInboxStore();
+  const { selectedItemId, closeItem } = useInboxStore();
+  const { addAlert } = useAlertStore();
+  const { isLoading, data: details, isError } = useInboxItemQuery(selectedItemId);
+  useEffect(() => {
+    if (isError) {
+      addAlert({
+        message: 'Failed to load inbox item details.',
+        type: AlertType.ERROR,
+      });
+      closeItem();
+    }
+  }, [isError, addAlert, closeItem]);
 
   if (selectedItemId == null) {
     return null;
   }
-
-  const { isLoading, data: details } = useInboxItemQuery(selectedItemId);
 
   const detailComponent = (() => {
     if (!details || !details.source) {

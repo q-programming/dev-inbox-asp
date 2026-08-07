@@ -2,6 +2,7 @@ using DevInbox.Web.Features.Audit.Domain;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Inbox.Domain;
+using DevInbox.Web.Features.Notes.Domain;
 using DevInbox.Web.Features.Settings.Domain;
 using DevInbox.Web.Infrastructure.Security;
 
@@ -16,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
     public DbSet<Inbox> Inboxes => Set<Inbox>();
     public DbSet<InboxItem> InboxItems => Set<InboxItem>();
     public DbSet<InboxItemState> InboxItemStates => Set<InboxItemState>();
+    public DbSet<Note> Notes => Set<Note>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -52,7 +54,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
             entity.Property(inbox => inbox.Reason).HasConversion<string>();
             entity.Property(inbox => inbox.Title).HasConversion(encryptedString);
         });
-
+        modelBuilder.Entity<Note>(entity =>
+        {
+            // AttachedToInboxItemId needs this: there's no data-annotation equivalent for delete
+            // behavior. Without it, the convention default (ClientSetNull) only nullifies the FK for
+            // notes already loaded into the context — a bulk/untracked delete of the target InboxItem
+            // (e.g. during resync) would otherwise hit a FK constraint violation instead of orphaning
+            // the note gracefully.
+            entity.HasOne(note => note.AttachedToInboxItem)
+                .WithMany()
+                .HasForeignKey(note => note.AttachedToInboxItemId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.Property(note => note.Title).HasConversion(encryptedString);
+            entity.Property(note => note.Body).HasConversion(encryptedString);
+        });
 
         base.OnModelCreating(modelBuilder);
     }

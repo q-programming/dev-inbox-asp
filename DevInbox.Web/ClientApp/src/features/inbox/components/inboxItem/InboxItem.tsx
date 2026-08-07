@@ -3,7 +3,11 @@ import { formatRelativeTime } from '@utils/date';
 
 import Box from '@mui/material/Box';
 import ListItemButton from '@mui/material/ListItemButton';
+import Stack from '@mui/material/Stack';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 
 import InboxItemBadges from '../inboxItemBadge/InboxItemBadge';
 import InboxItemIcon from '../inboxItemIcon/InboxItemIcon';
@@ -137,6 +141,32 @@ const InboxItem = ({ item }: IInboxItem) => {
           )}
 
           <InboxItemBadges item={item} />
+
+          <Stack
+            direction="row"
+            spacing={0.75}
+            sx={{ ml: 'auto', flexShrink: 0, alignItems: 'center', color: 'text.secondary' }}
+          >
+            {!!item.commentCount && (
+              <Tooltip title={`${item.commentCount} comment${item.commentCount === 1 ? '' : 's'}`}>
+                <Box
+                  data-testid="inbox-item-comment-count"
+                  sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}
+                >
+                  <ChatBubbleOutlineIcon sx={{ fontSize: 14 }} />
+                  <Typography variant="caption" sx={{ lineHeight: 1 }}>
+                    {item.commentCount}
+                  </Typography>
+                </Box>
+              </Tooltip>
+            )}
+
+            {item.hasNote && (
+              <Tooltip title="Has a note">
+                <EditNoteIcon data-testid="inbox-item-has-note" sx={{ fontSize: 16 }} />
+              </Tooltip>
+            )}
+          </Stack>
         </Box>
       </Box>
     </ListItemButton>

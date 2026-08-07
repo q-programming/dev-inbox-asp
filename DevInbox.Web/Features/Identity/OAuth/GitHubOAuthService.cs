@@ -2,7 +2,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using DevInbox.Web.Features.GitHub.Client;
 using DevInbox.Web.Features.GitHub.Client.DTO;
-using DevInbox.Web.Infrastructure.Auth;
+using DevInbox.Web.Features.GitHub.Config;
 using Microsoft.Extensions.Options;
 
 namespace DevInbox.Web.Features.Identity.OAuth;

@@ -1,9 +1,9 @@
 using System.Net;
 using System.Text.Json;
 using DevInbox.Web.Common;
+using DevInbox.Web.Features.GitHub.Config;
 using DevInbox.Web.Features.GitHub.Client;
 using DevInbox.Web.Features.Identity.OAuth;
-using DevInbox.Web.Infrastructure.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

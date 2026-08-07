@@ -15,6 +15,7 @@ public class InboxService(
     IInboxRepository inboxRepository,
     IInboxItemRepository inboxItemRepository,
     IInboxDetailService inboxDetailService,
+    Notes.INotesService notesService,
     IHttpContextAccessor httpContextAccessor) : IInboxService, IService
 {
     InboxMapper _inboxMapper = new();
@@ -25,7 +26,7 @@ public class InboxService(
         var now = DateTimeOffset.UtcNow;
         var staleBefore = now.AddDays(-7);
 
-        return await inboxItemRepository.GetInboxSummaryAsync(userId, group => new InboxSummary
+        var summary = await inboxItemRepository.GetInboxSummaryAsync(userId, group => new InboxSummary
         {
             Total = group.LongCount(),
             Unread = group.LongCount(item => item.State.IsUnread),
@@ -51,9 +52,12 @@ public class InboxService(
             AdoItems = group.LongCount(item =>
                 item.Source == ItemSource.Ado &&
                 item.State.IsUnread),
-            Notes = group.LongCount(item =>
-                item.Type == ItemType.Note)
         }) ?? new InboxSummary();
+
+        // Notes counts standalone + attached notes alike — unlike the metrics above, which only reflect
+        // items that show up as their own row in the main inbox listing (attached notes don't).
+        summary.Notes = await inboxItemRepository.CountNotesAsync(userId);
+        return summary;
     }
 
     public async Task<Domain.Inbox> GetUserInboxAsync()
@@ -81,10 +85,28 @@ public class InboxService(
         var count = random.Next(1, 6);
         for (var i = 0; i < count; i++)
         {
-            var source = RandomEnum<ItemSource>();
+            var source = RandomEnum(ItemSource.Other, ItemSource.Note);
+            var number = Random.Shared.Next(1000, 9999);
+
+            // Notes are domain objects in their own right (they own their InboxItem envelope), so they
+            // can't be seeded as a bare InboxItem like GitHub/Ado/Other — route them through NotesService.
+            if (source == ItemSource.Note)
+            {
+                var tags = new[] { PickRandomTag(), PickRandomTag() };
+                var followUpAt = random.Next(100) < 40
+                    ? DateTimeOffset.UtcNow.AddDays(random.Next(-7, 14))
+                    : (DateTimeOffset?)null;
+
+                await notesService.CreateNoteAsync(
+                    $"Seed note #{number}",
+                    $"Seed note body {Guid.NewGuid():N}"[..24],
+                    tags,
+                    followUpAt);
+                continue;
+            }
+
             var type = RandomEnum<ItemType>();
             var reason = RandomEnum<InboxReason>();
-            var number = Random.Shared.Next(1000, 9999);
             var item = new InboxItem
             {
                 InboxId = inbox.UserId,
@@ -103,9 +125,6 @@ public class InboxService(
                     IsPinned = random.Next(100) < 15,
                     IsDone = random.Next(100) < 30,
                     Priority = RandomEnum<Priority>(),
-                    PrivateNote = random.Next(100) < 30
-                        ? $"Seed note {Guid.NewGuid():N}"[..18]
-                        : null,
 
                     Tags =
                     [
@@ -123,9 +142,22 @@ public class InboxService(
             if (item.Source == ItemSource.GitHub)
             {
                 item.Repository = $"company/repo-{random.Next(1, 100)}";
+                item.CommentCount = 2;
             }
 
             await inboxItemRepository.AddAsync(item);
+
+            // Occasionally attach a note to demonstrate the "note attached to another item" flow —
+            // still routed through NotesService so it gets its own InboxItem envelope + FK.
+            if (random.Next(100) < 30)
+            {
+                await notesService.CreateNoteAsync(
+                    $"Note on {item.Title}",
+                    $"Seed attached note {Guid.NewGuid():N}"[..24],
+                    [PickRandomTag()],
+                    null,
+                    item.Id);
+            }
         }
     }
 
@@ -158,13 +190,15 @@ public class InboxService(
     {
         var userIdClaim = httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return string.IsNullOrEmpty(userIdClaim)
-            ? throw new NotFoundException("User ID claim not found in the current context.")
+            ? throw new UnauthorizedException("User ID claim not found in the current context.")
             : long.Parse(userIdClaim);
     }
 
-    private static T RandomEnum<T>() where T : struct, Enum
+    private static T RandomEnum<T>(params T[] excluded) where T : struct, Enum
     {
-        var values = Enum.GetValues<T>();
+        var values = Enum.GetValues<T>()
+        .Where(value => !excluded.Contains(value))
+        .ToArray();
         return values[Random.Shared.Next(values.Length)];
     }
 

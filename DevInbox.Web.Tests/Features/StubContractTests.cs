@@ -91,34 +91,58 @@ public class StubContractTests(DevInboxWebApplicationFactory factory)
         Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
     }
 
-    // ── Notes (not yet implemented — target: 200/201/204) ────────────────────
+    // ── Notes (implemented write endpoints) ───────────────────────────────────
 
-    [Fact(DisplayName = "GET /api/notes — stub, expects 501 until implemented (target: 200)")]
-    public async Task GetNotesReturns500UntilImplemented()
+    [Fact(DisplayName = "POST /api/notes returns 404 for an unauthenticated request (cookie challenge target)")]
+    public async Task PostNoteReturns404WithoutAuthenticatedUserAsync()
     {
-        var response = await _client.GetAsync("/api/notes");
-        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
+        var response = await _client.PostAsJsonAsync("/api/notes", new CreateNoteRequest
+        {
+            Title = "Test note",
+            Body = "Body"
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact(DisplayName = "POST /api/notes — stub, expects 501 until implemented (target: 201)")]
-    public async Task PostNoteReturns500UntilImplemented()
+    [Fact(DisplayName = "POST /api/notes returns 200 for an authenticated user")]
+    public async Task PostNoteReturns200ForAuthenticatedUserAsync()
     {
-        var response = await _client.PostAsJsonAsync("/api/notes", new { title = "Test", content = "Body" });
-        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
+        await RegisterAndLoginAsync();
+
+        var response = await _client.PostAsJsonAsync("/api/notes", new CreateNoteRequest
+        {
+            Title = "Test note",
+            Body = "Body",
+            Tags = ["todo"]
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<NoteDetail>();
+        Assert.NotNull(body);
+        Assert.Equal("Test note", body!.Title);
     }
 
-    [Fact(DisplayName = "PUT /api/notes/{id} — stub, expects 501 until implemented (target: 200)")]
-    public async Task PutNoteReturns500UntilImplemented()
+    [Fact(DisplayName = "PUT /api/notes/{id} throws KeyNotFoundException when note does not exist")]
+    public async Task PutNoteThrowsWhenNoteNotFoundAsync()
     {
-        var response = await _client.PutAsJsonAsync($"/api/notes/{Guid.NewGuid()}", new { title = "Updated", content = "Body" });
-        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
+        await RegisterAndLoginAsync();
+
+        _ = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _client.PutAsJsonAsync("/api/notes/999999", new CreateNoteRequest
+            {
+                Title = "Updated note",
+                Body = "Body"
+            }));
     }
 
-    [Fact(DisplayName = "DELETE /api/notes/{id} — stub, expects 501 until implemented (target: 204)")]
-    public async Task DeleteNoteReturns500UntilImplemented()
+    [Fact(DisplayName = "DELETE /api/notes/{id} throws KeyNotFoundException when note does not exist")]
+    public async Task DeleteNoteThrowsWhenNoteNotFoundAsync()
     {
-        var response = await _client.DeleteAsync($"/api/notes/{Guid.NewGuid()}");
-        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
+        await RegisterAndLoginAsync();
+
+        _ = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _client.DeleteAsync("/api/notes/999999"));
     }
 
     // ── Saved Views (not yet implemented — target: 200/201) ──────────────────

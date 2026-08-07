@@ -6,10 +6,19 @@ import { createQueryClient } from './queryClient';
 import { ApiError, NetworkError } from './httpClient';
 
 const { mockAddAlert } = vi.hoisted(() => ({ mockAddAlert: vi.fn() }));
+const { mockRedirectTo, mockSaveReturnPath } = vi.hoisted(() => ({
+  mockRedirectTo: vi.fn(),
+  mockSaveReturnPath: vi.fn(),
+}));
 
 vi.mock('@shared/store/alert.store', () => ({
   default: { getState: () => ({ addAlert: mockAddAlert }) },
   AlertType: { SUCCESS: 0, WARNING: 1, ERROR: 2 },
+}));
+
+vi.mock('@shared/utils/navigation', () => ({
+  redirectTo: mockRedirectTo,
+  saveReturnPath: mockSaveReturnPath,
 }));
 
 function makeWrapper() {
@@ -20,7 +29,9 @@ function makeWrapper() {
 }
 
 describe('queryClient error handling', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   describe('query errors', () => {
     it('should dispatch an alert with status and body message for ApiError', async () => {
@@ -154,6 +165,43 @@ describe('queryClient error handling', () => {
       await waitFor(() => expect(result.current.isError).toBe(true));
 
       expect(mockAddAlert).not.toHaveBeenCalled();
+      expect(mockRedirectTo).not.toHaveBeenCalled();
+    });
+
+    it('should redirect to /login on an unhandled 401 instead of dispatching an alert', async () => {
+      const { result } = renderHook(
+        () =>
+          useQuery({
+            queryKey: ['test'],
+            queryFn: () => Promise.reject(new ApiError(401, {})),
+            retry: false,
+          }),
+        { wrapper: makeWrapper() },
+      );
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      expect(mockAddAlert).not.toHaveBeenCalled();
+      expect(mockSaveReturnPath).toHaveBeenCalledOnce();
+      expect(mockRedirectTo).toHaveBeenCalledWith('/login');
+    });
+
+    it('should dispatch an alert (not redirect) on 401 when meta.skipAuthRedirect is true', async () => {
+      const { result } = renderHook(
+        () =>
+          useQuery({
+            queryKey: ['test'],
+            queryFn: () => Promise.reject(new ApiError(401, {})),
+            retry: false,
+            meta: { skipAuthRedirect: true },
+          }),
+        { wrapper: makeWrapper() },
+      );
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      expect(mockRedirectTo).not.toHaveBeenCalled();
+      expect(mockAddAlert).toHaveBeenCalledOnce();
     });
   });
 
