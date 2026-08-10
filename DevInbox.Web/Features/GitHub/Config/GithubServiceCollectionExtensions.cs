@@ -25,6 +25,17 @@ public static class GithubServiceCollectionExtensions
             client.DefaultRequestHeaders.Add("User-Agent", "DevInbox");
             client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
         }).AddStandardResilienceHandler();
+
+        // Separate named client for the GraphQL endpoint — different BaseAddress than the REST
+        // client above, so it can't share the same HttpClient, but gets the same resilience policy.
+        // GitHubClient wraps this in a GraphQLHttpClient per call (Authorization header carries the
+        // per-user PAT, so the HttpClient itself must not be a shared singleton with a baked-in token).
+        services.AddHttpClient("github-graphql", client =>
+        {
+            client.BaseAddress = new Uri("https://api.github.com/graphql");
+            client.DefaultRequestHeaders.Add("User-Agent", "DevInbox");
+        }).AddStandardResilienceHandler();
+
         return services;
     }
 }

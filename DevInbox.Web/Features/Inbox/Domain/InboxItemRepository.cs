@@ -99,6 +99,33 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
         return item;
     }
 
+    public Task<List<InboxItem>> GetExistingItemsAsync(
+        long inboxId,
+        ItemSource source,
+        ItemType type,
+        IReadOnlyCollection<string> repositories,
+        IReadOnlyCollection<string> externalIds)
+    {
+        return Set
+            .Include(i => i.State)
+            .Where(i => i.InboxId == inboxId
+                && i.Source == source
+                && i.Type == type
+                && i.Repository != null && repositories.Contains(i.Repository)
+                && i.ExternalId != null && externalIds.Contains(i.ExternalId))
+            .ToListAsync();
+    }
+
+    public async Task AddRangeAsync(IEnumerable<InboxItem> items)
+    {
+        await Set.AddRangeAsync(items);
+    }
+
+    public Task SaveChangesAsync()
+    {
+        return Context.SaveChangesAsync();
+    }
+
     /// <summary>Batches the "does this item have a note attached" lookup into a single query for the
     /// whole page/item set, instead of a per-item existence check (N+1). An item can have at most one
     /// attached note (enforced in NotesService), so a Contains-based set lookup is enough.</summary>

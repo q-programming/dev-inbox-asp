@@ -18,7 +18,7 @@ public class SyncService(IInboxService inboxService, IGitHubService gitHubServic
         logger.LogInformation("Started sync tasks for user {UserId} ({Email})", userId, EmailUtils.MaskEmail(email));
         try
         {
-            var githubTask = gitHubService.SyncUserPRAsync(userId, ct);
+            var githubTask = gitHubService.SyncUserPRAsync(userId, inbox.LastSyncCompletedAt, ct);
             var adoTask = adoService.SyncWorkItemsAsync(email, ct);
             await Task.WhenAll(githubTask, adoTask);
             inbox.LastSyncCompletedAt = DateTime.UtcNow;

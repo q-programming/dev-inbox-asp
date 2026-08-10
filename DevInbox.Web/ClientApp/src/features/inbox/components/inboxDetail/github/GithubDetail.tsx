@@ -1,5 +1,4 @@
-import { InboxItemDetail, PersonReference, ReviewState } from '@api';
-import Avatar from '@mui/material/Avatar';
+import { InboxItemDetail, ReviewState } from '@api';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Link from '@mui/material/Link';
@@ -11,7 +10,9 @@ import { formatRelativeTime } from '@utils/date';
 import { REASON_CHIP_COLOR, translateInboxReason } from '@feature/inbox/utils/reason';
 import InboxDetailHeader from '../InboxDetailHeader';
 import InboxDetailFooter from '../InboxDetailFooter';
-import { Tooltip } from '@mui/material';
+import PersonAvatar from '../shared/PersonAvatar';
+import RichContent from '../shared/RichContent';
+import CommentCard from '../shared/CommentCard';
 
 interface IGithubDetail {
   details: InboxItemDetail;
@@ -25,23 +26,6 @@ const REVIEW_STATE_COLOR: Record<ReviewState, string> = {
   [ReviewState.Waiting]: 'text.disabled',
 };
 
-/** Builds up-to-two-letter initials from a display name, for avatar fallbacks. */
-const initials = (name?: string): string =>
-  name
-    ?.split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') ?? '?';
-
-const PersonAvatar = ({ person, size = 32 }: { person?: PersonReference; size?: number }) => (
-  <Avatar
-    src={person?.avatarUrl ?? undefined}
-    sx={{ width: size, height: size, fontSize: size * 0.4 }}
-  >
-    {initials(person?.displayName)}
-  </Avatar>
-);
 
 const GithubDetail = ({ details }: IGithubDetail) => {
   const pr = details.github;
@@ -231,6 +215,17 @@ const GithubDetail = ({ details }: IGithubDetail) => {
               </Stack>
             </Box>
           )}
+
+          {!!pr.summary && (
+            <Box sx={{ mt: 2.5 }} data-testid="github-detail-summary">
+              <Typography variant="overline" color="text.secondary">
+                Description
+              </Typography>
+              <Box sx={{ mt: 0.5 }}>
+                <RichContent format="markdown">{pr.summary}</RichContent>
+              </Box>
+            </Box>
+          )}
         </Paper>
         {!!pr.latestComments?.length && (
           <Box sx={{ minWidth: 0 }} data-testid="github-detail-latest-comment">
@@ -238,47 +233,17 @@ const GithubDetail = ({ details }: IGithubDetail) => {
               Latest comments
             </Typography>
             {pr.latestComments.map((comment, index) => (
-              <Paper
+              <CommentCard
                 key={`${comment.author?.login ?? 'anon'}-${comment.createdAt}-${index}`}
-                variant="outlined"
-                sx={{ p: 2, bgcolor: 'action.hover', minWidth: 0, mt: 1 }}
-              >
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
-                  <PersonAvatar person={comment.author} size={24} />
-                  <Typography
-                    data-testid="github-detail-latest-comment-author"
-                    variant="body2"
-                    sx={{ fontWeight: 600 }}
-                  >
-                    {comment.author?.displayName ?? comment.author?.login}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {formatRelativeTime(comment.createdAt)}
-                  </Typography>
-                  {!!pr.url && (
-                    <Tooltip title="Open in GitHub">
-                      <Link
-                        href={pr.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        variant="body2"
-                        underline="hover"
-                        sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
-                      >
-                        <OpenInNewIcon sx={{ fontSize: 14 }} />
-                      </Link>
-                    </Tooltip>
-                  )}
-                </Stack>
-
-                <Typography
-                  data-testid="github-detail-latest-comment-body"
-                  variant="body2"
-                  sx={{ mb: 1.5 }}
-                >
-                  {comment.body}
-                </Typography>
-              </Paper>
+                author={comment.author}
+                body={comment.body}
+                createdAt={comment.createdAt}
+                format="markdown"
+                externalUrl={comment.url ?? pr.url}
+                externalUrlLabel="Open in GitHub"
+                authorTestId="github-detail-latest-comment-author"
+                bodyTestId="github-detail-latest-comment-body"
+              />
             ))}
           </Box>
         )}
