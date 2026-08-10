@@ -8,7 +8,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.EventLog;
 
 namespace DevInbox.Web.Tests.Infrastructure;
 
@@ -94,6 +96,18 @@ public class DevInboxWebApplicationFactory : WebApplicationFactory<Program>, IAs
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+
+        // The default host logging pipeline registers the Windows EventLog provider, which throws
+        // ObjectDisposedException noise into test output once its underlying handle is torn down —
+        // most visibly from fire-and-forget event handlers (e.g. SyncRequestedEventHandler) still
+        // logging after a test's container/DbContext has already been disposed. It's also just not
+        // useful in a test run (nothing reads the Windows Event Log here). Remove only that
+        // provider's registration — leave Console/Debug and anything a test adds via
+        // ConfigureTestServices intact, in case a test wants to inspect log output.
+        builder.ConfigureLogging(logging => logging.Services
+            .Where(d => d.ServiceType == typeof(ILoggerProvider) && d.ImplementationType == typeof(EventLogLoggerProvider))
+            .ToList()
+            .ForEach(d => logging.Services.Remove(d)));
 
         builder.ConfigureAppConfiguration((_, configBuilder) =>
         {

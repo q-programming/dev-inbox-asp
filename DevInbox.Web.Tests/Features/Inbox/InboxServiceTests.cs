@@ -116,7 +116,7 @@ public class InboxServiceTests
             _notesService,
             CreateAccessorWithClaim(null));
 
-        _ = await Assert.ThrowsAsync<NotFoundException>(() => service.GetUserInboxAsync());
+        _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetUserInboxAsync());
     }
 
     // ── GetUserInboxAsync(userId) ─────────────────────────────────────────────

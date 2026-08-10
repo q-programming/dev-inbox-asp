@@ -93,8 +93,8 @@ public class StubContractTests(DevInboxWebApplicationFactory factory)
 
     // ── Notes (implemented write endpoints) ───────────────────────────────────
 
-    [Fact(DisplayName = "POST /api/notes returns 404 for an unauthenticated request (cookie challenge target)")]
-    public async Task PostNoteReturns404WithoutAuthenticatedUserAsync()
+    [Fact(DisplayName = "POST /api/notes returns 401 for an unauthenticated request (cookie challenge target)")]
+    public async Task PostNoteReturns401WithoutAuthenticatedUserAsync()
     {
         var response = await _client.PostAsJsonAsync("/api/notes", new CreateNoteRequest
         {
@@ -102,7 +102,7 @@ public class StubContractTests(DevInboxWebApplicationFactory factory)
             Body = "Body"
         });
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact(DisplayName = "POST /api/notes returns 200 for an authenticated user")]
