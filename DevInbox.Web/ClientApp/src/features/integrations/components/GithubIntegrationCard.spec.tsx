@@ -61,11 +61,17 @@ describe('GithubIntegrationCard', () => {
   });
 
   describe('connecting via PAT', () => {
-    it('calls the connect endpoint and updates the store to ACTIVE on success', async () => {
+    // The badge/store only flip once AuthGuard's useAuthBootstrap refetches /me
+    // (invalidated by the mutation) — that's covered by useIntegrationsMutation's
+    // hook tests. Here we verify what this component owns: the request payload
+    // and clearing the token field on success.
+    it('calls the connect endpoint with the entered token and clears the field on success', async () => {
+      let requestBody: { token?: string } | undefined;
       server.use(
-        http.post('/api/integrations/github/pat', () =>
-          HttpResponse.json({ id: 1, status: IntegrationStatus.ACTIVE, type: IntegrationType.Github }),
-        ),
+        http.post('/api/integrations/github/pat', async ({ request }) => {
+          requestBody = (await request.json()) as { token?: string };
+          return HttpResponse.json({ id: 1, status: IntegrationStatus.ACTIVE, type: IntegrationType.Github });
+        }),
       );
       const user = userEvent.setup();
       renderWithProviders(<GithubIntegrationCard />);
@@ -73,12 +79,10 @@ describe('GithubIntegrationCard', () => {
       await user.type(screen.getByTestId('github-pat-input').querySelector('input')!, 'ghp_validtoken');
       await user.click(screen.getByTestId('github-pat-connect-btn'));
 
-      await waitFor(() => expect(screen.getByTestId('github-connected-badge')).toBeTruthy());
-      expect(
-        useUserStore
-          .getState()
-          .identity?.integrations?.find((entry) => entry.type === IntegrationType.Github)?.status,
-      ).toBe(IntegrationStatus.ACTIVE);
+      await waitFor(() =>
+        expect(screen.getByTestId('github-pat-input').querySelector('input')).toHaveValue(''),
+      );
+      expect(requestBody?.token).toBe('ghp_validtoken');
     });
 
     it('does not submit when the token field is only whitespace', async () => {
@@ -132,19 +136,27 @@ describe('GithubIntegrationCard', () => {
       expect(screen.queryByTestId('github-pat-input')).toBeNull();
     });
 
-    it('disconnects and reverts the store to inactive on success', async () => {
-      server.use(http.delete('/api/integrations/github', () => new HttpResponse(null, { status: 204 })));
+    // The badge/store only flip once AuthGuard's useAuthBootstrap refetches /me
+    // (invalidated by the mutation) — that's covered by useIntegrationsMutation's
+    // hook tests. Here we verify what this component owns: the request itself
+    // and closing the confirmation modal.
+    it('calls the disconnect endpoint and closes the confirmation modal', async () => {
+      let requestCount = 0;
+      server.use(
+        http.delete('/api/integrations/github', () => {
+          requestCount += 1;
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
       const user = userEvent.setup();
       renderWithProviders(<GithubIntegrationCard />);
 
       await user.click(screen.getByTestId('github-disconnect-btn'));
+      await user.click(screen.getByTestId('confirm-modal-confirm'));
 
-      await waitFor(() => expect(screen.queryByTestId('github-connected-badge')).toBeNull());
-      expect(
-        useUserStore
-          .getState()
-          .identity?.integrations?.find((entry) => entry.type === IntegrationType.Github),
-      ).toBeUndefined();
+      // MUI's Dialog unmounts asynchronously (portal/transition), so wait for it.
+      await waitFor(() => expect(screen.queryByTestId('confirm-modal')).toBeNull());
+      await waitFor(() => expect(requestCount).toBe(1));
     });
   });
 

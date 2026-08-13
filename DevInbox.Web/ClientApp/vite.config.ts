@@ -14,6 +14,29 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
+  // Pre-bundle deps that are otherwise only discovered lazily (e.g. via the
+  // `lazy()` route imports in App.tsx, or only pulled in by a subset of spec
+  // files). Without this, Vite's optimizer can decide mid-test-run that a new
+  // dep needs bundling, forcing a full dev-server reload. In Vitest browser
+  // mode that reload can leave the browser instance hung indefinitely
+  // (observed in CI as a stuck run after "Vite unexpectedly reloaded a test").
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react-router-dom',
+      '@tanstack/react-query',
+      '@tanstack/react-query-devtools',
+      '@tanstack/react-table',
+      '@mui/material',
+      '@mui/icons-material',
+      'react-hook-form',
+      'react-markdown',
+      'zustand',
+      'msw',
+    ],
+  },
   resolve: {
     alias: {
       '@shared': path.resolve(__dirname, './src/shared'),

@@ -311,3 +311,13 @@ The project intentionally does **not** use MediatR.
 - Do not write personal overlays back to GitHub or Azure DevOps.
 - Do not introduce new dependencies without discussing the trade-off.
 - Do not introduce MediatR, CQRS, Kafka, RabbitMQ or MassTransit unless there is a clear requirement.
+
+---
+
+## Test Failure Triage
+
+- When a test fails, **never modify production code to make it pass** without first checking `git status`/`git diff` for that file.
+- Tests safeguard intended behavior — they do not define it. If production code was recently or intentionally changed (staged, unstaged, or on the current branch), that change is the source of truth, not the test.
+- If a failing test conflicts with an intentional production change, **fix the test to match the new behavior** — don't reverse-engineer production code to satisfy an outdated assertion.
+- If it's unclear whether a production change was intentional, **ask before touching either side**.
+

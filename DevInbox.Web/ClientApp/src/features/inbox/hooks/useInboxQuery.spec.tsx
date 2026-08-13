@@ -215,8 +215,7 @@ describe('useInboxQuery hooks', () => {
       result.current.mutate();
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.items });
-      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.summary });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.all });
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: heartbeatKeys.status });
     });
   });
