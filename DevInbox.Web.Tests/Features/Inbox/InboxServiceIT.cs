@@ -5,6 +5,7 @@ using DevInbox.Web.Features.Inbox;
 using DevInbox.Web.Features.Inbox.Details;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Features.Notes;
+using DevInbox.Web.Features.Notes.Domain;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
 
     public override async Task DisposeAsync()
     {
+        await DataBase.Notes.ExecuteDeleteAsync();
         await DataBase.InboxItemStates.ExecuteDeleteAsync();
         await DataBase.InboxItems.ExecuteDeleteAsync();
         await DataBase.Inboxes.ExecuteDeleteAsync();
@@ -72,8 +74,8 @@ public class InboxServiceIT : DatabaseIntegrationTest
     }
 
     private async Task<InboxItem> AddItemAsync(long inboxId, ItemSource source, ItemType type, InboxReason reason,
-        bool isUnread = true, bool isSaved = false, Priority priority = Priority.None,
-        DateTimeOffset? activityAt = null, bool isDone = false)
+        bool isDone = false, bool isSaved = false, Priority priority = Priority.None,
+        DateTimeOffset? activityAt = null, bool isClosed = false)
     {
         var item = new InboxItem
         {
@@ -88,9 +90,9 @@ public class InboxServiceIT : DatabaseIntegrationTest
             UpdatedAt = DateTimeOffset.UtcNow,
             State = new InboxItemState
             {
-                IsUnread = isUnread,
-                IsSaved = isSaved,
                 IsDone = isDone,
+                IsSaved = isSaved,
+                IsClosed = isClosed,
                 Priority = priority,
                 UpdatedAt = DateTimeOffset.UtcNow
             }
@@ -103,20 +105,22 @@ public class InboxServiceIT : DatabaseIntegrationTest
     [Fact(DisplayName = "GetInboxSummaryAsync should aggregate counts across the current user's items only")]
     public async Task GetInboxSummaryAsyncShouldAggregateCountsForCurrentUserAsync()
     {
-        // Read (not unread) — MyPullRequests/Saved don't require unread, so this item can be read
-        // without breaking the Unread-gated ReviewRequests/Mentions/AdoItems counts below.
-        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, isUnread: false, isSaved: true);
-        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.ReviewRequested, isUnread: true);
+        // Done — MyPullRequests requires no not-done gating, so this item can be done
+        // without breaking the not-done-gated ReviewRequests/Mentions/AdoItems counts below.
+        // Saved is also gated on not-done, so this saved+done item must not count towards Saved.
+        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, isDone: true, isSaved: true);
+        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.ReviewRequested, isDone: false, isSaved: true);
         await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Mentioned, priority: Priority.Critical);
         await AddItemAsync(_user.Id, ItemSource.Note, ItemType.Note, InboxReason.Note);
         // Belongs to another user - must not be counted.
         await AddItemAsync(_otherUser.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+        // Closed — must be excluded from the inbox summary entirely.
+        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, isClosed: true);
 
         var summary = await _service.GetInboxSummaryAsync();
 
         Assert.Equal(4, summary.Total);
-        Assert.Equal(3, summary.Unread);
-        Assert.Equal(1, summary.Read);
+        Assert.Equal(3, summary.ToDo);
         Assert.Equal(1, summary.Saved);
         Assert.Equal(1, summary.NeedsAttention);
         Assert.Equal(1, summary.ReviewRequests);
@@ -193,5 +197,65 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var reloaded = await context.Inboxes.AsNoTracking().SingleAsync(i => i.UserId == _user.Id);
         Assert.Equal(SyncStatus.Running, reloaded.SyncStatus);
         Assert.Equal(inbox.Version, reloaded.Version);
+    }
+
+    [Fact(DisplayName = "DeleteInboxItemsBySourceAsync should remove items for the given source, along with any attached notes")]
+    public async Task DeleteInboxItemsBySourceAsyncShouldRemoveItemsAndAttachedNotesAsync()
+    {
+        var githubItem = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+        var otherGithubItem = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.Issue, InboxReason.Mentioned);
+        var adoItem = await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned);
+        var otherUserGithubItem = await AddItemAsync(_otherUser.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+
+        var attachedNote = await AddNoteAsync(_user.Id, attachedToInboxItemId: githubItem.Id);
+        var standaloneNote = await AddNoteAsync(_user.Id, attachedToInboxItemId: null);
+
+        await _service.DeleteInboxItemsBySourceAsync(_user.Id, ItemSource.GitHub, CancellationToken.None);
+
+        var remainingItemIds = await DataBase.InboxItems.AsNoTracking().Select(i => i.Id).ToListAsync();
+        Assert.DoesNotContain(githubItem.Id, remainingItemIds);
+        Assert.DoesNotContain(otherGithubItem.Id, remainingItemIds);
+        Assert.Contains(adoItem.Id, remainingItemIds);
+        Assert.Contains(otherUserGithubItem.Id, remainingItemIds);
+
+        // The note attached to the deleted GitHub item must be gone entirely — both the Note row and
+        // its own InboxItem envelope — not merely detached via AttachedToInboxItemId being nulled out.
+        var remainingNoteIds = await DataBase.Notes.AsNoTracking().Select(n => n.Id).ToListAsync();
+        Assert.DoesNotContain(attachedNote.Id, remainingNoteIds);
+        Assert.DoesNotContain(attachedNote.InboxItemId, remainingItemIds);
+        Assert.Contains(standaloneNote.Id, remainingNoteIds);
+        Assert.Contains(standaloneNote.InboxItemId, remainingItemIds);
+    }
+
+    private async Task<Note> AddNoteAsync(long inboxId, long? attachedToInboxItemId)
+    {
+        var envelope = new InboxItem
+        {
+            InboxId = inboxId,
+            Source = ItemSource.Note,
+            Type = ItemType.Note,
+            Reason = InboxReason.Note,
+            Title = "Test note",
+            ActivityAt = DateTimeOffset.UtcNow,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+            State = new InboxItemState { UpdatedAt = DateTimeOffset.UtcNow }
+        };
+        await DataBase.InboxItems.AddAsync(envelope);
+        await DataBase.SaveChangesAsync();
+
+        var note = new Note
+        {
+            InboxItemId = envelope.Id,
+            InboxItem = envelope,
+            AttachedToInboxItemId = attachedToInboxItemId,
+            Title = "Note title",
+            Body = "Note body",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+        await DataBase.Notes.AddAsync(note);
+        await DataBase.SaveChangesAsync();
+        return note;
     }
 }

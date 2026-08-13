@@ -22,6 +22,7 @@ import {
   useInboxItemQuery,
   useInboxQuery,
   useInboxSummaryQuery,
+  useMarkInboxItemDoneMutation,
   useSyncMutation,
 } from './useInboxQuery';
 
@@ -32,7 +33,7 @@ const createInboxItem = (overrides: Partial<InboxItemSummary> = {}): InboxItemSu
   title: 'Review PR',
   repository: 'octo/repo',
   reason: InboxReason.ReviewRequested,
-  isUnread: true,
+  isClosed: false,
   isSaved: false,
   isDone: false,
   isPinned: false,
@@ -50,13 +51,13 @@ const createInboxItemDetail = (overrides: Partial<InboxItemDetail> = {}): InboxI
 
 const summary: InboxSummary = {
   total: 2,
-  unread: 1,
+  toDo: 1,
   reviewRequests: 1,
 };
 
 const heartbeat: InboxStatus = {
   version: 7,
-  syncStatus: SyncStatus.Completed,
+  syncStatus: SyncStatus.Idle,
   lastUpdatedAt: new Date('2026-08-01T08:00:00.000Z'),
   lastSyncCompletedAt: new Date('2026-08-01T08:05:00.000Z'),
 };
@@ -133,8 +134,8 @@ describe('useInboxQuery hooks', () => {
       });
       await waitFor(() => expect(second.result.current.isSuccess).toBe(true));
 
-      const githubKey = [...inboxKeys.items, githubFilter.source, undefined, undefined] as const;
-      const adoKey = [...inboxKeys.items, adoFilter.source, undefined, adoFilter.reason] as const;
+      const githubKey = [...inboxKeys.items, githubFilter.source, undefined, undefined, undefined] as const;
+      const adoKey = [...inboxKeys.items, adoFilter.source, undefined, adoFilter.reason, undefined] as const;
 
       expect(client.getQueryData(githubKey)).toBeDefined();
       expect(client.getQueryData(adoKey)).toBeDefined();
@@ -217,6 +218,25 @@ describe('useInboxQuery hooks', () => {
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.items });
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.summary });
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: heartbeatKeys.status });
+    });
+  });
+
+  describe('useMarkInboxItemDoneMutation', () => {
+    it('should invalidate inbox items, summary and the specific item detail query after marking done', async () => {
+      server.use(
+        http.post('/api/inbox/item/:id/done', () => new HttpResponse(null, { status: 204 })),
+      );
+
+      const { client, Wrapper } = makeWrapper();
+      const invalidateQueriesSpy = vi.spyOn(client, 'invalidateQueries');
+      const { result } = renderHook(() => useMarkInboxItemDoneMutation(), { wrapper: Wrapper });
+
+      result.current.mutate({ itemId: 42, isDone: true });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.items });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.summary });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: [...inboxKeys.detail, 42] });
     });
   });
 

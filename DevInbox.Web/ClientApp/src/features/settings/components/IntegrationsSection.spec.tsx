@@ -14,48 +14,32 @@ beforeEach(() => {
       id: 1,
       email: 'jane@dev.com',
       accountType: AccountType.REGULAR,
-      integrations: [
-        { type: IntegrationType.Github, status: IntegrationStatus.INACTIVE },
-        { type: IntegrationType.Ado, status: IntegrationStatus.INACTIVE },
-      ],
+      integrations: [{ type: IntegrationType.Github, status: IntegrationStatus.INACTIVE }],
     },
   });
 });
 
 describe('IntegrationsSection', () => {
-  describe('status-driven rendering', () => {
-    it('shows the active badge only for connected integrations', () => {
-      useUserStore.setState({
-        identity: {
-          id: 1,
-          email: 'jane@dev.com',
-          accountType: AccountType.REGULAR,
-          integrations: [
-            { type: IntegrationType.Github, status: IntegrationStatus.ACTIVE },
-            { type: IntegrationType.Ado, status: IntegrationStatus.INACTIVE },
-          ],
-        },
-      });
-      renderWithProviders(<IntegrationsSection />);
-      expect(screen.getAllByTestId('integration-status-badge')).toHaveLength(1);
-    });
-
-    it('shows no active badges when all integrations are inactive', () => {
-      renderWithProviders(<IntegrationsSection />);
-      expect(screen.queryAllByTestId('integration-status-badge')).toHaveLength(0);
-    });
-
-    it('shows no integration cards when identity is null', () => {
-      useUserStore.setState({ identity: null });
-      renderWithProviders(<IntegrationsSection />);
-      expect(screen.queryAllByTestId('integration-action-btn')).toHaveLength(0);
-    });
+  it('renders the GitHub integration card', () => {
+    renderWithProviders(<IntegrationsSection />);
+    expect(screen.getByTestId('github-pat-connect-btn')).toBeTruthy();
   });
 
-  describe('action buttons', () => {
-    it('renders one action button per integration', () => {
-      renderWithProviders(<IntegrationsSection />);
-      expect(screen.getAllByTestId('integration-action-btn')).toHaveLength(2);
+  it('shows the connected badge when GitHub is active', () => {
+    useUserStore.setState({
+      identity: {
+        id: 1,
+        email: 'jane@dev.com',
+        accountType: AccountType.REGULAR,
+        integrations: [{ type: IntegrationType.Github, status: IntegrationStatus.ACTIVE }],
+      },
     });
+    renderWithProviders(<IntegrationsSection />);
+    expect(screen.getByTestId('github-connected-badge')).toBeTruthy();
+  });
+
+  it('renders the Azure DevOps integration card', () => {
+    renderWithProviders(<IntegrationsSection />);
+    expect(screen.getByTestId('ado-coming-soon-badge')).toBeTruthy();
   });
 });

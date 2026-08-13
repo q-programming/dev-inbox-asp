@@ -1,5 +1,6 @@
 using DevInbox.Web.Common;
 using DevInbox.Web.Features.GitHub.Client.DTO;
+using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Identity.OAuth;
@@ -43,7 +44,8 @@ public class UserControllerTests
                 _userService,
                 _jwtTokenService,
                 Substitute.For<IHttpContextAccessor>(),
-                Substitute.For<IGitHubOAuthService>());
+                Substitute.For<IGitHubOAuthService>(),
+                Substitute.For<IGitHubProfileRepository>());
         }
 
         [Fact(DisplayName = "LogoutAsync should revoke the JWT token")]
@@ -145,7 +147,8 @@ public class UserControllerTests
             _userService = Substitute.For<IUserService>();
             _jwtTokenService = Substitute.For<IJwtTokenService>();
 
-            _controller = new UserController(_userService, _jwtTokenService, accessor, _githubAuthService);
+            _controller = new UserController(
+                _userService, _jwtTokenService, accessor, _githubAuthService, Substitute.For<IGitHubProfileRepository>());
         }
 
         [Fact(DisplayName = "GithubAuthAsync should redirect to the authorization URL returned by the service")]

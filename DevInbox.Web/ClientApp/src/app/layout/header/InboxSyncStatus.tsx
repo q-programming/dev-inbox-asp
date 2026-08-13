@@ -6,7 +6,6 @@ import SyncIcon from '@mui/icons-material/Sync';
 import { Box, IconButton, Typography } from '@mui/material';
 import { keyframes } from '@mui/system';
 import useAlertStore, { AlertType } from '@shared/store/alert.store';
-import { useMemo } from 'react';
 
 const spin = keyframes`
   from {

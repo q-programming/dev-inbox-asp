@@ -8,7 +8,7 @@ namespace DevInbox.Web.Features.Sync;
 
 public class SyncService(IInboxService inboxService, IGitHubService gitHubService, IAdoService adoService, ILogger<SyncService> logger) : ISyncService, IService
 {
-    public async Task SynchronizeIntegrations(long userId, string email, CancellationToken ct = default)
+    public async Task SynchronizeIntegrations(long userId, string email, bool forceFullSync = false, CancellationToken ct = default)
     {
         var inbox = await inboxService.GetUserInboxAsync(userId) ?? throw new ArgumentException("Inbox not found for user {UserId}", nameof(userId)); ;
         inbox.LastSyncStartedAt = DateTime.UtcNow;
@@ -18,7 +18,8 @@ public class SyncService(IInboxService inboxService, IGitHubService gitHubServic
         logger.LogInformation("Started sync tasks for user {UserId} ({Email})", userId, EmailUtils.MaskEmail(email));
         try
         {
-            var githubTask = gitHubService.SyncUserPRAsync(userId, inbox.LastSyncCompletedAt, ct);
+            var githubSince = forceFullSync ? null : inbox.LastSyncCompletedAt;
+            var githubTask = gitHubService.SyncUserPRAsync(userId, githubSince, ct);
             var adoTask = adoService.SyncWorkItemsAsync(email, ct);
             await Task.WhenAll(githubTask, adoTask);
             inbox.LastSyncCompletedAt = DateTime.UtcNow;

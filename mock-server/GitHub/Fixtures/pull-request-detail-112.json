@@ -1,0 +1,46 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwABCD6",
+        "number": 112,
+        "title": "Debounce SavedViews filter input",
+        "body": "The SavedViews filter box was firing a query on every keystroke. This adds a 300ms debounce.\n\n@jkowalski this follows the same debounce pattern you used in the inbox search — let me know if this looks right.",
+        "url": "https://github.com/acme/dev-inbox/pull/112",
+        "state": "OPEN",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-08-06T10:15:00Z",
+        "updatedAt": "2026-08-11T10:30:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 32,
+        "deletions": 4,
+        "changedFiles": 2,
+        "reviewDecision": null,
+        "repository": { "nameWithOwner": "acme/dev-inbox" },
+        "author": { "login": "tnowak", "avatarUrl": "https://avatars.githubusercontent.com/u/1003" },
+        "comments": { "totalCount": 2 },
+        "labels": { "nodes": [{ "name": "frontend" }] },
+        "reviewRequests": { "nodes": [] },
+        "reviews": { "nodes": [] },
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "@jkowalski following the debounce pattern from the inbox search, does this look right to you?",
+              "url": "https://github.com/acme/dev-inbox/pull/112#issuecomment-1",
+              "createdAt": "2026-08-06T10:20:00Z",
+              "author": { "login": "tnowak", "avatarUrl": "https://avatars.githubusercontent.com/u/1003" }
+            },
+            {
+              "body": "Looks good, same debounce value we use elsewhere too.",
+              "url": "https://github.com/acme/dev-inbox/pull/112#issuecomment-2",
+              "createdAt": "2026-08-11T10:30:00Z",
+              "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

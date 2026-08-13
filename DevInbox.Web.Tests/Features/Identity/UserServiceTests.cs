@@ -1,14 +1,18 @@
 using System.Security.Claims;
 using DevInbox.Web.Common;
+using DevInbox.Web.Features.GitHub;
+using DevInbox.Web.Features.GitHub.Client;
 using DevInbox.Web.Features.GitHub.Client.DTO;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity;
+using DevInbox.Web.Features.Identity.Config;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Identity.Events;
 using DevInbox.Web.Features.Identity.Exceptions;
 using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 
 namespace DevInbox.Web.Tests.Features.Identity;
@@ -23,14 +27,21 @@ public class UserServiceTests
     private const string AccessToken = "accessToken";
     private const string InvalidEmail = "login@github.invalid";
     private readonly IUserRepository _userRepository;
+    private readonly IGitHubIntegrationService _gitHubIntegrationService;
     private readonly UserService _service;
     private readonly IPublisher _asyncPublisher;
+    private static IOptions<IdentityOptions> MockDataOptions => Options.Create(new IdentityOptions { UseMockData = true });
+    private static IOptions<IdentityOptions> DefaultOptions => Options.Create(new IdentityOptions());
 
     public UserServiceTests()
     {
         _userRepository = Substitute.For<IUserRepository>();
         _asyncPublisher = Substitute.For<IPublisher>();
-        _service = new UserService(_userRepository, Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>(), _asyncPublisher);
+        _gitHubIntegrationService = new GitHubIntegrationService(
+            Substitute.For<IGitHubProfileRepository>(),
+            Substitute.For<IGitHubClient>(),
+            Substitute.For<ILogger<GitHubIntegrationService>>());
+        _service = new UserService(_userRepository, Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>(), _asyncPublisher, _gitHubIntegrationService, MockDataOptions);
     }
 
     [Fact(DisplayName = "RegisterAsync should normalize email, hash password, and persist user")]
@@ -52,13 +63,33 @@ public class UserServiceTests
         await _userRepository.Received(1).AddAsync(Arg.Is<User>(u =>
             u.Email == TestEmail &&
             u.FirstName == FirstName &&
-            u.LastName == LastName));
+            u.LastName == LastName &&
+            u.GitHubProfile != null &&
+            u.GitHubProfile.GitHubLogin == "jkowalski"));
         await _asyncPublisher.Received(1).PublishAsync(Arg.Is<UserCreatedEvent>(ev => ev.Email == TestEmail));
 
         Assert.Equal(TestEmail, result.Email);
         Assert.Equal(FirstName, result.FirstName);
         Assert.Equal(LastName, result.LastName);
+    }
 
+    [Fact(DisplayName = "RegisterAsync should not add a GitHub profile when UseMockData is disabled")]
+    public async Task RegisterAsyncShouldNotAddGitHubProfileWhenMockDataDisabledAsync()
+    {
+        _ = _userRepository.ExistsByEmailAsync(TestEmail).Returns(false);
+        var service = new UserService(_userRepository, Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>(), _asyncPublisher, _gitHubIntegrationService, DefaultOptions);
+
+        var request = new RegisterRequest
+        {
+            FirstName = FirstName,
+            LastName = LastName,
+            Email = TestEmail,
+            Password = StrongPassword
+        };
+
+        _ = await service.RegisterAsync(request);
+
+        await _userRepository.Received(1).AddAsync(Arg.Is<User>(u => u.GitHubProfile == null));
     }
 
     [Fact(DisplayName = "LoginAsync should authenticate user and return mapped dto")]
@@ -142,7 +173,8 @@ public class UserServiceTests
     [Fact(DisplayName = "GetCurrentUserAsync should return user when NameIdentifier claim is present")]
     public async Task GetCurrentUserAsyncShouldReturnUserForAuthenticatedRequestAsync()
     {
-        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestUserId), Substitute.For<ILogger<UserService>>(), _asyncPublisher);
+        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestUserId), Substitute.For<ILogger<UserService>>(), _asyncPublisher, _gitHubIntegrationService, DefaultOptions);
+
         _ = _userRepository.FindByIdAsync(TestUserId).Returns(new User
         {
             Id = TestUserId,
@@ -163,7 +195,7 @@ public class UserServiceTests
     {
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns((HttpContext?)null);
-        var service = new UserService(_userRepository, accessor, Substitute.For<ILogger<UserService>>(), Substitute.For<IPublisher>());
+        var service = new UserService(_userRepository, accessor, Substitute.For<ILogger<UserService>>(), Substitute.For<IPublisher>(), _gitHubIntegrationService, DefaultOptions);
 
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetCurrentUserAsync());
     }
@@ -175,7 +207,7 @@ public class UserServiceTests
         httpContext.User.Returns(new ClaimsPrincipal(new ClaimsIdentity()));
         var accessor = Substitute.For<IHttpContextAccessor>();
         accessor.HttpContext.Returns(httpContext);
-        var service = new UserService(_userRepository, accessor, Substitute.For<ILogger<UserService>>(), _asyncPublisher);
+        var service = new UserService(_userRepository, accessor, Substitute.For<ILogger<UserService>>(), _asyncPublisher, _gitHubIntegrationService, DefaultOptions);
 
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetCurrentUserAsync());
     }
@@ -183,7 +215,7 @@ public class UserServiceTests
     [Fact(DisplayName = "GetCurrentUserAsync should throw when user no longer exists in the database")]
     public async Task GetCurrentUserAsyncShouldThrowWhenUserNoLongerExistsAsync()
     {
-        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestUserId), Substitute.For<ILogger<UserService>>(), _asyncPublisher);
+        var service = new UserService(_userRepository, CreateAccessorWithClaim(TestUserId), Substitute.For<ILogger<UserService>>(), _asyncPublisher, _gitHubIntegrationService, DefaultOptions);
         _ = _userRepository.FindByIdAsync(TestUserId).Returns((User?)null);
 
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetCurrentUserAsync());

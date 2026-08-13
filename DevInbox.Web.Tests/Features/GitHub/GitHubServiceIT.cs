@@ -69,7 +69,7 @@ public class GitHubServiceIT : DatabaseIntegrationTest
         await base.DisposeAsync();
     }
 
-    [Fact(DisplayName = "SyncUserPRAsync should persist a brand-new unread InboxItem for a PR not seen before")]
+    [Fact(DisplayName = "SyncUserPRAsync should persist a brand-new not-done InboxItem for a PR not seen before")]
     public async Task SyncUserPRAsyncShouldPersistNewInboxItemAsync()
     {
         var pr = BuildPr(number: 7, repo: "octocat/hello-world", authorLogin: "octocat", state: "OPEN");
@@ -87,11 +87,11 @@ public class GitHubServiceIT : DatabaseIntegrationTest
         Assert.Equal(DomainItemSource.GitHub, persisted.Source);
         Assert.Equal(DomainItemType.PR, persisted.Type);
         Assert.Equal(DomainInboxReason.Authored, persisted.Reason);
-        Assert.True(persisted.State.IsUnread);
         Assert.False(persisted.State.IsDone);
+        Assert.False(persisted.State.IsClosed);
     }
 
-    [Fact(DisplayName = "SyncUserPRAsync should update an already-tracked PR's activity and re-flag it unread")]
+    [Fact(DisplayName = "SyncUserPRAsync should update an already-tracked PR's activity and clear its done flag")]
     public async Task SyncUserPRAsyncShouldUpdateExistingInboxItemAsync()
     {
         var existing = new InboxItem
@@ -107,7 +107,7 @@ public class GitHubServiceIT : DatabaseIntegrationTest
             ActivityAt = DateTimeOffset.UtcNow.AddDays(-1),
             CreatedAt = DateTimeOffset.UtcNow.AddDays(-2),
             UpdatedAt = DateTimeOffset.UtcNow.AddDays(-1),
-            State = new InboxItemState { IsUnread = false, IsDone = false, UpdatedAt = DateTimeOffset.UtcNow.AddDays(-1) }
+            State = new InboxItemState { IsDone = true, IsClosed = false, UpdatedAt = DateTimeOffset.UtcNow.AddDays(-1) }
         };
         await DataBase.InboxItems.AddAsync(existing);
         await DataBase.SaveChangesAsync();
@@ -126,10 +126,10 @@ public class GitHubServiceIT : DatabaseIntegrationTest
 
         Assert.Equal("New activity on the PR", persisted.Title);
         Assert.Equal(4, persisted.CommentCount);
-        Assert.True(persisted.State.IsUnread);
+        Assert.False(persisted.State.IsDone);
     }
 
-    [Fact(DisplayName = "SyncUserPRAsync should mark a tracked PR done without re-flagging it unread when it just closed")]
+    [Fact(DisplayName = "SyncUserPRAsync should mark a tracked PR closed and done when it just closed")]
     public async Task SyncUserPRAsyncShouldMarkClosedWithoutUnreadAsync()
     {
         var updatedAt = DateTimeOffset.UtcNow.AddHours(-1);
@@ -146,7 +146,7 @@ public class GitHubServiceIT : DatabaseIntegrationTest
             ActivityAt = updatedAt,
             CreatedAt = DateTimeOffset.UtcNow.AddDays(-2),
             UpdatedAt = updatedAt,
-            State = new InboxItemState { IsUnread = false, IsDone = false, UpdatedAt = updatedAt }
+            State = new InboxItemState { IsDone = false, IsClosed = false, UpdatedAt = updatedAt }
         };
         await DataBase.InboxItems.AddAsync(existing);
         await DataBase.SaveChangesAsync();
@@ -163,8 +163,8 @@ public class GitHubServiceIT : DatabaseIntegrationTest
             .Include(i => i.State)
             .SingleAsync(i => i.Id == existing.Id);
 
+        Assert.True(persisted.State.IsClosed);
         Assert.True(persisted.State.IsDone);
-        Assert.False(persisted.State.IsUnread);
     }
 
     [Fact(DisplayName = "SyncUserPRAsync should leave the inbox untouched when GitHub returns no pull requests")]
@@ -188,12 +188,12 @@ public class GitHubServiceIT : DatabaseIntegrationTest
         await Assert.ThrowsAsync<InvalidOperationException>(() => _service.SyncUserPRAsync(_user.Id, DateTimeOffset.UtcNow));
 
         await _gitHubClient.DidNotReceive().GetPullRequestsInvolvingUserAsync(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<bool>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     private void SetupSearch(List<GitHubPullRequestDTO> results) =>
         _gitHubClient.GetPullRequestsInvolvingUserAsync(
-                _profile.AccessToken!, _profile.GitHubLogin, Arg.Any<DateTimeOffset>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+                _profile.AccessToken!, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(results);
 
     private static GitHubPullRequestDTO BuildPr(int number, string repo, string authorLogin, string state) => new()

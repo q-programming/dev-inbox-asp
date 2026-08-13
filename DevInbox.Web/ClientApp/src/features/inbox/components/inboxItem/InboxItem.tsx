@@ -51,7 +51,7 @@ const InboxItem = ({ item }: IInboxItem) => {
           justifyContent: 'center',
         }}
       >
-        {item.isUnread && (
+        {!item.isDone && (
           <Box
             data-testid="inbox-item-unread-dot"
             sx={{
@@ -94,7 +94,7 @@ const InboxItem = ({ item }: IInboxItem) => {
             sx={{
               flex: 1,
               minWidth: 0,
-              fontWeight: item.isUnread ? 600 : 400,
+              fontWeight: !item.isDone ? 600 : 400,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',

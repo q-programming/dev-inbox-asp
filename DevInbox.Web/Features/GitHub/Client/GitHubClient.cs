@@ -25,7 +25,7 @@ public class GitHubClient(HttpClient client, IHttpClientFactory httpClientFactor
 
     public async Task<(GitHubUserProfileDTO Profile, string AccessToken)> GetCurrentUserAsync(string accessToken, CancellationToken ct = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/user");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "user");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         using var response = await client.SendAsync(request, ct);
@@ -37,45 +37,20 @@ public class GitHubClient(HttpClient client, IHttpClientFactory httpClientFactor
         return (profile, accessToken);
     }
 
-    public async Task<IReadOnlyList<GitHubPullRequestDTO>> GetPullRequestsInvolvingUserAsync(
+    public Task<IReadOnlyList<GitHubPullRequestDTO>> GetPullRequestsInvolvingUserAsync(
         string accessToken,
-        string login,
-        DateTimeOffset updatedSince,
-        bool openPullRequestsOnly = false,
-        CancellationToken ct = default)
-    {
-        if (openPullRequestsOnly)
-        {
-            // First-ever sync: closed/merged history from before the user started using Dev Inbox
-            // isn't inbox-worthy (nothing to act on), so skip the "updated since" query entirely and
-            // fetch only what's currently open — unbounded by date, since that set is inherently
-            // small for a single person, unlike full closed/merged history.
-            return await SearchAllPagesAsync(
-                accessToken, login, $"is:pr involves:{login} is:open archived:false sort:updated-desc", ct);
-        }
-
-        // Incremental sync: catches both new PRs and activity on already-known ones (including a
-        // close/merge that happened during this window — that IS inbox-worthy, unlike historical
-        // closed PRs from before the user's first sync).
-        // GitHub's date qualifiers expect YYYY-MM-DD for issue/PR search — not a full ISO datetime.
-        var updatedFilter = $"updated:>={updatedSince:yyyy-MM-dd}";
-        var searchQuery = $"is:pr involves:{login} archived:false {updatedFilter} sort:updated-desc";
-        return await SearchAllPagesAsync(accessToken, login, searchQuery, ct);
-    }
+        string searchQuery,
+        CancellationToken ct = default) =>
+        SearchAllPagesAsync(accessToken, searchQuery, ct);
 
     public async Task<GitHubPullRequestDetail> GetPullRequestDetailAsync(
         string accessToken,
-        string repositoryFullName,
+        string owner,
+        string name,
         int pullRequestNumber,
         int latestCommentsCount = 5,
         CancellationToken ct = default)
     {
-        var parts = repositoryFullName.Split('/', 2);
-        if (parts.Length != 2)
-        {
-            throw new ArgumentException($"Expected \"owner/repo\", got \"{repositoryFullName}\".", nameof(repositoryFullName));
-        }
-
         using var graphQlClient = CreateGraphQlClient(accessToken);
 
         var request = new GraphQLRequest
@@ -84,8 +59,8 @@ public class GitHubClient(HttpClient client, IHttpClientFactory httpClientFactor
             OperationName = "PullRequestDetail",
             Variables = new
             {
-                owner = parts[0],
-                name = parts[1],
+                owner,
+                name,
                 number = pullRequestNumber,
                 latestComments = latestCommentsCount
             }
@@ -95,14 +70,13 @@ public class GitHubClient(HttpClient client, IHttpClientFactory httpClientFactor
         ThrowIfErrors(response);
 
         var node = response.Data.Repository?.PullRequest
-            ?? throw new InvalidOperationException($"GitHub PR {repositoryFullName}#{pullRequestNumber} was not found.");
+            ?? throw new InvalidOperationException($"GitHub PR {owner}/{name}#{pullRequestNumber} was not found.");
 
         return _pullRequestMapper.ToDetail(node);
     }
 
     private async Task<IReadOnlyList<GitHubPullRequestDTO>> SearchAllPagesAsync(
         string accessToken,
-        string login,
         string searchQuery,
         CancellationToken ct)
     {
@@ -124,8 +98,8 @@ public class GitHubClient(HttpClient client, IHttpClientFactory httpClientFactor
             if (page >= MaxPages)
             {
                 logger.LogWarning(
-                    "GitHub PR sync for {Login} stopped after {MaxPages} pages ({Count} PRs) — narrow the sync window if this recurs.",
-                    login, MaxPages, results.Count);
+                    "GitHub PR search {SearchQuery} stopped after {MaxPages} pages ({Count} PRs) — narrow the sync window if this recurs.",
+                    searchQuery, MaxPages, results.Count);
                 break;
             }
 

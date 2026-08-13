@@ -1,12 +1,13 @@
 using DevInbox.Web.Features.GitHub.Client;
 
 namespace DevInbox.Web.Features.GitHub.Config;
+
 public static class GithubServiceCollectionExtensions
 {
     public static IServiceCollection AddGitHubClient(this IServiceCollection services, IConfiguration configuration)
     {
         // GitHub
-        var ghSection = configuration.GetSection("GitHub");
+        var ghSection = configuration.GetSection(GithubOptions.SectionName);
         var ghOptions = ghSection.Get<GithubOptions>() ?? throw new InvalidOperationException("GitHub configuration section is missing.");
         if (string.IsNullOrWhiteSpace(ghOptions.ClientId))
         {
@@ -20,7 +21,7 @@ public static class GithubServiceCollectionExtensions
         // HTTP client — named "github" so it can also be resolved via IHttpClientFactory.CreateClient("github")
         services.AddHttpClient<IGitHubClient, GitHubClient>("github", (sp, client) =>
         {
-            client.BaseAddress = new Uri("https://api.github.com");
+            client.BaseAddress = new Uri(ghOptions.NormalizedBaseAddress);
             client.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");
             client.DefaultRequestHeaders.Add("User-Agent", "DevInbox");
             client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
@@ -32,7 +33,7 @@ public static class GithubServiceCollectionExtensions
         // per-user PAT, so the HttpClient itself must not be a shared singleton with a baked-in token).
         services.AddHttpClient("github-graphql", client =>
         {
-            client.BaseAddress = new Uri("https://api.github.com/graphql");
+            client.BaseAddress = new Uri(ghOptions.GraphQlUri);
             client.DefaultRequestHeaders.Add("User-Agent", "DevInbox");
         }).AddStandardResilienceHandler();
 

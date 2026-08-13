@@ -12,7 +12,7 @@ function makeInboxItemDetail(
     title: 'Improve inbox detail rendering',
     source: ItemSource.Github,
     itemType: ItemType.PR,
-    isUnread: false,
+    isDone: true,
     github: {
       repository: 'octo-org/dev-inbox',
       pullRequestNumber: 42,
@@ -126,12 +126,12 @@ describe('GithubDetail', () => {
 
     it('shows unread prefix only when item is unread', () => {
       const { rerender } = renderWithProviders(
-        <GithubDetail details={makeInboxItemDetail({ isUnread: true })} />,
+        <GithubDetail details={makeInboxItemDetail({ isDone: false })} />,
       );
 
       expect(screen.getByTestId('github-detail-unread-indicator').getAttribute('data-unread')).toBe('true');
 
-      rerender(<GithubDetail details={makeInboxItemDetail({ isUnread: false })} />);
+      rerender(<GithubDetail details={makeInboxItemDetail({ isDone: true })} />);
 
       expect(screen.getByTestId('github-detail-unread-indicator').getAttribute('data-unread')).toBe('false');
     });

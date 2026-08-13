@@ -7,12 +7,17 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { formatRelativeTime } from '@utils/date';
-import { REASON_CHIP_COLOR, translateInboxReason } from '@feature/inbox/utils/reason';
+import {
+  REASON_CHIP_COLOR,
+  STATE_CHIP_COLOR,
+  translateInboxReason,
+} from '@feature/inbox/utils/reason';
 import InboxDetailHeader from '../InboxDetailHeader';
 import InboxDetailFooter from '../InboxDetailFooter';
 import PersonAvatar from '../shared/PersonAvatar';
 import RichContent from '../shared/RichContent';
 import CommentCard from '../shared/CommentCard';
+import { Tooltip } from '@mui/material';
 
 interface IGithubDetail {
   details: InboxItemDetail;
@@ -25,7 +30,6 @@ const REVIEW_STATE_COLOR: Record<ReviewState, string> = {
   [ReviewState.Commented]: 'info.main',
   [ReviewState.Waiting]: 'text.disabled',
 };
-
 
 const GithubDetail = ({ details }: IGithubDetail) => {
   const pr = details.github;
@@ -84,7 +88,7 @@ const GithubDetail = ({ details }: IGithubDetail) => {
           )}
         </Stack>
 
-        <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
+        <Paper variant="outlined" sx={{ padding: 2, minWidth: 0 }}>
           <Stack
             direction="row"
             spacing={1}
@@ -108,11 +112,18 @@ const GithubDetail = ({ details }: IGithubDetail) => {
             <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
               <Typography
                 data-testid="github-detail-unread-indicator"
-                data-unread={details.isUnread}
+                data-unread={!details.isDone}
                 variant="caption"
-                sx={{ color: details.isUnread ? 'primary.main' : 'text.secondary' }}
+                sx={{ color: !details.isDone ? 'primary.main' : 'text.secondary' }}
               >
-                {details.isUnread && <Box component="span" sx={{ fontWeight: 600 }}>Unread • </Box>}
+                <Box component="span" sx={{ fontWeight: 600 }}>
+                  <Chip
+                    label={pr?.state}
+                    color={STATE_CHIP_COLOR[pr?.state ?? 'open'] ?? 'default'}
+                    size="small"
+                    sx={{ fontWeight: 600, height: 20, minWidth: 0, marginRight: 0.5 }}
+                  />
+                </Box>
                 {formatRelativeTime(pr.updatedAt)}
               </Typography>
             </Box>
@@ -146,15 +157,18 @@ const GithubDetail = ({ details }: IGithubDetail) => {
                       <Typography variant="body2" noWrap>
                         {reviewer.reviewer?.displayName ?? reviewer.reviewer?.login}
                       </Typography>
-                      <Box
-                        sx={{
-                          width: 6,
-                          height: 6,
-                          flexShrink: 0,
-                          borderRadius: '50%',
-                          bgcolor: REVIEW_STATE_COLOR[reviewer.reviewState ?? ReviewState.Waiting],
-                        }}
-                      />
+                      <Tooltip title={reviewer.reviewState ?? ReviewState.Waiting}>
+                        <Box
+                          sx={{
+                            width: 6,
+                            height: 6,
+                            flexShrink: 0,
+                            borderRadius: '50%',
+                            bgcolor:
+                              REVIEW_STATE_COLOR[reviewer.reviewState ?? ReviewState.Waiting],
+                          }}
+                        />
+                      </Tooltip>
                     </Stack>
                   ))}
                 </Stack>

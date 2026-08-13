@@ -47,5 +47,13 @@ public interface IInboxItemRepository : IRepository<InboxItem>
     /// Kept separate from GetInboxSummaryAsync because attached notes are excluded from that grouped
     /// query's "visible" set (they're surfaced inline on their target item, not as their own row).</summary>
     Task<long> CountNotesAsync(long userId);
+
+    /// <summary>
+    /// Deletes all inbox items for the given user and source. Used when a user disconnects an external integration (e.g. GitHub) to remove all items that were synced from that source.
+    /// </summary>
+    /// <param name="userId">The ID of the user whose inbox items should be deleted.</param>
+    /// <param name="source">The source of the inbox items to delete.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task DeleteBySourceAsync(long userId, ItemSource source);
 }
 

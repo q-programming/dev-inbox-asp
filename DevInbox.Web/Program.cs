@@ -1,15 +1,26 @@
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
-using DevInbox.Web.Features.ADO.Configuration;
+using DevInbox.Web.Common.Utils;
+using DevInbox.Web.Features.ADO.Config;
 using DevInbox.Web.Features.GitHub.Config;
+using DevInbox.Web.Features.Identity.Config;
 using DevInbox.Web.Infrastructure.Auth;
 using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.Filters;
 using DevInbox.Web.Infrastructure.Persistence;
+using Serilog;
 
 Banner.Print();
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Replace the default logging providers with Serilog, configured from the "Serilog" section
+// in appsettings.json (see Serilog.Settings.Configuration). ILogger<T> injection elsewhere in
+// the app is unaffected — Serilog just becomes the provider underneath it.
+builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfiguration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext());
 
 // NSwag emits a per-property [JsonConverter(typeof(JsonStringEnumConverter<T>))] attribute on every
 // generated enum DTO property. Attribute-level converters always take priority over anything added to
@@ -73,6 +84,7 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 //integrations
 builder.Services.AddGitHubClient(builder.Configuration);
 builder.Services.AddAdoClient(builder.Configuration);
+builder.Services.Configure<IdentityOptions>(builder.Configuration.GetSection(IdentityOptions.SectionName));
 
 builder.Services.AddEncryption(builder.Configuration);
 
@@ -101,10 +113,13 @@ if (builder.Configuration.GetValue<bool>("Database:AutoMigrate"))
     _ = db.Database.EnsureCreated();
 }
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsLocal())
 {
     _ = app.UseSwagger();
     _ = app.UseSwaggerUI();
+    // Logs one line per HTTP request (method, path, status code, elapsed ms) at Information level,
+    // under the "Microsoft.AspNetCore.Hosting.Diagnostics"
+    app.UseSerilogRequestLogging();
 }
 
 app.UseHttpsRedirection();

@@ -1,3 +1,5 @@
+using DevInbox.Web.Features.GitHub.Domain;
+using DevInbox.Web.Features.GitHub.Mapper;
 using DevInbox.Web.Features.Identity.OAuth;
 using DevInbox.Web.Infrastructure.Auth;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
@@ -12,16 +14,18 @@ public class UserController(
     IUserService userService,
     IJwtTokenService jwtTokenService,
     IHttpContextAccessor httpContextAccessor,
-    IGitHubOAuthService githubAuthService) : IAuthBaseController, IComponent
+    IGitHubOAuthService githubAuthService,
+    IGitHubProfileRepository gitHubProfileRepository) : IAuthBaseController, IComponent
 {
     private static readonly UserMapper _mapper = new();
+    private static readonly GitHubIntegrationMapper _integrationMapper = new();
 
     /// <summary>Registers a new user and returns the created profile.</summary>
     public async Task<UserDto> RegisterAsync(RegisterRequest body)
     {
         var user = await userService.RegisterAsync(body);
         var dto = _mapper.ToDto(user);
-        dto.Integrations = [];
+        dto.Integrations = await LoadIntegrationsAsync(user.Id);
         return dto;
     }
 
@@ -33,11 +37,7 @@ public class UserController(
         var user = await userService.LoginAsync(body);
         jwtTokenService.IssueAccessToken(user);
         var dto = _mapper.ToDto(user);
-        dto.Integrations =
-        [
-            new() { Id = 1, Type = IntegrationType.Github, Status = IntegrationStatus.ACTIVE },
-            new() { Id = 2, Type = IntegrationType.Ado,    Status = IntegrationStatus.INACTIVE },
-        ];
+        dto.Integrations = await LoadIntegrationsAsync(user.Id);
         return dto;
     }
 
@@ -53,11 +53,7 @@ public class UserController(
     {
         var user = await userService.GetCurrentUserAsync();
         var dto = _mapper.ToDto(user);
-        dto.Integrations = []; // TODO: load real integrations
-        if (dto.AccountType == AccountType.OAUTH_GITHUB)
-        {
-            dto.Integrations = [new() { Type = IntegrationType.Github, Status = IntegrationStatus.ACTIVE }];
-        }
+        dto.Integrations = await LoadIntegrationsAsync(user.Id);
         return dto;
     }
 
@@ -78,4 +74,15 @@ public class UserController(
         jwtTokenService.IssueAccessToken(user);
         httpContext.Response.Redirect(githubAuthService.GetPostLoginRedirectUrl());
     }
+
+    /// <summary>
+    /// Builds the current integrations list for a user. Only GitHub is backed by real data today —
+    /// Azure DevOps will be added the same way once that integration exists.
+    /// </summary>
+    private async Task<List<IntegrationDto>> LoadIntegrationsAsync(long userId)
+    {
+        var gitHubProfile = await gitHubProfileRepository.GetByUserIdAsync(userId);
+        return gitHubProfile is null ? [] : [_integrationMapper.ToIntegrationDto(gitHubProfile)];
+    }
 }
+

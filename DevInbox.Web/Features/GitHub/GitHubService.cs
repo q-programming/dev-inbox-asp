@@ -3,6 +3,7 @@ using DevInbox.Web.Features.GitHub.Client.DTO;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
+using GraphQL.Client.Http;
 using InboxReason = DevInbox.Web.Features.Inbox.Domain.InboxReason;
 using ItemSource = DevInbox.Web.Features.Inbox.Domain.ItemSource;
 using ItemType = DevInbox.Web.Features.Inbox.Domain.ItemType;
@@ -32,6 +33,12 @@ public class GitHubService(
             throw new InvalidOperationException($"Inbox item {item.Id} has a non-numeric GitHub PR number '{item.ExternalId}'.");
         }
 
+        var repoParts = item.Repository.Split('/', 2);
+        if (repoParts.Length != 2)
+        {
+            throw new InvalidOperationException($"Inbox item {item.Id} has a malformed GitHub repository name '{item.Repository}' — expected \"owner/repo\".");
+        }
+
         // item.InboxId doubles as the owning user's id (Inbox's key is the user's own id).
         var profile = await repository.GetByUserIdAsync(item.InboxId)
             ?? throw new InvalidOperationException($"No GitHub profile found for user {item.InboxId}.");
@@ -39,7 +46,7 @@ public class GitHubService(
         var accessToken = profile.AccessToken
             ?? throw new InvalidOperationException($"No stored access token for GitHub profile {profile.GitHubLogin}.");
 
-        return await gitHubClient.GetPullRequestDetailAsync(accessToken, item.Repository, pullRequestNumber, ct: ct);
+        return await gitHubClient.GetPullRequestDetailAsync(accessToken, repoParts[0], repoParts[1], pullRequestNumber, ct: ct);
     }
 
     public async Task SyncUserPRAsync(
@@ -53,7 +60,11 @@ public class GitHubService(
             logger.LogWarning("No GitHub profile found for user {UserId}", userId);
             return;
         }
-        //TODO Handle case when token expired or revoked, and refresh it if possible
+        if (profile.Status != GitHubIntegrationStatus.Active)
+        {
+            logger.LogWarning("GitHub profile for user {UserId} is not active (status: {Status})", userId, profile.Status);
+            return;
+        }
 
         var accessToken = profile.AccessToken
             ?? throw new InvalidOperationException($"No stored access token for GitHub profile {profile.GitHubLogin}.");
@@ -67,12 +78,22 @@ public class GitHubService(
             "[GitHub] Starting {SyncKind} sync for {GitHubLogin}",
             isInitialSync ? "initial (open PRs only)" : $"incremental (since {updatedSince:O})", profile.GitHubLogin);
 
-        var pullRequests = await gitHubClient.GetPullRequestsInvolvingUserAsync(
-            accessToken,
-            profile.GitHubLogin,
-            updatedSince ?? DateTimeOffset.UtcNow,
-            openPullRequestsOnly: isInitialSync,
-            ct);
+        IReadOnlyList<GitHubPullRequestDTO> pullRequests;
+        try
+        {
+            var searchQuery = BuildSearchQuery(profile.GitHubLogin, updatedSince, isInitialSync);
+            pullRequests = await gitHubClient.GetPullRequestsInvolvingUserAsync(accessToken, searchQuery, ct);
+        }
+        catch (Exception ex) when (IsUnauthorized(ex))
+        {
+            // The stored token was rejected by GitHub — most likely an expired/revoked PAT, or a
+            // revoked OAuth App grant. Flag it so the user is prompted to reconnect rather than
+            // failing silently on every future sync attempt.
+            logger.LogWarning(ex, "[GitHub] Token rejected for {GitHubLogin} — marking integration invalid", profile.GitHubLogin);
+            profile.Status = GitHubIntegrationStatus.Invalid;
+            await repository.UpdateAsync(profile);
+            return;
+        }
 
         logger.LogInformation(
             "[GitHub] Fetched {Count} pull request(s) involving {GitHubLogin}",
@@ -140,6 +161,45 @@ public class GitHubService(
             profile.GitHubLogin, newItems.Count, updatedCount, pullRequests.Count - newItems.Count - updatedCount);
     }
 
+    /// <summary>
+    /// Builds the GitHub search query used to find PRs "involving" a user for a sync
+    /// </summary>
+    /// <param name="login">GitHub login to search "involves:" for.</param>
+    /// <param name="updatedSince">Lower bound for the "updated:" qualifier — ignored when <paramref name="openPullRequestsOnly"/> is true.</param>
+    /// <param name="openPullRequestsOnly">
+    /// When true, ignores <paramref name="updatedSince"/> and searches only currently-open PRs, with
+    /// no date bound. Used for a first-time sync: closed/merged PRs from before the user started
+    /// using Dev Inbox aren't inbox-worthy (nothing to act on), so there's no need to pull that
+    /// history — just today's open, actionable set. Otherwise, an incremental sync catches both new
+    /// PRs and activity on already-known ones (including a close/merge that happened during this
+    /// window — that IS inbox-worthy, unlike historical closed PRs from before the user's first sync).
+    /// </param>
+    private static string BuildSearchQuery(string login, DateTimeOffset? updatedSince, bool openPullRequestsOnly)
+    {
+        if (openPullRequestsOnly)
+        {
+            return $"is:pr involves:{login} is:open archived:false sort:updated-desc";
+        }
+
+        // GitHub's date qualifiers expect YYYY-MM-DD for issue/PR search — not a full ISO datetime.
+        var since = updatedSince ?? DateTimeOffset.UtcNow;
+        return $"is:pr involves:{login} archived:false updated:>={since:yyyy-MM-dd} sort:updated-desc";
+    }
+
+    /// <summary>
+    /// True when the given exception represents an HTTP 401 from GitHub. Two distinct exception
+    /// shapes carry this: plain <see cref="HttpRequestException"/> from <c>GetCurrentUserAsync</c>'s
+    /// REST call, and <see cref="GraphQLHttpRequestException"/> — raised by the GraphQL client for
+    /// any non-2xx HTTP response, which is how an expired/revoked token surfaces from the GraphQL PR
+    /// search/detail calls.
+    /// </summary>
+    private static bool IsUnauthorized(Exception ex) => ex switch
+    {
+        HttpRequestException httpEx => httpEx.StatusCode == System.Net.HttpStatusCode.Unauthorized,
+        GraphQLHttpRequestException graphQlEx => graphQlEx.StatusCode == System.Net.HttpStatusCode.Unauthorized,
+        _ => false
+    };
+
     private static (string Repository, string ExternalId) BuildKey(string repository, string externalId) => (repository, externalId);
 
     /// <summary>
@@ -149,12 +209,11 @@ public class GitHubService(
     private static bool UpdateExistingItem(InboxItem existing, GitHubPullRequestDTO pr)
     {
         var isClosedOrMerged = IsClosedOrMerged(pr);
-        var wasClosedOrMerged = existing.State.IsDone;
+        var wasClosed = existing.State.IsClosed;
         var hasActivityChange = existing.CommentCount != pr.CommentsCount || existing.ActivityAt != pr.UpdatedAt;
-        var justClosedOrMerged = isClosedOrMerged && !wasClosedOrMerged;
-        var reopened = !isClosedOrMerged && wasClosedOrMerged;
+        var closedStateChanged = isClosedOrMerged != wasClosed;
 
-        if (!hasActivityChange && !justClosedOrMerged && !reopened)
+        if (!hasActivityChange && !closedStateChanged)
         {
             return false;
         }
@@ -163,39 +222,47 @@ public class GitHubService(
         existing.CommentCount = pr.CommentsCount;
         existing.ActivityAt = pr.UpdatedAt;
         existing.UpdatedAt = DateTimeOffset.UtcNow;
-        existing.State.IsDone = isClosedOrMerged;
-
-        // A PR being closed/merged is a status change, not something demanding fresh attention —
-        // surface the updated state but don't re-flag it unread. Reopening or any other activity on
-        // a still-open PR (new comments, review updates, etc.) does warrant re-surfacing as unread.
-        if (reopened || (hasActivityChange && !isClosedOrMerged))
+        existing.State.IsClosed = isClosedOrMerged;
+        // Freshly closed/merged means there's nothing left to review, so mark it done
+        // automatically. Otherwise, any fresh activity (new comments, review updates) or
+        // reopening means the item is worth another look, so clear the "done" mark
+        // regardless of whether it was already reviewed.
+        if (closedStateChanged && isClosedOrMerged)
         {
-            existing.State.IsUnread = true;
+            existing.State.IsDone = true;
         }
-
+        else if (hasActivityChange || closedStateChanged)
+        {
+            existing.State.IsDone = false;
+        }
         return true;
     }
 
     /// <summary>
-    /// Builds a brand-new <see cref="InboxItem"/> for a PR not previously seen. Always unread — new
-    /// to the inbox is always worth flagging, even if the PR itself was already closed/merged by the
-    /// time we first saw it (e.g. closed since the last sync).
+    /// Builds a brand-new <see cref="InboxItem"/> for a PR not previously seen. Starts as not done,
+    /// since new-to-the-inbox items are always worth reviewing — unless the PR is already
+    /// closed/merged (e.g. closed since the last sync), in which case it's created as both closed
+    /// and done right away, since it never needs to be reviewed.
     /// </summary>
-    private static InboxItem CreateNewItem(GitHubProfile profile, GitHubPullRequestDTO pr) => new()
+    private static InboxItem CreateNewItem(GitHubProfile profile, GitHubPullRequestDTO pr)
     {
-        InboxId = profile.UserId,
-        Source = ItemSource.GitHub,
-        Type = ItemType.PR,
-        ExternalId = pr.Number.ToString(),
-        Repository = pr.RepositoryFullName,
-        Title = pr.Title,
-        Reason = InferReason(pr, profile.GitHubLogin),
-        CommentCount = pr.CommentsCount,
-        ActivityAt = pr.UpdatedAt,
-        CreatedAt = pr.CreatedAt,
-        UpdatedAt = DateTimeOffset.UtcNow,
-        State = new InboxItemState { IsUnread = true, IsDone = IsClosedOrMerged(pr) }
-    };
+        var isClosedOrMerged = IsClosedOrMerged(pr);
+        return new()
+        {
+            InboxId = profile.UserId,
+            Source = ItemSource.GitHub,
+            Type = ItemType.PR,
+            ExternalId = pr.Number.ToString(),
+            Repository = pr.RepositoryFullName,
+            Title = pr.Title,
+            Reason = InferReason(pr, profile.GitHubLogin),
+            CommentCount = pr.CommentsCount,
+            ActivityAt = pr.UpdatedAt,
+            CreatedAt = pr.CreatedAt,
+            UpdatedAt = DateTimeOffset.UtcNow,
+            State = new InboxItemState { IsDone = isClosedOrMerged, IsClosed = isClosedOrMerged }
+        };
+    }
 
     private static bool IsClosedOrMerged(GitHubPullRequestDTO pr) =>
         pr.Merged ||

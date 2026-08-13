@@ -70,7 +70,7 @@ public class InboxServiceTests
     [Fact(DisplayName = "GetInboxSummaryAsync should return the summary produced by the repository for the current user")]
     public async Task GetInboxSummaryAsyncShouldReturnRepositorySummaryAsync()
     {
-        var summary = new InboxSummary { Total = 5, Unread = 2 };
+        var summary = new InboxSummary { Total = 5, ToDo = 2 };
         _ = _inboxItemRepository
             .GetInboxSummaryAsync(UserId, Arg.Any<Expression<Func<IGrouping<int, InboxItem>, InboxSummary>>>())
             .Returns(summary);
@@ -230,6 +230,114 @@ public class InboxServiceTests
         _ = await Assert.ThrowsAsync<NotFoundException>(() => _service.GetInboxItemByIdAsync(5));
 
         await _inboxDetailService.DidNotReceive().PopulateAsync(Arg.Any<InboxItem>(), Arg.Any<GeneratedInboxItemDetail>(), Arg.Any<CancellationToken>());
+    }
+
+    // ── MarkInboxItemDoneAsync ────────────────────────────────────────────────
+
+    [Fact(DisplayName = "MarkInboxItemDoneAsync should set IsDone and persist the item via UpdateAsync")]
+    public async Task MarkInboxItemDoneAsyncShouldSetIsDoneAndPersistAsync()
+    {
+        var item = new InboxItem
+        {
+            Id = 5,
+            InboxId = UserId,
+            ExternalId = "42",
+            Source = ItemSource.GitHub,
+            Type = ItemType.PR,
+            Title = "Review this",
+            State = new InboxItemState { InboxItemId = 5, IsDone = false },
+        };
+        _ = _inboxItemRepository.GetByIdForUserAsync(5, UserId).Returns(item);
+
+        await _service.MarkInboxItemDoneAsync(5, true);
+
+        Assert.True(item.State.IsDone);
+        await _inboxItemRepository.Received(1).UpdateAsync(item);
+    }
+
+    [Fact(DisplayName = "MarkInboxItemDoneAsync should clear IsDone when isDone is false")]
+    public async Task MarkInboxItemDoneAsyncShouldClearIsDoneAsync()
+    {
+        var item = new InboxItem
+        {
+            Id = 5,
+            InboxId = UserId,
+            ExternalId = "42",
+            Source = ItemSource.GitHub,
+            Type = ItemType.PR,
+            Title = "Review this",
+            State = new InboxItemState { InboxItemId = 5, IsDone = true },
+        };
+        _ = _inboxItemRepository.GetByIdForUserAsync(5, UserId).Returns(item);
+
+        await _service.MarkInboxItemDoneAsync(5, false);
+
+        Assert.False(item.State.IsDone);
+        await _inboxItemRepository.Received(1).UpdateAsync(item);
+    }
+
+    [Fact(DisplayName = "MarkInboxItemDoneAsync should throw NotFoundException and not call UpdateAsync when the item does not belong to the user")]
+    public async Task MarkInboxItemDoneAsyncShouldThrowWhenNotFoundForUserAsync()
+    {
+        _ = _inboxItemRepository.GetByIdForUserAsync(5, UserId).Returns((InboxItem?)null);
+
+        _ = await Assert.ThrowsAsync<NotFoundException>(() => _service.MarkInboxItemDoneAsync(5, true));
+
+        await _inboxItemRepository.DidNotReceive().UpdateAsync(Arg.Any<InboxItem>());
+    }
+
+    // ── SaveInboxItemAsync ────────────────────────────────────────────────────
+
+    [Fact(DisplayName = "SaveInboxItemAsync should set IsSaved and persist the item via UpdateAsync")]
+    public async Task SaveInboxItemAsyncShouldSetIsSavedAndPersistAsync()
+    {
+        var item = new InboxItem
+        {
+            Id = 5,
+            InboxId = UserId,
+            ExternalId = "42",
+            Source = ItemSource.GitHub,
+            Type = ItemType.PR,
+            Title = "Review this",
+            State = new InboxItemState { InboxItemId = 5, IsSaved = false },
+        };
+        _ = _inboxItemRepository.GetByIdForUserAsync(5, UserId).Returns(item);
+
+        await _service.SaveInboxItemAsync(5, true);
+
+        Assert.True(item.State.IsSaved);
+        await _inboxItemRepository.Received(1).UpdateAsync(item);
+    }
+
+    [Fact(DisplayName = "SaveInboxItemAsync should clear IsSaved when save is false")]
+    public async Task SaveInboxItemAsyncShouldClearIsSavedAsync()
+    {
+        var item = new InboxItem
+        {
+            Id = 5,
+            InboxId = UserId,
+            ExternalId = "42",
+            Source = ItemSource.GitHub,
+            Type = ItemType.PR,
+            Title = "Review this",
+            State = new InboxItemState { InboxItemId = 5, IsSaved = true },
+        };
+        _ = _inboxItemRepository.GetByIdForUserAsync(5, UserId).Returns(item);
+
+        await _service.SaveInboxItemAsync(5, false);
+
+        Assert.False(item.State.IsSaved);
+        await _inboxItemRepository.Received(1).UpdateAsync(item);
+    }
+
+    [Fact(DisplayName = "SaveInboxItemAsync should throw NotFoundException and not call UpdateAsync when the item does not belong to the user")]
+    public async Task SaveInboxItemAsyncShouldThrowWhenNotFoundForUserAsync()
+    {
+        _ = _inboxItemRepository.GetByIdForUserAsync(5, UserId).Returns((InboxItem?)null);
+
+        _ = await Assert.ThrowsAsync<NotFoundException>(() => _service.SaveInboxItemAsync(5, true));
+
+        await _inboxItemRepository.DidNotReceive().UpdateAsync(Arg.Any<InboxItem>());
     }
 
     // ── PutInboxSeedAsync ─────────────────────────────────────────────────────

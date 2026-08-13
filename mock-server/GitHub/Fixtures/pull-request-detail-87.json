@@ -1,0 +1,50 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwABCD3",
+        "number": 87,
+        "title": "Introduce SavedViews feature slice",
+        "body": "Adds the SavedViews feature slice: controller, service, entity and mapper, plus the OpenAPI contract additions for saved-view CRUD.",
+        "url": "https://github.com/acme/dev-inbox/pull/87",
+        "state": "MERGED",
+        "isDraft": false,
+        "merged": true,
+        "createdAt": "2026-07-10T10:00:00Z",
+        "updatedAt": "2026-07-15T16:45:00Z",
+        "closedAt": "2026-07-15T16:45:00Z",
+        "mergedAt": "2026-07-15T16:45:00Z",
+        "additions": 340,
+        "deletions": 20,
+        "changedFiles": 18,
+        "reviewDecision": "APPROVED",
+        "repository": { "nameWithOwner": "acme/dev-inbox" },
+        "author": { "login": "amaj", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" },
+        "comments": { "totalCount": 8 },
+        "labels": { "nodes": [{ "name": "feature" }] },
+        "reviewRequests": { "nodes": [] },
+        "reviews": {
+          "nodes": [
+            { "state": "APPROVED", "submittedAt": "2026-07-15T15:30:00Z", "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" } }
+          ]
+        },
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Nice slice organization, LGTM.",
+              "url": "https://github.com/acme/dev-inbox/pull/87#issuecomment-1",
+              "createdAt": "2026-07-15T15:31:00Z",
+              "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" }
+            },
+            {
+              "body": "Merged, thanks for the review!",
+              "url": "https://github.com/acme/dev-inbox/pull/87#issuecomment-2",
+              "createdAt": "2026-07-15T16:45:00Z",
+              "author": { "login": "amaj", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

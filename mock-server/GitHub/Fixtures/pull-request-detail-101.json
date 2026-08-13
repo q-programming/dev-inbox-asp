@@ -1,0 +1,50 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwABCD1",
+        "number": 101,
+        "title": "Add rate limiting to inbox sync",
+        "body": "This adds a token-bucket rate limiter around the GitHub sync job to avoid tripping secondary rate limits during backfill.\n\n- Adds `RateLimiter` in Infrastructure/Scheduling\n- Wires it into `GitHubSyncJob`\n- Adds unit tests",
+        "url": "https://github.com/acme/dev-inbox/pull/101",
+        "state": "OPEN",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-08-01T09:12:00Z",
+        "updatedAt": "2026-08-10T14:05:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 128,
+        "deletions": 12,
+        "changedFiles": 6,
+        "reviewDecision": "REVIEW_REQUIRED",
+        "repository": { "nameWithOwner": "acme/dev-inbox" },
+        "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" },
+        "comments": { "totalCount": 3 },
+        "labels": { "nodes": [{ "name": "backend" }, { "name": "needs-review" }] },
+        "reviewRequests": {
+          "nodes": [
+            { "requestedReviewer": { "login": "amaj", "name": "Anna Majewska", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" } }
+          ]
+        },
+        "reviews": { "nodes": [] },
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Looks solid overall — can you add a test for the burst scenario?",
+              "url": "https://github.com/acme/dev-inbox/pull/101#issuecomment-1",
+              "createdAt": "2026-08-09T10:00:00Z",
+              "author": { "login": "amaj", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" }
+            },
+            {
+              "body": "Added in the latest commit, PTAL.",
+              "url": "https://github.com/acme/dev-inbox/pull/101#issuecomment-2",
+              "createdAt": "2026-08-10T14:05:00Z",
+              "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

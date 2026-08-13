@@ -114,7 +114,7 @@ const NoteDetail = ({ details }: INoteDetail) => {
                 data-testid="note-detail-linked-item"
                 variant="outlined"
                 sx={{
-                  p: 1.5,
+                  padding: 1.5,
                   mb: 2,
                   display: 'flex',
                   alignItems: 'center',
@@ -148,7 +148,7 @@ const NoteDetail = ({ details }: INoteDetail) => {
                 </Button>
               </Paper>
             )}
-            <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
+            <Paper variant="outlined" sx={{ padding: 2, minWidth: 0 }}>
               <NoteForm
                 key={note.noteId}
                 dense

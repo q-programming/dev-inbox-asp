@@ -10,6 +10,16 @@
         "${workspaceFolder}/DevInbox.Web/DevInbox.Web.csproj"
       ],
       "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build-mock-server",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/mock-server/MockServer.csproj"
+      ],
+      "problemMatcher": "$msCompile"
     }
   ]
 }

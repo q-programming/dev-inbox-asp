@@ -4,7 +4,9 @@ using DevInbox.Web.Features.GitHub.Client.DTO;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
+using GraphQL.Client.Http;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using DomainInboxReason = DevInbox.Web.Features.Inbox.Domain.InboxReason;
 using DomainItemSource = DevInbox.Web.Features.Inbox.Domain.ItemSource;
 using DomainItemType = DevInbox.Web.Features.Inbox.Domain.ItemType;
@@ -41,7 +43,7 @@ public class GitHubServiceTests
         var profile = BuildProfile(userId: 1, accessToken: "token-abc");
         _profileRepository.GetByUserIdAsync(1).Returns(profile);
         var detail = new GitHubPullRequestDetail { PullRequestNumber = 42 };
-        _gitHubClient.GetPullRequestDetailAsync("token-abc", "octocat/hello-world", 42, ct: Arg.Any<CancellationToken>())
+        _gitHubClient.GetPullRequestDetailAsync("token-abc", "octocat", "hello-world", 42, ct: Arg.Any<CancellationToken>())
             .Returns(detail);
 
         var result = await _service.GetDetailsAsync(item);
@@ -104,7 +106,7 @@ public class GitHubServiceTests
         await _service.SyncUserPRAsync(99);
 
         await _gitHubClient.DidNotReceive().GetPullRequestsInvolvingUserAsync(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<bool>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact(DisplayName = "SyncUserPRAsync should throw when profile has no AccessToken")]
@@ -116,42 +118,57 @@ public class GitHubServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => _service.SyncUserPRAsync(1));
     }
 
+    [Fact(DisplayName = "SyncUserPRAsync should mark integration invalid when GraphQL search returns 401 Unauthorized")]
+    public async Task SyncUserPRAsyncShouldMarkInvalidOnGraphQlUnauthorizedAsync()
+    {
+        var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
+        _profileRepository.GetByUserIdAsync(1).Returns(profile);
+        _gitHubClient.GetPullRequestsInvolvingUserAsync(
+                "token-abc", Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new GraphQLHttpRequestException(System.Net.HttpStatusCode.Unauthorized, null!, "Bad credentials"));
+
+        await _service.SyncUserPRAsync(1, updatedSince: null);
+
+        Assert.Equal(GitHubIntegrationStatus.Invalid, profile.Status);
+        await _profileRepository.Received(1).UpdateAsync(profile);
+    }
+
     [Fact(DisplayName = "SyncUserPRAsync should request open PRs only when updatedSince is null (initial sync)")]
     public async Task SyncUserPRAsyncShouldRequestOpenOnlyOnInitialSyncAsync()
     {
         var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
         _profileRepository.GetByUserIdAsync(1).Returns(profile);
         _gitHubClient.GetPullRequestsInvolvingUserAsync(
-                "token-abc", "octocat", Arg.Any<DateTimeOffset>(), true, Arg.Any<CancellationToken>())
+                "token-abc", Arg.Is<string>(q => q.Contains("is:open") && q.Contains("involves:octocat")), Arg.Any<CancellationToken>())
             .Returns(new List<GitHubPullRequestDTO>());
 
         await _service.SyncUserPRAsync(1, updatedSince: null);
 
         await _gitHubClient.Received(1).GetPullRequestsInvolvingUserAsync(
-            "token-abc", "octocat", Arg.Any<DateTimeOffset>(), true, Arg.Any<CancellationToken>());
+            "token-abc", Arg.Is<string>(q => q.Contains("is:open") && q.Contains("involves:octocat")), Arg.Any<CancellationToken>());
     }
 
-    [Fact(DisplayName = "SyncUserPRAsync should pass updatedSince and openPullRequestsOnly=false on incremental sync")]
+    [Fact(DisplayName = "SyncUserPRAsync should pass an updated:>= query on incremental sync")]
     public async Task SyncUserPRAsyncShouldPassUpdatedSinceOnIncrementalSyncAsync()
     {
         var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
         _profileRepository.GetByUserIdAsync(1).Returns(profile);
         var updatedSince = DateTimeOffset.UtcNow.AddDays(-3);
         _gitHubClient.GetPullRequestsInvolvingUserAsync(
-                "token-abc", "octocat", updatedSince, false, Arg.Any<CancellationToken>())
+                "token-abc", Arg.Is<string>(q => q.Contains("updated:>=") && q.Contains("involves:octocat")), Arg.Any<CancellationToken>())
             .Returns(new List<GitHubPullRequestDTO>());
 
         await _service.SyncUserPRAsync(1, updatedSince);
 
         await _gitHubClient.Received(1).GetPullRequestsInvolvingUserAsync(
-            "token-abc", "octocat", updatedSince, false, Arg.Any<CancellationToken>());
+            "token-abc", Arg.Is<string>(q => q.Contains("updated:>=") && q.Contains("involves:octocat")), Arg.Any<CancellationToken>());
     }
 
     // -------------------------------------------------------------------------
     // SyncUserPRAsync — upsert: new PR creation & InferReason priority
     // -------------------------------------------------------------------------
 
-    [Fact(DisplayName = "SyncUserPRAsync should create a new unread InboxItem for a PR not seen before")]
+    [Fact(DisplayName = "SyncUserPRAsync should create a new not-done InboxItem for a PR not seen before")]
     public async Task SyncUserPRAsyncShouldCreateNewUnreadItemAsync()
     {
         var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
@@ -165,9 +182,28 @@ public class GitHubServiceTests
 
         await _inboxItemRepository.Received(1).AddRangeAsync(Arg.Is<IEnumerable<InboxItem>>(items =>
             items.Count() == 1 &&
-            items.First().State.IsUnread &&
+            !items.First().State.IsDone &&
             items.First().Repository == "octocat/hello-world" &&
             items.First().ExternalId == "42"));
+        await _inboxItemRepository.Received(1).SaveChangesAsync();
+    }
+
+    [Fact(DisplayName = "SyncUserPRAsync should create a new done+closed InboxItem for an already closed/merged PR not seen before")]
+    public async Task SyncUserPRAsyncShouldCreateNewDoneItemForClosedPrAsync()
+    {
+        var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
+        _profileRepository.GetByUserIdAsync(1).Returns(profile);
+        var pr = BuildPr(number: 42, repo: "octocat/hello-world", authorLogin: "someone-else", state: "CLOSED");
+        SetupSearch(profile, [pr]);
+        _inboxItemRepository.GetExistingItemsAsync(1, DomainItemSource.GitHub, DomainItemType.PR, Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(new List<InboxItem>());
+
+        await _service.SyncUserPRAsync(1, DateTimeOffset.UtcNow);
+
+        await _inboxItemRepository.Received(1).AddRangeAsync(Arg.Is<IEnumerable<InboxItem>>(items =>
+            items.Count() == 1 &&
+            items.First().State.IsDone &&
+            items.First().State.IsClosed));
         await _inboxItemRepository.Received(1).SaveChangesAsync();
     }
 
@@ -248,8 +284,8 @@ public class GitHubServiceTests
         var existing = BuildInboxItem(repository: "r/r", externalId: "1", inboxId: 1);
         existing.CommentCount = 3;
         existing.ActivityAt = updatedAt;
-        existing.State.IsDone = false;
-        existing.State.IsUnread = false;
+        existing.State.IsDone = true;
+        existing.State.IsClosed = false;
 
         _inboxItemRepository.GetExistingItemsAsync(Arg.Any<long>(), Arg.Any<DomainItemSource>(), Arg.Any<DomainItemType>(), Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
             .Returns(new List<InboxItem> { existing });
@@ -257,10 +293,10 @@ public class GitHubServiceTests
         await _service.SyncUserPRAsync(1, DateTimeOffset.UtcNow);
 
         await _inboxItemRepository.DidNotReceive().SaveChangesAsync();
-        Assert.False(existing.State.IsUnread);
+        Assert.True(existing.State.IsDone);
     }
 
-    [Fact(DisplayName = "SyncUserPRAsync should update existing item and mark unread when comment count changed but PR still open")]
+    [Fact(DisplayName = "SyncUserPRAsync should update existing item and clear done flag when comment count changed but PR still open")]
     public async Task SyncUserPRAsyncShouldMarkUnreadOnActivityChangeWhileOpenAsync()
     {
         var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
@@ -272,21 +308,21 @@ public class GitHubServiceTests
         var existing = BuildInboxItem(repository: "r/r", externalId: "1", inboxId: 1);
         existing.CommentCount = 2;
         existing.ActivityAt = pr.UpdatedAt;
-        existing.State.IsDone = false;
-        existing.State.IsUnread = false;
+        existing.State.IsDone = true;
+        existing.State.IsClosed = false;
 
         _inboxItemRepository.GetExistingItemsAsync(Arg.Any<long>(), Arg.Any<DomainItemSource>(), Arg.Any<DomainItemType>(), Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
             .Returns(new List<InboxItem> { existing });
 
         await _service.SyncUserPRAsync(1, DateTimeOffset.UtcNow);
 
-        Assert.True(existing.State.IsUnread);
+        Assert.False(existing.State.IsDone);
         Assert.Equal(5, existing.CommentCount);
         await _inboxItemRepository.Received(1).SaveChangesAsync();
     }
 
-    [Fact(DisplayName = "SyncUserPRAsync should update existing item but NOT mark unread when the PR just closed")]
-    public async Task SyncUserPRAsyncShouldNotMarkUnreadWhenJustClosedAsync()
+    [Fact(DisplayName = "SyncUserPRAsync should update existing item and mark it done+closed when the PR just closed")]
+    public async Task SyncUserPRAsyncShouldMarkDoneWhenJustClosedAsync()
     {
         var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
         _profileRepository.GetByUserIdAsync(1).Returns(profile);
@@ -295,21 +331,21 @@ public class GitHubServiceTests
 
         var existing = BuildInboxItem(repository: "r/r", externalId: "1", inboxId: 1);
         existing.CommentCount = pr.CommentsCount;
-        existing.ActivityAt = pr.UpdatedAt.AddMinutes(-1); // activity changed too, but close shouldn't re-flag
+        existing.ActivityAt = pr.UpdatedAt.AddMinutes(-1); // activity changed too, but closing should still mark done
         existing.State.IsDone = false;
-        existing.State.IsUnread = false;
+        existing.State.IsClosed = false;
 
         _inboxItemRepository.GetExistingItemsAsync(Arg.Any<long>(), Arg.Any<DomainItemSource>(), Arg.Any<DomainItemType>(), Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
             .Returns(new List<InboxItem> { existing });
 
         await _service.SyncUserPRAsync(1, DateTimeOffset.UtcNow);
 
-        Assert.False(existing.State.IsUnread);
         Assert.True(existing.State.IsDone);
+        Assert.True(existing.State.IsClosed);
         await _inboxItemRepository.Received(1).SaveChangesAsync();
     }
 
-    [Fact(DisplayName = "SyncUserPRAsync should update existing item and mark unread when the PR was reopened")]
+    [Fact(DisplayName = "SyncUserPRAsync should update existing item and clear done/closed flags when the PR was reopened")]
     public async Task SyncUserPRAsyncShouldMarkUnreadWhenReopenedAsync()
     {
         var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
@@ -320,16 +356,16 @@ public class GitHubServiceTests
         var existing = BuildInboxItem(repository: "r/r", externalId: "1", inboxId: 1);
         existing.CommentCount = pr.CommentsCount;
         existing.ActivityAt = pr.UpdatedAt;
-        existing.State.IsDone = true; // was previously closed/merged
-        existing.State.IsUnread = false;
+        existing.State.IsDone = true;
+        existing.State.IsClosed = true; // was previously closed/merged
 
         _inboxItemRepository.GetExistingItemsAsync(Arg.Any<long>(), Arg.Any<DomainItemSource>(), Arg.Any<DomainItemType>(), Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
             .Returns(new List<InboxItem> { existing });
 
         await _service.SyncUserPRAsync(1, DateTimeOffset.UtcNow);
 
-        Assert.True(existing.State.IsUnread);
         Assert.False(existing.State.IsDone);
+        Assert.False(existing.State.IsClosed);
         await _inboxItemRepository.Received(1).SaveChangesAsync();
     }
 
@@ -353,7 +389,7 @@ public class GitHubServiceTests
 
     private void SetupSearch(GitHubProfile profile, List<GitHubPullRequestDTO> results) =>
         _gitHubClient.GetPullRequestsInvolvingUserAsync(
-                profile.AccessToken!, profile.GitHubLogin, Arg.Any<DateTimeOffset>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+                profile.AccessToken!, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(results);
 
     private static GitHubPullRequestDTO BuildPr(int number, string repo, string authorLogin, string state) => new()

@@ -31,34 +31,19 @@ public class GitHubClientTests
     }
 
     // -------------------------------------------------------------------------
-    // GetPullRequestsInvolvingUserAsync — query building
+    // GetPullRequestsInvolvingUserAsync — executes the given search query as-is
     // -------------------------------------------------------------------------
 
-    [Fact(DisplayName = "GetPullRequestsInvolvingUserAsync should build an is:open query for initial sync")]
-    public async Task ShouldBuildOpenOnlyQueryForInitialSyncAsync()
+    [Fact(DisplayName = "GetPullRequestsInvolvingUserAsync should send the given search query verbatim")]
+    public async Task ShouldSendGivenSearchQueryAsync()
     {
-        _mockHttp.When(HttpMethod.Post, GraphQlEndpoint)
-            .WithPartialContent("is:open")
-            .WithPartialContent($"involves:{Login}")
-            .Respond("application/json", BuildSearchResponseJson(items: [], hasNextPage: false, endCursor: null));
-
-        var result = await _client.GetPullRequestsInvolvingUserAsync(AccessToken, Login, DateTimeOffset.UtcNow, openPullRequestsOnly: true);
-
-        Assert.Empty(result);
-    }
-
-    [Fact(DisplayName = "GetPullRequestsInvolvingUserAsync should build an updated:>= query for incremental sync")]
-    public async Task ShouldBuildUpdatedSinceQueryForIncrementalSyncAsync()
-    {
-        var updatedSince = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        const string searchQuery = "is:pr involves:octocat is:open archived:false sort:updated-desc";
 
         _mockHttp.When(HttpMethod.Post, GraphQlEndpoint)
-            .WithPartialContent("updated:")
-            .WithPartialContent("2026-01-15")
-            .WithPartialContent($"involves:{Login}")
+            .WithPartialContent(searchQuery)
             .Respond("application/json", BuildSearchResponseJson(items: [], hasNextPage: false, endCursor: null));
 
-        var result = await _client.GetPullRequestsInvolvingUserAsync(AccessToken, Login, updatedSince, openPullRequestsOnly: false);
+        var result = await _client.GetPullRequestsInvolvingUserAsync(AccessToken, searchQuery);
 
         Assert.Empty(result);
     }
@@ -80,7 +65,7 @@ public class GitHubClientTests
             .Respond("application/json", BuildSearchResponseJson(
                 items: [BuildPrJson(2, "octocat/repo")], hasNextPage: false, endCursor: null));
 
-        var result = await _client.GetPullRequestsInvolvingUserAsync(AccessToken, Login, DateTimeOffset.UtcNow, openPullRequestsOnly: true);
+        var result = await _client.GetPullRequestsInvolvingUserAsync(AccessToken, $"is:pr involves:{Login}");
 
         Assert.Equal(2, result.Count);
         Assert.Contains(result, pr => pr.Number == 1);
@@ -104,7 +89,7 @@ public class GitHubClientTests
                 };
             });
 
-        var result = await _client.GetPullRequestsInvolvingUserAsync(AccessToken, Login, DateTimeOffset.UtcNow, openPullRequestsOnly: true);
+        var result = await _client.GetPullRequestsInvolvingUserAsync(AccessToken, $"is:pr involves:{Login}");
 
         Assert.Equal(50, callCount);
         Assert.Equal(50, result.Count);
@@ -113,13 +98,6 @@ public class GitHubClientTests
     // -------------------------------------------------------------------------
     // GetPullRequestDetailAsync
     // -------------------------------------------------------------------------
-
-    [Fact(DisplayName = "GetPullRequestDetailAsync should throw ArgumentException for a malformed repositoryFullName")]
-    public async Task ShouldThrowArgumentExceptionForMalformedRepositoryNameAsync()
-    {
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _client.GetPullRequestDetailAsync(AccessToken, "not-a-valid-repo-name", 1));
-    }
 
     [Fact(DisplayName = "GetPullRequestDetailAsync should throw InvalidOperationException when GraphQL returns errors")]
     public async Task ShouldThrowWhenGraphQlReturnsErrorsAsync()
@@ -132,7 +110,7 @@ public class GitHubClientTests
             }));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _client.GetPullRequestDetailAsync(AccessToken, "octocat/hello-world", 42));
+            _client.GetPullRequestDetailAsync(AccessToken, "octocat", "hello-world", 42));
     }
 
     [Fact(DisplayName = "GetPullRequestDetailAsync should throw InvalidOperationException when the PR node is not found")]
@@ -145,7 +123,7 @@ public class GitHubClientTests
             }));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _client.GetPullRequestDetailAsync(AccessToken, "octocat/hello-world", 42));
+            _client.GetPullRequestDetailAsync(AccessToken, "octocat", "hello-world", 42));
     }
 
     [Fact(DisplayName = "GetPullRequestDetailAsync should return mapped detail on success")]
@@ -178,7 +156,7 @@ public class GitHubClientTests
                 }
             }));
 
-        var detail = await _client.GetPullRequestDetailAsync(AccessToken, "octocat/hello-world", 42);
+        var detail = await _client.GetPullRequestDetailAsync(AccessToken, "octocat", "hello-world", 42);
 
         Assert.Equal(42, detail.PullRequestNumber);
         Assert.Equal("octocat/hello-world", detail.Repository);

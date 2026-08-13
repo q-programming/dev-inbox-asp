@@ -1,0 +1,50 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwABCD5",
+        "number": 110,
+        "title": "Add keyboard shortcuts to inbox list",
+        "body": "Adds `j`/`k` navigation and `e` to archive in the inbox list, matching the shortcuts used in Gmail/Linear.\n\nRequesting review from @jkowalski since this touches the same list component he refactored last month.",
+        "url": "https://github.com/acme/dev-inbox/pull/110",
+        "state": "OPEN",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-08-05T13:00:00Z",
+        "updatedAt": "2026-08-11T09:40:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 90,
+        "deletions": 8,
+        "changedFiles": 5,
+        "reviewDecision": "REVIEW_REQUIRED",
+        "repository": { "nameWithOwner": "acme/dev-inbox" },
+        "author": { "login": "amaj", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" },
+        "comments": { "totalCount": 2 },
+        "labels": { "nodes": [{ "name": "frontend" }] },
+        "reviewRequests": {
+          "nodes": [
+            { "requestedReviewer": { "login": "jkowalski", "name": "Jan Kowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" } }
+          ]
+        },
+        "reviews": { "nodes": [] },
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "@jkowalski requesting your review here since you know this component best.",
+              "url": "https://github.com/acme/dev-inbox/pull/110#issuecomment-1",
+              "createdAt": "2026-08-05T13:05:00Z",
+              "author": { "login": "amaj", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" }
+            },
+            {
+              "body": "Sure, will take a look this afternoon.",
+              "url": "https://github.com/acme/dev-inbox/pull/110#issuecomment-2",
+              "createdAt": "2026-08-11T09:40:00Z",
+              "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -18,7 +18,7 @@ function makeDetail(overrides: Partial<InboxItemDetail> = {}): InboxItemDetail {
     source: ItemSource.Note,
     isDone: false,
     isSaved: false,
-    isUnread: true,
+    isClosed: false,
     note: {},
     ...overrides,
   };
@@ -67,7 +67,7 @@ describe('InboxDetailPanel', () => {
         ? makeDetail({
             source,
             itemType: ItemType.WorkItem,
-            ado: { workItemId: 5, title: 'ADO work item', url: 'https://ado.example/items/5' },
+            ado: { workItemId: '5', title: 'ADO work item', url: 'https://ado.example/items/5' },
             note: undefined,
           })
         : source === ItemSource.Github

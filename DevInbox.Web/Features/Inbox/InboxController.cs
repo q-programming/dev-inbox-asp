@@ -36,4 +36,14 @@ public class InboxController(IInboxService inboxService) : IInboxBaseController,
     {
         return inboxService.PutInboxSeedAsync();
     }
+
+    public async Task MarkInboxItemDoneAsync(long id, bool isDone)
+    {
+        await inboxService.MarkInboxItemDoneAsync(id, isDone);
+    }
+
+    public async Task SaveInboxItemAsync(long id, bool save)
+    {
+        await inboxService.SaveInboxItemAsync(id, save);
+    }
 }
