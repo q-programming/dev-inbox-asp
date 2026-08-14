@@ -1,5 +1,9 @@
 using System.Security.Claims;
+using DevInbox.Web.Features.GitHub;
+using DevInbox.Web.Features.GitHub.Client;
+using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity;
+using DevInbox.Web.Features.Identity.Config;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Settings;
 using DevInbox.Web.Features.Settings.Domain;
@@ -8,6 +12,7 @@ using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 
 namespace DevInbox.Web.Tests.Features.Settings;
@@ -45,7 +50,11 @@ public class SettingsServiceIT : DatabaseIntegrationTest
         var httpContextAccessor = Substitute.For<IHttpContextAccessor>();
         httpContextAccessor.HttpContext.Returns(new DefaultHttpContext { User = new ClaimsPrincipal(claimsIdentity) });
 
-        var userService = new UserService(new UserRepository(DataBase), httpContextAccessor, Substitute.For<ILogger<UserService>>(), Substitute.For<IPublisher>());
+        var gitHubIntegrationService = new GitHubIntegrationService(
+            Substitute.For<IGitHubProfileRepository>(),
+            Substitute.For<IGitHubClient>(),
+            Substitute.For<ILogger<GitHubIntegrationService>>());
+        var userService = new UserService(new UserRepository(DataBase), httpContextAccessor, Substitute.For<ILogger<UserService>>(), Substitute.For<IPublisher>(), gitHubIntegrationService, Options.Create(new IdentityOptions()));
         _service = new SettingsService(new SettingsRepository(DataBase), userService);
     }
 

@@ -13,7 +13,7 @@ const createInboxItem = (overrides: Partial<InboxItemSummary> = {}): InboxItemSu
   title: 'Review PR',
   repository: 'octo/repo',
   reason: InboxReason.ReviewRequested,
-  isUnread: true,
+  isClosed: false,
   isSaved: false,
   isDone: false,
   isPinned: false,

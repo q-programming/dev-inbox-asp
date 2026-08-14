@@ -1,13 +1,15 @@
 using System.Security.Claims;
 using DevInbox.Web.Common.Utils;
+using DevInbox.Web.Features.GitHub;
 using DevInbox.Web.Features.GitHub.Client.DTO;
-using DevInbox.Web.Features.GitHub.Domain;
+using DevInbox.Web.Features.Identity.Config;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Identity.Events;
 using DevInbox.Web.Features.Identity.Exceptions;
 using DevInbox.Web.Features.Sync.Events;
 using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
+using Microsoft.Extensions.Options;
 
 namespace DevInbox.Web.Features.Identity;
 
@@ -15,7 +17,13 @@ namespace DevInbox.Web.Features.Identity;
 /// Handles user registration, authentication, and profile retrieval.
 /// Returns domain entities — callers are responsible for mapping to DTOs.
 /// </summary>
-public class UserService(IUserRepository userRepository, IHttpContextAccessor httpContextAccessor, ILogger<UserService> logger, IPublisher publisher) : IUserService, IService
+public class UserService(
+    IUserRepository userRepository,
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<UserService> logger,
+    IPublisher publisher,
+    IGitHubIntegrationService gitHubIntegrationService,
+    IOptions<IdentityOptions> options) : IUserService, IService
 {
     private const string GitHubInvalidSuffix = "@github.invalid";
 
@@ -38,9 +46,13 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
             Email = email!,
             Password = BCrypt.Net.BCrypt.HashPassword(body.Password),
             Type = User.AccountType.REGULAR,
-            Inbox = Inbox.Domain.Inbox.CreateDefault()
-
+            Inbox = Inbox.Domain.Inbox.CreateDefault(),
         };
+        if (options.Value.UseMockData)
+        {
+            user.GitHubProfile = gitHubIntegrationService.CreateOAuthProfile(
+                new GitHubUserProfileDTO { Login = "jkowalski", Id = 1 }, "fake-token");
+        }
         await userRepository.AddAsync(user);
         await publisher.PublishAsync(new UserCreatedEvent(user.Id, user.Email, user.FirstName, user.LastName, User.AccountType.REGULAR.ToString()));
         return user;
@@ -105,9 +117,7 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
         if (user != null)
         {
             logger.LogDebug("Refreshing GitHub token for {Email}", email);
-            user.GitHubProfile!.AccessToken = accessToken;
-            user.GitHubProfile.AvatarUrl = profile.AvatarUrl;
-            user.GitHubProfile.GitHubLogin = profile.Login;
+            gitHubIntegrationService.ApplyOAuthRefresh(user.GitHubProfile!, profile, accessToken);
             await userRepository.UpdateAsync(user);
         }
         else
@@ -121,13 +131,7 @@ public class UserService(IUserRepository userRepository, IHttpContextAccessor ht
                 LastName = lastName,
                 Email = email,
                 Type = User.AccountType.OAUTH_GITHUB,
-                GitHubProfile = new GitHubProfile
-                {
-                    GitHubLogin = profile.Login,
-                    GitHubUserId = profile.Id,
-                    AccessToken = accessToken,
-                    AvatarUrl = profile.AvatarUrl
-                },
+                GitHubProfile = gitHubIntegrationService.CreateOAuthProfile(profile, accessToken),
                 Inbox = Inbox.Domain.Inbox.CreateDefault()
             };
             await userRepository.AddAsync(user);

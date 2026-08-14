@@ -2,7 +2,7 @@
  * Settings-specific domain types.
  * Density controls how much vertical space each inbox row occupies.
  */
-import { Density, IntegrationStatus } from '@api';
+import { Density } from '@api';
 
 export const DENSITY_LABELS: Record<Density, string> = {
   [Density.Relaxed]: 'Relaxed',
@@ -15,16 +15,3 @@ export const DENSITY_DESCRIPTIONS: Record<Density, string> = {
   [Density.Tight]: 'Standard view. Balanced information density.',
   [Density.SuperTight]: 'Maximum data visibility. Ideal for power users.',
 };
-
-/** Integration connection status driven by the backend. */
-
-export interface IntegrationConfig {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  status: IntegrationStatus;
-  /** Shown beneath the name when status is active, e.g. "@janedev-git" */
-  connectedAs?: string;
-  actionLabel: string;
-}

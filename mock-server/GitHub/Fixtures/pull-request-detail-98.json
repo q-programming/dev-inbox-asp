@@ -1,0 +1,40 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwABCD2",
+        "number": 98,
+        "title": "Fix ADO work item sync duplicate rows",
+        "body": "Duplicate inbox items were being created when an ADO work item was updated twice within the same sync window. Fixed by upserting on external id instead of always inserting.\n\nStill draft — need to add a regression test with Testcontainers.",
+        "url": "https://github.com/acme/dev-inbox/pull/98",
+        "state": "OPEN",
+        "isDraft": true,
+        "merged": false,
+        "createdAt": "2026-07-28T11:30:00Z",
+        "updatedAt": "2026-08-09T08:20:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 45,
+        "deletions": 30,
+        "changedFiles": 4,
+        "reviewDecision": null,
+        "repository": { "nameWithOwner": "acme/dev-inbox" },
+        "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" },
+        "comments": { "totalCount": 1 },
+        "labels": { "nodes": [{ "name": "bug" }] },
+        "reviewRequests": { "nodes": [] },
+        "reviews": { "nodes": [] },
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Marking as draft until the regression test is in place.",
+              "url": "https://github.com/acme/dev-inbox/pull/98#issuecomment-1",
+              "createdAt": "2026-07-29T09:00:00Z",
+              "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -11,6 +11,31 @@ public interface IInboxItemRepository : IRepository<InboxItem>
     Task<InboxItem?> GetByIdForUserAsync(long id, long userId);
 
     /// <summary>
+    /// Loads existing inbox items for the given source/type whose (Repository, ExternalId) key falls
+    /// within the provided candidate sets — used to determine, in a single query, which of a batch of
+    /// externally-fetched items (e.g. GitHub PRs) already exist locally, so callers can decide
+    /// create-vs-update without a query per item.
+    /// Repository and ExternalId narrow the *candidate* rows only (e.g. a PR number is unique within a
+    /// repository, not globally) — callers must still match the exact (Repository, ExternalId) pair
+    /// themselves once loaded. Returned entities are change-tracked (not AsNoTracking) so callers can
+    /// mutate them directly and persist via <see cref="SaveChangesAsync"/>.
+    /// </summary>
+    Task<List<InboxItem>> GetExistingItemsAsync(
+        long inboxId,
+        ItemSource source,
+        ItemType type,
+        IReadOnlyCollection<string> repositories,
+        IReadOnlyCollection<string> externalIds);
+
+    /// <summary>Adds new items without saving — pair with <see cref="SaveChangesAsync"/> to batch
+    /// inserts together with any updates made to entities returned by <see cref="GetExistingItemsAsync"/>.</summary>
+    Task AddRangeAsync(IEnumerable<InboxItem> items);
+
+    /// <summary>Persists all pending changes (new items added via <see cref="AddRangeAsync"/> and any
+    /// mutations to tracked entities) in a single round trip.</summary>
+    Task SaveChangesAsync();
+
+    /// <summary>
     /// Groups all inbox items belonging to <paramref name="userId"/> into a single aggregate and
     /// projects it via <paramref name="selector"/>. The selector is an expression tree (not a plain
     /// delegate) so EF Core can translate the aggregation/projection into SQL instead of pulling every
@@ -22,5 +47,13 @@ public interface IInboxItemRepository : IRepository<InboxItem>
     /// Kept separate from GetInboxSummaryAsync because attached notes are excluded from that grouped
     /// query's "visible" set (they're surfaced inline on their target item, not as their own row).</summary>
     Task<long> CountNotesAsync(long userId);
+
+    /// <summary>
+    /// Deletes all inbox items for the given user and source. Used when a user disconnects an external integration (e.g. GitHub) to remove all items that were synced from that source.
+    /// </summary>
+    /// <param name="userId">The ID of the user whose inbox items should be deleted.</param>
+    /// <param name="source">The source of the inbox items to delete.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task DeleteBySourceAsync(long userId, ItemSource source);
 }
 

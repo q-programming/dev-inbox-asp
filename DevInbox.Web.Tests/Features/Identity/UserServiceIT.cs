@@ -1,10 +1,15 @@
+using DevInbox.Web.Features.GitHub;
+using DevInbox.Web.Features.GitHub.Client;
+using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity;
+using DevInbox.Web.Features.Identity.Config;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 
 namespace DevInbox.Web.Tests.Features.Identity;
@@ -21,7 +26,11 @@ public class UserServiceIT : DatabaseIntegrationTest
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync();
-        _service = new UserService(new UserRepository(DataBase), Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>(), Substitute.For<IPublisher>());
+        var gitHubIntegrationService = new GitHubIntegrationService(
+            Substitute.For<IGitHubProfileRepository>(),
+            Substitute.For<IGitHubClient>(),
+            Substitute.For<ILogger<GitHubIntegrationService>>());
+        _service = new UserService(new UserRepository(DataBase), Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>(), Substitute.For<IPublisher>(), gitHubIntegrationService, Options.Create(new IdentityOptions()));
     }
 
     [Fact(DisplayName = "LoginAsync integration should authenticate user and return mapped dto")]

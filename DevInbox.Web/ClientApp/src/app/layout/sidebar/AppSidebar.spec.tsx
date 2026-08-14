@@ -42,7 +42,7 @@ describe('AppSidebar', () => {
     it('should render the FILTERS section with filter items', () => {
       renderSidebar();
       expect(screen.getAllByText(/filters/i).length).toBeGreaterThan(0);
-      expect(screen.getByText('Unread')).toBeTruthy();
+      expect(screen.getByText('To Do')).toBeTruthy();
       expect(screen.getByText('Stale')).toBeTruthy();
     });
   });

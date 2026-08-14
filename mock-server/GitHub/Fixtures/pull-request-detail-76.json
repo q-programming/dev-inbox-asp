@@ -1,0 +1,50 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwABCD4",
+        "number": 76,
+        "title": "Close stale audit log entries",
+        "body": "Proposed a cleanup job for stale audit log entries, but the team decided to keep full history instead. Closing without merging.",
+        "url": "https://github.com/acme/dev-inbox/pull/76",
+        "state": "CLOSED",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-06-20T09:00:00Z",
+        "updatedAt": "2026-06-25T13:10:00Z",
+        "closedAt": "2026-06-25T13:10:00Z",
+        "mergedAt": null,
+        "additions": 15,
+        "deletions": 60,
+        "changedFiles": 3,
+        "reviewDecision": "CHANGES_REQUESTED",
+        "repository": { "nameWithOwner": "acme/dev-inbox" },
+        "author": { "login": "tnowak", "avatarUrl": "https://avatars.githubusercontent.com/u/1003" },
+        "comments": { "totalCount": 5 },
+        "labels": { "nodes": [{ "name": "wontfix" }] },
+        "reviewRequests": { "nodes": [] },
+        "reviews": {
+          "nodes": [
+            { "state": "CHANGES_REQUESTED", "submittedAt": "2026-06-22T10:00:00Z", "author": { "login": "amaj", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" } }
+          ]
+        },
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "@jkowalski can you confirm compliance needs full audit history retained?",
+              "url": "https://github.com/acme/dev-inbox/pull/76#issuecomment-1",
+              "createdAt": "2026-06-23T09:15:00Z",
+              "author": { "login": "amaj", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" }
+            },
+            {
+              "body": "Confirmed — compliance requires keeping full history, let's close this one.",
+              "url": "https://github.com/acme/dev-inbox/pull/76#issuecomment-2",
+              "createdAt": "2026-06-25T13:10:00Z",
+              "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

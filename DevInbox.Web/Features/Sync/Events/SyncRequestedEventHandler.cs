@@ -6,7 +6,7 @@ public class SyncRequestedEventHandler(ISyncService syncService) : IEventHandler
 {
     public async Task Handle(SyncRequestedEvent message, CancellationToken cancellationToken)
     {
-        await syncService.SynchronizeIntegrations(message.UserId, message.Email, cancellationToken);
+        await syncService.SynchronizeIntegrations(message.UserId, message.Email, message.ForceFullSync, cancellationToken);
     }
 
 }

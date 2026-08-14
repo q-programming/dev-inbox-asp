@@ -41,7 +41,12 @@ const AppSidebar = memo(() => {
   const activeId = useMemo(() => {
     // Several nav items share the same /inbox route and are only
     // distinguished by their filter query params — match on both.
-    const candidates = [...CORE_FOCUS_ITEMS, ...INTEGRATION_FOCUS_ITEMS, ...BOTTOM_FOCUS_ITEMS];
+    const candidates = [
+      ...CORE_FOCUS_ITEMS,
+      ...INTEGRATION_FOCUS_ITEMS,
+      ...BOTTOM_FOCUS_ITEMS,
+      ...FILTER_ITEMS,
+    ];
     const match = candidates.find(
       (item) => item.route === pathname && buildInboxSearch(item.filter) === location.search,
     );
@@ -62,8 +67,8 @@ const AppSidebar = memo(() => {
 
     switch (id) {
       case 'inbox':
-      case 'unread':
-        return summary.unread;
+      case 'todo':
+        return summary.toDo;
       case 'reviews':
         return summary.reviewRequests;
       case 'mentions':

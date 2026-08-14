@@ -29,9 +29,8 @@ public class InboxService(
         var summary = await inboxItemRepository.GetInboxSummaryAsync(userId, group => new InboxSummary
         {
             Total = group.LongCount(),
-            Unread = group.LongCount(item => item.State.IsUnread),
-            Read = group.LongCount(item => !item.State.IsUnread),
-            Saved = group.LongCount(item => item.State.IsSaved),
+            ToDo = group.LongCount(item => !item.State.IsDone),
+            Saved = group.LongCount(item => item.State.IsSaved && !item.State.IsDone),
             NeedsAttention = group.LongCount(item =>
                 item.State.Priority == Priority.High ||
                 item.State.Priority == Priority.Critical ||
@@ -41,17 +40,17 @@ public class InboxService(
                 item.ActivityAt < staleBefore),
             ReviewRequests = group.LongCount(item =>
                 item.Reason == InboxReason.ReviewRequested &&
-                item.State.IsUnread),
+                !item.State.IsDone),
             Mentions = group.LongCount(item =>
                 item.Reason == InboxReason.Mentioned &&
-                item.State.IsUnread),
+                !item.State.IsDone),
             MyPullRequests = group.LongCount(item =>
                 item.Source == ItemSource.GitHub &&
                 item.Type == ItemType.PR &&
                 item.Reason == InboxReason.Authored),
             AdoItems = group.LongCount(item =>
                 item.Source == ItemSource.Ado &&
-                item.State.IsUnread),
+                !item.State.IsDone),
         }) ?? new InboxSummary();
 
         // Notes counts standalone + attached notes alike — unlike the metrics above, which only reflect
@@ -120,10 +119,10 @@ public class InboxService(
                 UpdatedAt = DateTimeOffset.UtcNow,
                 State = new InboxItemState
                 {
-                    IsUnread = random.Next(100) < 50,
+                    IsDone = random.Next(100) < 50,
                     IsSaved = random.Next(100) < 25,
                     IsPinned = random.Next(100) < 15,
-                    IsDone = random.Next(100) < 30,
+                    IsClosed = random.Next(100) < 15,
                     Priority = RandomEnum<Priority>(),
 
                     Tags =
@@ -184,6 +183,30 @@ public class InboxService(
         var itemDto = _inboxMapper.ToInboxItemDetail(item);
         await inboxDetailService.PopulateAsync(item, itemDto);
         return itemDto;
+    }
+
+    public async Task MarkInboxItemDoneAsync(long id, bool isDone)
+    {
+        var userId = GetCurrentUserId();
+        var item = await inboxItemRepository.GetByIdForUserAsync(id, userId) ?? throw new NotFoundException($"Inbox item with ID {id} not found for user {userId}");
+        item.State.IsDone = isDone;
+        item.State.UpdatedAt = DateTimeOffset.UtcNow;
+        await inboxItemRepository.UpdateAsync(item);
+    }
+
+    public async Task SaveInboxItemAsync(long id, bool save)
+    {
+        var userId = GetCurrentUserId();
+        var item = await inboxItemRepository.GetByIdForUserAsync(id, userId) ?? throw new NotFoundException($"Inbox item with ID {id} not found for user {userId}");
+        item.State.IsSaved = save;
+        item.State.UpdatedAt = DateTimeOffset.UtcNow;
+        await inboxItemRepository.UpdateAsync(item);
+    }
+
+
+    public async Task DeleteInboxItemsBySourceAsync(long userId, ItemSource source, CancellationToken cancellationToken)
+    {
+        await inboxItemRepository.DeleteBySourceAsync(userId, source);
     }
 
     private long GetCurrentUserId()

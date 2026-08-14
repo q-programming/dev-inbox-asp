@@ -12,4 +12,7 @@ public interface IInboxService
     Task PutInboxSeedAsync();
     Task<InboxPage> ListInboxItemsAsync(int page, int size, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason);
     Task<InboxItemDetail> GetInboxItemByIdAsync(long id);
+    Task MarkInboxItemDoneAsync(long id, bool isDone);
+    Task SaveInboxItemAsync(long id, bool save);
+    Task DeleteInboxItemsBySourceAsync(long userId, Domain.ItemSource gitHub, CancellationToken cancellationToken);
 }

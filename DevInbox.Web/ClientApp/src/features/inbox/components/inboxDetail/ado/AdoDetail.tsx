@@ -1,5 +1,4 @@
-import { InboxItemDetail, PersonReference } from '@api';
-import Avatar from '@mui/material/Avatar';
+import { InboxItemDetail } from '@api';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Paper from '@mui/material/Paper';
@@ -9,28 +8,12 @@ import { formatRelativeTime } from '@utils/date';
 import { REASON_CHIP_COLOR, translateInboxReason } from '@feature/inbox/utils/reason';
 import InboxDetailHeader from '../InboxDetailHeader';
 import InboxDetailFooter from '../InboxDetailFooter';
+import PersonAvatar from '../shared/PersonAvatar';
+import CommentCard from '../shared/CommentCard';
 
 interface IAdoDetail {
   details: InboxItemDetail;
 }
-
-/** Builds up-to-two-letter initials from a display name, for avatar fallbacks. */
-const initials = (name?: string): string =>
-  name
-    ?.split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') ?? '?';
-
-const PersonAvatar = ({ person, size = 32 }: { person?: PersonReference; size?: number }) => (
-  <Avatar
-    src={person?.avatarUrl ?? undefined}
-    sx={{ width: size, height: size, fontSize: size * 0.4 }}
-  >
-    {initials(person?.displayName)}
-  </Avatar>
-);
 
 const AdoDetail = ({ details }: IAdoDetail) => {
   const workItem = details.ado ?? {};
@@ -164,29 +147,14 @@ const AdoDetail = ({ details }: IAdoDetail) => {
               Comments
             </Typography>
             {workItem.comments.map((comment, index) => (
-              <Paper
+              <CommentCard
                 key={`${comment.author?.login ?? comment.author?.displayName ?? 'anon'}-${comment.createdAt}-${index}`}
-                variant="outlined"
-                sx={{ p: 2, bgcolor: 'action.hover', minWidth: 0, mt: 1 }}
-              >
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
-                  <PersonAvatar person={comment.author} size={24} />
-                  <Typography
-                    data-testid="ado-detail-comment-author"
-                    variant="body2"
-                    sx={{ fontWeight: 600 }}
-                  >
-                    {comment.author?.displayName ?? comment.author?.login}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {formatRelativeTime(comment.createdAt)}
-                  </Typography>
-                </Stack>
-
-                <Typography data-testid="ado-detail-comment-body" variant="body2" sx={{ mb: 1.5 }}>
-                  {comment.body}
-                </Typography>
-              </Paper>
+                author={comment.author}
+                body={comment.body}
+                createdAt={comment.createdAt}
+                authorTestId="ado-detail-comment-author"
+                bodyTestId="ado-detail-comment-body"
+              />
             ))}
           </Box>
         )}

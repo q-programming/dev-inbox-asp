@@ -1,0 +1,8 @@
+{
+  "login": "jkowalski",
+  "id": 1,
+  "name": "Jan Kowalski",
+  "email": "jkowalski@example.com",
+  "avatar_url": "https://avatars.githubusercontent.com/u/1001",
+  "bio": "Backend engineer at Acme — mock profile served by the local GitHub mock server."
+}

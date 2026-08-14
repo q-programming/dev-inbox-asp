@@ -31,6 +31,13 @@ export const REASON_CHIP_COLOR: Partial<Record<InboxReason, ChipProps['color']>>
   [InboxReason.FollowUp]: 'default',
 };
 
+export const STATE_CHIP_COLOR: Partial<Record<string, ChipProps['color']>> = {
+  ["open"]: 'info',
+  ["merged"]: 'success',
+  ["closed"]: 'warning',
+  ["draft"]: 'default',
+};
+
 /** Human readable label for an item type, used in detail panel headers. */
 export const translateItemType = (itemType?: ItemType): string => {
   switch (itemType) {

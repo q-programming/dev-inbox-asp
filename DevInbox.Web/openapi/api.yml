@@ -11,6 +11,8 @@ servers:
 tags:
   - name: auth
     description: Authentication operations
+  - name: integrations
+    description: Third-party integration connections (GitHub, Azure DevOps)
   - name: settings
     description: User settings and integration credentials
   - name: inbox
@@ -139,6 +141,47 @@ paths:
         "401":
           description: Authentication failed
 
+  # ── Integrations ─────────────────────────────────────────────
+  /integrations/github/pat:
+    post:
+      operationId: connectGithubPat
+      security:
+        - cookieAuth: []
+      tags: [integrations]
+      summary: Connect (or reconnect) GitHub using a Personal Access Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectGithubPatRequest"
+      responses:
+        "200":
+          description: GitHub integration connected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationDto"
+        "400":
+          description: Invalid or unreachable PAT
+        "401":
+          description: No authenticated user
+
+  /integrations/github:
+    delete:
+      operationId: disconnectGithub
+      security:
+        - cookieAuth: []
+      tags: [integrations]
+      summary: Disconnect the GitHub integration for the current user
+      responses:
+        "204":
+          description: GitHub integration disconnected
+        "401":
+          description: No authenticated user
+        "404":
+          description: No GitHub integration to disconnect
+
   # ── Settings ─────────────────────────────────────────────────
   /settings:
     get:
@@ -244,7 +287,7 @@ paths:
     put:
       operationId: putInboxSeed
       tags: [inbox]
-      depreciated: true
+      deprecated: true
       summary: Seeds inbox with random elements for testing
       responses:
         "204":
@@ -273,6 +316,50 @@ paths:
                 $ref: "#/components/schemas/InboxItemDetail"
         "404":
           description: Not found
+  /inbox/item/{id}/done:
+    post:
+      operationId: markInboxItemDone
+      tags: [inbox]
+      summary: Mark a single inbox item as done
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: isDone
+          in: query
+          required: true
+          schema:
+            type: boolean    
+      responses:
+        "204":
+          description: Inbox item marked as done
+        "404":
+          description: Not found          
+  /inbox/item/{id}/save:
+    post:
+      operationId: saveInboxItem
+      tags: [inbox]
+      summary: Save a single inbox item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: save
+          in: query
+          required: true
+          schema:
+            type: boolean    
+      responses:
+        "204":
+          description: Inbox item saved
+        "404":
+          description: Not found               
 
   /inbox/item/{id}/overlay:
     put:
@@ -503,6 +590,20 @@ components:
       default: INACTIVE
       enum: [ACTIVE, EXPIRED, INACTIVE]
 
+    ConnectGithubPatRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: GitHub Personal Access Token (classic or fine-grained).
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional expiry date for the PAT — used to proactively warn the user before it expires.
+
     # ── Settings ───────────────────────────────────────────────
     Theme:
       type: string
@@ -582,36 +683,43 @@ components:
           total:
             type: integer
             format: int64
-          unread:
+            description: Total number of inbox items
+          toDo:
             type: integer
             format: int64
-          read:
-            type: integer
-            format: int64
+            description: Number of inbox items that are not done
           saved:
             type: integer
             format: int64
+            description: Number of inbox items that are saved and not done
           needsAttention:
             type: integer
             format: int64
+            description: Number of inbox items that are high or critical priority
           stale:
             type: integer
             format: int64
+            description: Number of inbox items that have not been updated for a long time
           reviewRequests:
             type: integer
             format: int64
+            description: Number of inbox items that are require review
           mentions:
             type: integer
             format: int64
+            description: Number of inbox items that mention the user
           myPullRequests:
             type: integer
             format: int64
+            description: Number of inbox items that are authored by the user
           adoItems:
             type: integer
             format: int64
+            description: Number of inbox items that are ADO items
           notes:
             type: integer
             format: int64
+            description: Number of inbox items that are notes
 
     InboxItemSummary:
       type: object
@@ -630,7 +738,7 @@ components:
           type: string
         reason:
           $ref: "#/components/schemas/InboxReason"
-        isUnread:
+        isClosed:
           type: boolean
         isSaved:
           type: boolean
@@ -679,7 +787,7 @@ components:
           $ref: "#/components/schemas/InboxReason"
         priority:
           $ref: "#/components/schemas/Priority"
-        isUnread:
+        isClosed:
           type: boolean
         isSaved:
           type: boolean
@@ -706,6 +814,8 @@ components:
         repository:
           type: string
         title:
+          type: string
+        summary:
           type: string
         state:
           $ref: "#/components/schemas/GitHubPullRequestState"
@@ -854,6 +964,8 @@ components:
         createdAt:
           type: string
           format: date-time
+        url:
+          type: string
 
     PersonReference:
       type: object
@@ -872,7 +984,7 @@ components:
       properties:
         priority:
           $ref: "#/components/schemas/Priority"
-        isUnread:
+        isClosed:
           type: boolean
         isSaved:
           type: boolean
@@ -922,7 +1034,7 @@ components:
 
     ItemStatus:
       type: string
-      enum: [Unread, Saved, Done, Pinned]
+      enum: [ToDo, Saved, Done, Pinned, Closed]
 
     Priority:
       type: string

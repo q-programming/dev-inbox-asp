@@ -42,6 +42,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
         modelBuilder.Entity<GitHubProfile>(entity =>
         {
             entity.Property(profile => profile.AccessToken).HasConversion(encryptedString);
+            entity.Property(profile => profile.AuthMethod).HasConversion<string>();
+            entity.Property(profile => profile.Status).HasConversion<string>();
         });
         modelBuilder.Entity<Inbox>(entity =>
         {

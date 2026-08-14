@@ -14,7 +14,7 @@ function makeInboxItem(overrides: Partial<InboxItemSummary> = {}): InboxItemSumm
   return {
     id: 123,
     title: 'Review API contract',
-    isUnread: true,
+    isDone: false,
     activityAt: '2026-07-31T10:15:00.000Z' as unknown as Date,
     repository: 'octo/dev-inbox',
     reason: InboxReason.ReviewRequested,
@@ -68,13 +68,13 @@ describe('InboxItem', () => {
 
   describe('unread state', () => {
     it('shows the unread dot when the item is unread', () => {
-      renderWithProviders(<InboxItem item={makeInboxItem({ isUnread: true })} />);
+      renderWithProviders(<InboxItem item={makeInboxItem({ isDone: false })} />);
 
       expect(screen.getByTestId('inbox-item-unread-dot')).toBeTruthy();
     });
 
     it('hides the unread dot when the item is read', () => {
-      renderWithProviders(<InboxItem item={makeInboxItem({ isUnread: false })} />);
+      renderWithProviders(<InboxItem item={makeInboxItem({ isDone: true })} />);
 
       expect(screen.queryByTestId('inbox-item-unread-dot')).toBeNull();
     });

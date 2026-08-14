@@ -16,7 +16,7 @@ beforeEach(() => {
     title: undefined,
     close: () => useNoteModalStore.setState({ isOpen: false, attachedToInboxItemId: undefined, title: undefined }),
   });
-  useInboxStore.setState({ selectedItemId: undefined, openItem: vi.fn(), closeItem: vi.fn(), isListExpanded: true, toggleListExpanded: vi.fn() });
+  useInboxStore.setState({ selectedItemId: undefined, openItem: vi.fn(), closeItem: vi.fn() });
   useAlertStore.setState({ alerts: [] });
 });
 

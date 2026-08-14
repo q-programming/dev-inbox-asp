@@ -80,7 +80,7 @@ describe('AppLayout', () => {
       renderLayout();
       // "Filters" section label + "Manage filters" item both contain "filter"
       expect(screen.getAllByText(/filters/i).length).toBeGreaterThan(0);
-      expect(screen.getByText('Unread')).toBeTruthy();
+      expect(screen.getByText('To Do')).toBeTruthy();
     });
   });
 

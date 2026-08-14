@@ -1,4 +1,4 @@
-import { InboxClient, InboxReason, ItemSource, ItemType, SyncClient } from '@api';
+import { InboxClient, InboxReason, ItemSource, ItemStatus, ItemType, SyncClient } from '@api';
 import { ApiError, apiFetch, BASE_URL } from '@shared/api/httpClient';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { heartbeatKeys } from './useInboxHeartBeat';
@@ -16,14 +16,14 @@ export const inboxKeys = {
 
 export const useInboxQuery = (filter?: InboxFilter) =>
   useQuery({
-    queryKey: [...inboxKeys.items, filter?.source, filter?.itemType, filter?.reason],
+    queryKey: [...inboxKeys.items, filter?.source, filter?.itemType, filter?.reason, filter?.status],
     queryFn: () =>
       inboxApi.listInboxItems(
         0,
         20,
         filter?.source as ItemSource | undefined,
         filter?.itemType as ItemType | undefined,
-        undefined,
+        filter?.status as ItemStatus | undefined,
         filter?.reason as InboxReason | undefined,
       ),
   });
@@ -51,8 +51,7 @@ export const useSyncMutation = () =>
       mutationFn: () => syncApi.triggerSync(),
       onSuccess: () => {
         // Invalidate the inbox query to refetch the latest items after a successful sync.
-        queryClient.invalidateQueries({ queryKey: inboxKeys.items });
-        queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
+        queryClient.invalidateQueries({ queryKey: inboxKeys.all });
         queryClient.invalidateQueries({ queryKey: heartbeatKeys.status });
       },
     });
@@ -67,5 +66,36 @@ export const useSyncMutation = () =>
   {
     return useMutation<void, ApiError, void>({
       mutationFn: () => inboxApi.putInboxSeed()
+    });
+  };
+
+  export const useMarkInboxItemDoneMutation = () =>
+  {
+    const queryClient = useQueryClient();
+    return useMutation<void, ApiError, { itemId: number; isDone: boolean }>({
+      mutationFn: ({ itemId, isDone }) => inboxApi.markInboxItemDone(itemId, isDone),
+      onSuccess: (_data, { itemId }) => {
+        // Invalidate the inbox query to refetch the latest items after marking an item as done.
+        queryClient.invalidateQueries({ queryKey: inboxKeys.items });
+        queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
+        // The detail panel reads from its own cached query (staleTime: 30s) keyed by itemId —
+        // without this it would keep showing the pre-mutation isDone until that staleTime elapses.
+        queryClient.invalidateQueries({ queryKey: [...inboxKeys.detail, itemId] });
+      },
+    });
+  };
+    export const useSaveInboxItemMutation = () =>
+  {
+    const queryClient = useQueryClient();
+    return useMutation<void, ApiError, { itemId: number; isSaved: boolean }>({
+      mutationFn: ({ itemId, isSaved }) => inboxApi.saveInboxItem(itemId, isSaved),
+      onSuccess: (_data, { itemId }) => {
+        // Invalidate the inbox query to refetch the latest items after saving an item.
+        queryClient.invalidateQueries({ queryKey: inboxKeys.items });
+        queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
+        // The detail panel reads from its own cached query (staleTime: 30s) keyed by itemId —
+        // without this it would keep showing the pre-mutation isSaved until that staleTime elapses.
+        queryClient.invalidateQueries({ queryKey: [...inboxKeys.detail, itemId] });
+      },
     });
   };

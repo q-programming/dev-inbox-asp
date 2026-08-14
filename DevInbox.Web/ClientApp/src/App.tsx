@@ -10,6 +10,7 @@ const AppLayout = lazy(() => import('@app/layout/Layout'));
 const InboxPage = lazy(() => import('@feature/inbox/InboxPage'));
 const SettingsPage = lazy(() => import('@feature/settings/SettingsPage'));
 const NotesPage = lazy(() => import('@feature/notes/NotesPage'));
+const OnboardingPage = lazy(() => import('@feature/integrations/OnboardingPage'));
 
 const Spinner = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -29,8 +30,11 @@ export default function App() {
 
           {/* Protected — AuthGuard verifies session, AppLayout provides shell */}
           <Route element={<AuthGuard />}>
+            {/* Onboarding is protected but rendered full-page, without the app shell */}
+            <Route path={AppRoute.ONBOARDING} element={<OnboardingPage />} />
             <Route element={<AppLayout />}>
               <Route path={AppRoute.INBOX} element={<InboxPage />} />
+              <Route path={AppRoute.INBOX_ITEM} element={<InboxPage />} />
               <Route path={AppRoute.SETTINGS} element={<SettingsPage />} />
               <Route path={AppRoute.NOTES} element={<NotesPage />} />
               <Route path="*" element={<Navigate to={AppRoute.INBOX} replace />} />

@@ -10,6 +10,6 @@ public class GitHubInboxDetailProvider(IGitHubService gitHubService) : IInboxDet
 
     public async Task PopulateAsync(InboxItem item, InboxItemDetail dto, CancellationToken cancellationToken = default)
     {
-        dto.Github = await gitHubService.GetDetailsAsync(item);
+        dto.Github = await gitHubService.GetDetailsAsync(item, cancellationToken);
     }
 }

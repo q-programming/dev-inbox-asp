@@ -6,7 +6,9 @@ using DevInbox.Web.Features.GitHub.Client;
 using DevInbox.Web.Features.Identity.OAuth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NSubstitute;
 using RichardSzalay.MockHttp;
 
 namespace DevInbox.Web.Tests.Features.Identity.OAuth;
@@ -41,7 +43,7 @@ public class GitHubOAuthServiceTests
         _mockHttp = new MockHttpMessageHandler();
         var httpClient = _mockHttp.ToHttpClient();
         httpClient.BaseAddress = new Uri("https://api.github.com");
-        _gitHubClient = new GitHubClient(httpClient);
+        _gitHubClient = new GitHubClient(httpClient, BuildFactory(_mockHttp), Substitute.For<ILogger<GitHubClient>>());
         _service = new GitHubOAuthService(BuildFactory(_mockHttp), BuildOptions(), _gitHubClient);
     }
 
@@ -167,7 +169,7 @@ public class GitHubOAuthServiceTests
     {
         var httpClient = _mockHttp.ToHttpClient();
         httpClient.BaseAddress = new Uri("https://api.github.com");
-        var gitHubClient = new GitHubClient(httpClient);
+        var gitHubClient = new GitHubClient(httpClient, BuildFactory(_mockHttp), Substitute.For<ILogger<GitHubClient>>());
         var service = new GitHubOAuthService(BuildFactory(_mockHttp), BuildOptions(FrontendUrl), gitHubClient);
 
         Assert.Equal($"{FrontendUrl}/inbox", service.GetPostLoginRedirectUrl());

@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { server } from '@test/setupBrowserTests';
 
 import { ItemSource, ItemType, type InboxItemDetail } from '@api';
 import { renderWithProviders } from '@test/renderWithProviders';
 import { useInboxStore } from '@feature/inbox/store/inbox.store';
+import { useNoteModalStore } from '@feature/notes/store/noteModal.store';
 import InboxDetailHeader from './InboxDetailHeader';
 
 function makeDetails(overrides: Partial<InboxItemDetail> = {}): InboxItemDetail {
@@ -92,6 +95,145 @@ describe('InboxDetailHeader', () => {
       rerender(<InboxDetailHeader details={makeDetails({ isSaved: true })} />);
 
       expect(screen.getByTestId('inbox-detail-save-btn').getAttribute('title')).toBe('Saved');
+    });
+  });
+
+  describe('mark as done button', () => {
+    it('calls the mark-done API with the toggled isDone value when clicked', async () => {
+      const user = userEvent.setup();
+      let receivedIsDone: string | null = null;
+      server.use(
+        http.post('/api/inbox/item/:id/done', ({ request }) => {
+          receivedIsDone = new URL(request.url).searchParams.get('isDone');
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      renderWithProviders(<InboxDetailHeader details={makeDetails({ id: 7, isDone: false })} />);
+
+      await user.click(screen.getByTestId('inbox-detail-mark-done-btn'));
+
+      await waitFor(() => expect(receivedIsDone).toBe('true'));
+    });
+
+    it('calls the mark-done API to unmark an already-done item', async () => {
+      const user = userEvent.setup();
+      let receivedIsDone: string | null = null;
+      server.use(
+        http.post('/api/inbox/item/:id/done', ({ request }) => {
+          receivedIsDone = new URL(request.url).searchParams.get('isDone');
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      renderWithProviders(<InboxDetailHeader details={makeDetails({ id: 7, isDone: true })} />);
+
+      await user.click(screen.getByTestId('inbox-detail-mark-done-btn'));
+
+      await waitFor(() => expect(receivedIsDone).toBe('false'));
+    });
+
+    it('does not call the API when the item has no id', async () => {
+      const user = userEvent.setup();
+      let callCount = 0;
+      server.use(
+        http.post('/api/inbox/item/:id/done', () => {
+          callCount += 1;
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      renderWithProviders(<InboxDetailHeader details={makeDetails({ id: undefined })} />);
+
+      await user.click(screen.getByTestId('inbox-detail-mark-done-btn'));
+
+      expect(callCount).toBe(0);
+    });
+  });
+
+  describe('save button', () => {
+    it('calls the save API with the toggled isSaved value when clicked', async () => {
+      const user = userEvent.setup();
+      let receivedSave: string | null = null;
+      server.use(
+        http.post('/api/inbox/item/:id/save', ({ request }) => {
+          receivedSave = new URL(request.url).searchParams.get('save');
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      renderWithProviders(<InboxDetailHeader details={makeDetails({ id: 7, isSaved: false })} />);
+
+      await user.click(screen.getByTestId('inbox-detail-save-btn'));
+
+      await waitFor(() => expect(receivedSave).toBe('true'));
+    });
+
+    it('calls the save API to unsave an already-saved item', async () => {
+      const user = userEvent.setup();
+      let receivedSave: string | null = null;
+      server.use(
+        http.post('/api/inbox/item/:id/save', ({ request }) => {
+          receivedSave = new URL(request.url).searchParams.get('save');
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      renderWithProviders(<InboxDetailHeader details={makeDetails({ id: 7, isSaved: true })} />);
+
+      await user.click(screen.getByTestId('inbox-detail-save-btn'));
+
+      await waitFor(() => expect(receivedSave).toBe('false'));
+    });
+
+    it('does not call the API when the item has no id', async () => {
+      const user = userEvent.setup();
+      let callCount = 0;
+      server.use(
+        http.post('/api/inbox/item/:id/save', () => {
+          callCount += 1;
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      renderWithProviders(<InboxDetailHeader details={makeDetails({ id: undefined })} />);
+
+      await user.click(screen.getByTestId('inbox-detail-save-btn'));
+
+      expect(callCount).toBe(0);
+    });
+  });
+
+  describe('add note button', () => {
+    it('opens the note modal attached to the current item when clicked', async () => {
+      const user = userEvent.setup();
+      useNoteModalStore.setState({ isOpen: false, attachedToInboxItemId: undefined, title: undefined });
+
+      renderWithProviders(
+        <InboxDetailHeader details={makeDetails({ id: 9, title: 'PR to review' })} />,
+      );
+
+      await user.click(screen.getByTestId('inbox-detail-add-note-btn'));
+
+      expect(useNoteModalStore.getState().isOpen).toBe(true);
+      expect(useNoteModalStore.getState().attachedToInboxItemId).toBe(9);
+      expect(useNoteModalStore.getState().title).toBe('PR to review');
+    });
+
+    it('does not render the add-note button for note items', () => {
+      renderWithProviders(<InboxDetailHeader details={makeDetails({ source: ItemSource.Note })} />);
+
+      expect(screen.queryByTestId('inbox-detail-add-note-btn')).toBeNull();
+    });
+
+    it('does not render the add-note button when the item already has an attached note', () => {
+      renderWithProviders(
+        <InboxDetailHeader
+          details={makeDetails({ attachedNote: { noteId: 1, title: 'Existing note' } })}
+        />,
+      );
+
+      expect(screen.queryByTestId('inbox-detail-add-note-btn')).toBeNull();
     });
   });
 

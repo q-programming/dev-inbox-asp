@@ -16,6 +16,7 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
         return await Set
             .AsNoTracking()
             .Where(item => item.InboxId == userId &&
+                !item.State.IsClosed &&
                 (item.Source != ItemSource.Note || item.Note!.AttachedToInboxItemId == null))
             .GroupBy(_ => 1)
             .Select(selector)
@@ -32,10 +33,12 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
 
     public async Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(int page, int size, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason)
     {
+        // Closed items (fully done with, e.g. a merged/closed PR) are excluded from every other
+        // view — they only ever show up when the caller explicitly asks for the Closed status.
         var query = Set
             .AsNoTracking()
             .Include(x => x.State)
-            .Where(i => i.InboxId == userId);
+            .Where(i => i.InboxId == userId && (status == ItemStatus.Closed ? i.State.IsClosed : !i.State.IsClosed));
 
         if (source.HasValue)
         {
@@ -63,7 +66,7 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
         {
             query = status switch
             {
-                ItemStatus.Unread => query.Where(i => i.State.IsUnread),
+                ItemStatus.ToDo => query.Where(i => !i.State.IsDone),
                 ItemStatus.Saved => query.Where(i => i.State.IsSaved),
                 ItemStatus.Done => query.Where(i => i.State.IsDone),
                 ItemStatus.Pinned => query.Where(i => i.State.IsPinned),
@@ -99,6 +102,33 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
         return item;
     }
 
+    public Task<List<InboxItem>> GetExistingItemsAsync(
+        long inboxId,
+        ItemSource source,
+        ItemType type,
+        IReadOnlyCollection<string> repositories,
+        IReadOnlyCollection<string> externalIds)
+    {
+        return Set
+            .Include(i => i.State)
+            .Where(i => i.InboxId == inboxId
+                && i.Source == source
+                && i.Type == type
+                && i.Repository != null && repositories.Contains(i.Repository)
+                && i.ExternalId != null && externalIds.Contains(i.ExternalId))
+            .ToListAsync();
+    }
+
+    public async Task AddRangeAsync(IEnumerable<InboxItem> items)
+    {
+        await Set.AddRangeAsync(items);
+    }
+
+    public Task SaveChangesAsync()
+    {
+        return Context.SaveChangesAsync();
+    }
+
     /// <summary>Batches the "does this item have a note attached" lookup into a single query for the
     /// whole page/item set, instead of a per-item existence check (N+1). An item can have at most one
     /// attached note (enforced in NotesService), so a Contains-based set lookup is enough.</summary>
@@ -120,5 +150,35 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
         {
             item.HasNote = idsWithNotes.Contains(item.Id);
         }
+    }
+
+    public async Task DeleteBySourceAsync(long userId, ItemSource source)
+    {
+        var targetIds = await Set
+            .Where(i => i.InboxId == userId && i.Source == source)
+            .Select(i => i.Id)
+            .ToListAsync();
+
+        if (targetIds.Count == 0)
+        {
+            return;
+        }
+
+        // A note attached to one of these items isn't meaningful once its target is gone, so it must
+        // be deleted too
+        var attachedNoteEnvelopeIds = await dbContext.Notes
+            .Where(note => note.AttachedToInboxItemId != null && targetIds.Contains(note.AttachedToInboxItemId.Value))
+            .Select(note => note.InboxItemId)
+            .ToListAsync();
+
+        var idsToDelete = attachedNoteEnvelopeIds.Count == 0
+            ? targetIds
+            : targetIds.Union(attachedNoteEnvelopeIds).ToList();
+
+        // Single bulk DELETE for both the target items and any attached notes' envelopes — their
+        // InboxItemState rows cascade-delete automatically via the existing FK configuration.
+        await Set
+            .Where(i => idsToDelete.Contains(i.Id))
+            .ExecuteDeleteAsync();
     }
 }
