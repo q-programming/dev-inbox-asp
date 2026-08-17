@@ -10,6 +10,7 @@ using NSubstitute.ExceptionExtensions;
 using DomainInboxReason = DevInbox.Web.Features.Inbox.Domain.InboxReason;
 using DomainItemSource = DevInbox.Web.Features.Inbox.Domain.ItemSource;
 using DomainItemType = DevInbox.Web.Features.Inbox.Domain.ItemType;
+using DomainIntegrationStatus = DevInbox.Web.Features.Sync.Domain.IntegrationStatus;
 
 namespace DevInbox.Web.Tests.Features.GitHub;
 
@@ -129,7 +130,7 @@ public class GitHubServiceTests
 
         await _service.SyncUserPRAsync(1, updatedSince: null);
 
-        Assert.Equal(GitHubIntegrationStatus.Invalid, profile.Status);
+        Assert.Equal(DomainIntegrationStatus.Invalid, profile.Status);
         await _profileRepository.Received(1).UpdateAsync(profile);
     }
 

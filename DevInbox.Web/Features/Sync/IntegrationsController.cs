@@ -15,7 +15,12 @@ public class IntegrationsController(
     IUserService userService,
     IPublisher publisher) : IIntegrationsBaseController, IComponent
 {
-    public async Task<IntegrationDto> ConnectGithubPatAsync(ConnectGithubPatRequest body)
+    public Task<IntegrationDto> ConnectAdoPatAsync(ConnectPatRequest body)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task<IntegrationDto> ConnectGithubPatAsync(ConnectPatRequest body)
     {
         var user = await userService.GetCurrentUserAsync();
         var integration = await gitHubIntegrationService.ConnectPatAsync(user.Id, body.Token, body.ExpiresAt);
@@ -23,6 +28,11 @@ public class IntegrationsController(
         // full (open-PRs) sync rather than an incremental one that would find nothing new.
         await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email, ForceFullSync: true));
         return integration;
+    }
+
+    public Task DisconnectAdoAsync()
+    {
+        throw new NotImplementedException();
     }
 
     public async Task DisconnectGithubAsync()

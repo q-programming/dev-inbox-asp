@@ -154,7 +154,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConnectGithubPatRequest"
+              $ref: "#/components/schemas/ConnectPatRequest"
       responses:
         "200":
           description: GitHub integration connected
@@ -166,6 +166,30 @@ paths:
           description: Invalid or unreachable PAT
         "401":
           description: No authenticated user
+  /integrations/ado/pat:
+    post:
+      operationId: connectAdoPat
+      security:
+        - cookieAuth: []
+      tags: [integrations]
+      summary: Connect (or reconnect) Azure Devops using a Personal Access Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectPatRequest"
+      responses:
+        "200":
+          description: Azure Devops integration connected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationDto"
+        "400":
+          description: Invalid or unreachable PAT
+        "401":
+          description: No authenticated user          
 
   /integrations/github:
     delete:
@@ -181,6 +205,20 @@ paths:
           description: No authenticated user
         "404":
           description: No GitHub integration to disconnect
+  /integrations/ado:
+    delete:
+      operationId: disconnectAdo
+      security:
+        - cookieAuth: []
+      tags: [integrations]
+      summary: Disconnect the Azure Devops integration for the current user
+      responses:
+        "204":
+          description: Azure Devops integration disconnected
+        "401":
+          description: No authenticated user
+        "404":
+          description: No Azure Devops integration to disconnect          
 
   # ── Settings ─────────────────────────────────────────────────
   /settings:
@@ -580,24 +618,30 @@ components:
           $ref: "#/components/schemas/IntegrationStatus"
         type:
           $ref: "#/components/schemas/IntegrationType"
+        authMethod:
+          $ref: "#/components/schemas/IntegrationType"       
 
     IntegrationType:
       type: string
       enum: [Github, Ado]
+    
+    IntegrationAuthMethod:
+      type: string  
+      enum: [Pat, OAuthApp]
 
     IntegrationStatus:
       type: string
       default: INACTIVE
       enum: [ACTIVE, EXPIRED, INACTIVE]
 
-    ConnectGithubPatRequest:
+    ConnectPatRequest:
       type: object
       additionalProperties: false
       required: [token]
       properties:
         token:
           type: string
-          description: GitHub Personal Access Token (classic or fine-grained).
+          description: Personal Access Token (classic or fine-grained).
         expiresAt:
           type: string
           format: date-time

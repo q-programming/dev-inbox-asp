@@ -40,7 +40,7 @@ public class GitHubIntegrationService(
 
         var existing = await profileRepository.GetByUserIdAsync(userId);
         var gitHubProfile = existing ?? new GitHubProfile { UserId = userId };
-        UpdateProfile(gitHubProfile, profile, token, GitHubAuthMethod.Pat, expiresAt);
+        UpdateProfile(gitHubProfile, profile, token, Sync.Domain.IntegrationAuthMethod.Pat, expiresAt);
 
         if (existing is null)
         {
@@ -62,13 +62,13 @@ public class GitHubIntegrationService(
     public GitHubProfile CreateOAuthProfile(GitHubUserProfileDTO profile, string accessToken)
     {
         var gitHubProfile = new GitHubProfile();
-        UpdateProfile(gitHubProfile, profile, accessToken, GitHubAuthMethod.OAuthApp, expiresAt: null);
+        UpdateProfile(gitHubProfile, profile, accessToken, Sync.Domain.IntegrationAuthMethod.OAuthApp, expiresAt: null);
         return gitHubProfile;
     }
 
     public void ApplyOAuthRefresh(GitHubProfile existingProfile, GitHubUserProfileDTO profile, string accessToken)
     {
-        UpdateProfile(existingProfile, profile, accessToken, GitHubAuthMethod.OAuthApp, expiresAt: null);
+        UpdateProfile(existingProfile, profile, accessToken, Sync.Domain.IntegrationAuthMethod.OAuthApp, expiresAt: null);
     }
 
     /// <summary>
@@ -79,7 +79,7 @@ public class GitHubIntegrationService(
         GitHubProfile gitHubProfile,
         GitHubUserProfileDTO profile,
         string accessToken,
-        GitHubAuthMethod authMethod,
+        Sync.Domain.IntegrationAuthMethod authMethod,
         DateTimeOffset? expiresAt)
     {
         gitHubProfile.GitHubUserId = profile.Id;
@@ -88,6 +88,6 @@ public class GitHubIntegrationService(
         gitHubProfile.AccessToken = accessToken;
         gitHubProfile.AuthMethod = authMethod;
         gitHubProfile.TokenExpiresAt = expiresAt;
-        gitHubProfile.Status = GitHubIntegrationStatus.Active;
+        gitHubProfile.Status = Sync.Domain.IntegrationStatus.Active;
     }
 }
