@@ -1,3 +1,5 @@
+using DevInbox.Web.Features.ADO.Domain;
+using DevInbox.Web.Features.ADO.Mapper;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.GitHub.Mapper;
 using DevInbox.Web.Features.Identity.OAuth;
@@ -15,10 +17,12 @@ public class UserController(
     IJwtTokenService jwtTokenService,
     IHttpContextAccessor httpContextAccessor,
     IGitHubOAuthService githubAuthService,
-    IGitHubProfileRepository gitHubProfileRepository) : IAuthBaseController, IComponent
+    IGitHubProfileRepository gitHubProfileRepository,
+    IAdoProfileRepository adoProfileRepository) : IAuthBaseController, IComponent
 {
     private static readonly UserMapper _mapper = new();
     private static readonly GitHubIntegrationMapper _integrationMapper = new();
+    private static readonly AdoIntegrationMapper _adoIntegrationMapper = new();
 
     /// <summary>Registers a new user and returns the created profile.</summary>
     public async Task<UserDto> RegisterAsync(RegisterRequest body)
@@ -76,13 +80,26 @@ public class UserController(
     }
 
     /// <summary>
-    /// Builds the current integrations list for a user. Only GitHub is backed by real data today —
-    /// Azure DevOps will be added the same way once that integration exists.
+    /// Builds the current integrations list for a user — one entry per connected external service
+    /// (GitHub, Azure DevOps), omitting any that aren't connected.
     /// </summary>
     private async Task<List<IntegrationDto>> LoadIntegrationsAsync(long userId)
     {
+        var integrations = new List<IntegrationDto>();
+
         var gitHubProfile = await gitHubProfileRepository.GetByUserIdAsync(userId);
-        return gitHubProfile is null ? [] : [_integrationMapper.ToIntegrationDto(gitHubProfile)];
+        if (gitHubProfile is not null)
+        {
+            integrations.Add(_integrationMapper.ToIntegrationDto(gitHubProfile));
+        }
+
+        var adoProfile = await adoProfileRepository.GetByUserIdAsync(userId);
+        if (adoProfile is not null)
+        {
+            integrations.Add(_adoIntegrationMapper.ToIntegrationDto(adoProfile));
+        }
+
+        return integrations;
     }
 }
 

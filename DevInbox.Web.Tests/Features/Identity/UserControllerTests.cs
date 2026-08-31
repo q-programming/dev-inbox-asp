@@ -1,4 +1,5 @@
 using DevInbox.Web.Common;
+using DevInbox.Web.Features.ADO.Domain;
 using DevInbox.Web.Features.GitHub.Client.DTO;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity;
@@ -20,6 +21,7 @@ public class UserControllerTests
 
     private static User BuildUser() => new()
     {
+        Id = 42,
         FirstName = FirstName,
         LastName = LastName,
         Email = TestEmail,
@@ -34,18 +36,23 @@ public class UserControllerTests
     {
         private readonly IUserService _userService;
         private readonly IJwtTokenService _jwtTokenService;
+        private readonly IGitHubProfileRepository _gitHubProfileRepository;
+        private readonly IAdoProfileRepository _adoProfileRepository;
         private readonly UserController _controller;
 
         public StandardEndpoints()
         {
             _userService = Substitute.For<IUserService>();
             _jwtTokenService = Substitute.For<IJwtTokenService>();
+            _gitHubProfileRepository = Substitute.For<IGitHubProfileRepository>();
+            _adoProfileRepository = Substitute.For<IAdoProfileRepository>();
             _controller = new UserController(
                 _userService,
                 _jwtTokenService,
                 Substitute.For<IHttpContextAccessor>(),
                 Substitute.For<IGitHubOAuthService>(),
-                Substitute.For<IGitHubProfileRepository>());
+                _gitHubProfileRepository,
+                _adoProfileRepository);
         }
 
         [Fact(DisplayName = "LogoutAsync should revoke the JWT token")]
@@ -63,7 +70,7 @@ public class UserControllerTests
 
             await _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = StrongPassword });
 
-            _jwtTokenService.Received(1).IssueAccessToken(Arg.Is<User>(u => u.Email == TestEmail && u.Id == 0));
+            _jwtTokenService.Received(1).IssueAccessToken(Arg.Is<User>(u => u.Email == TestEmail && u.Id == 42));
         }
 
         [Fact(DisplayName = "LoginAsync should return user dto on success")]
@@ -121,6 +128,112 @@ public class UserControllerTests
     }
 
     /// <summary>
+    /// Tests the integration aggregation behavior on the user endpoints.
+    /// </summary>
+    public class IntegrationLoading
+    {
+        private readonly IUserService _userService;
+        private readonly IGitHubProfileRepository _gitHubProfileRepository;
+        private readonly IAdoProfileRepository _adoProfileRepository;
+        private readonly UserController _controller;
+
+        public IntegrationLoading()
+        {
+            _userService = Substitute.For<IUserService>();
+            _gitHubProfileRepository = Substitute.For<IGitHubProfileRepository>();
+            _adoProfileRepository = Substitute.For<IAdoProfileRepository>();
+            _controller = new UserController(
+                _userService,
+                Substitute.For<IJwtTokenService>(),
+                Substitute.For<IHttpContextAccessor>(),
+                Substitute.For<IGitHubOAuthService>(),
+                _gitHubProfileRepository,
+                _adoProfileRepository);
+            _userService.GetCurrentUserAsync().Returns(BuildUser());
+        }
+
+        [Fact(DisplayName = "MeAsync should return no integrations when neither GitHub nor ADO is connected")]
+        public async Task MeAsyncShouldReturnEmptyIntegrationsWhenNothingConnectedAsync()
+        {
+            _gitHubProfileRepository.GetByUserIdAsync(42).Returns((GitHubProfile?)null);
+            _adoProfileRepository.GetByUserIdAsync(42).Returns((AdoProfile?)null);
+
+            var result = await _controller.MeAsync();
+
+            Assert.Empty(result.Integrations);
+        }
+
+        [Fact(DisplayName = "MeAsync should return only the GitHub integration when only GitHub is connected")]
+        public async Task MeAsyncShouldReturnOnlyGitHubIntegrationAsync()
+        {
+            _gitHubProfileRepository.GetByUserIdAsync(42).Returns(new GitHubProfile
+            {
+                Id = 1,
+                GitHubUserId = 100,
+                GitHubLogin = "octocat",
+                AccessToken = "gh-token",
+                AuthMethod = DevInbox.Web.Features.Sync.Domain.IntegrationAuthMethod.Pat,
+                Status = DevInbox.Web.Features.Sync.Domain.IntegrationStatus.Active
+            });
+            _adoProfileRepository.GetByUserIdAsync(42).Returns((AdoProfile?)null);
+
+            var result = await _controller.MeAsync();
+
+            Assert.Single(result.Integrations);
+            Assert.Equal(IntegrationType.Github, result.Integrations[0].Type);
+        }
+
+        [Fact(DisplayName = "MeAsync should return only the ADO integration when only ADO is connected")]
+        public async Task MeAsyncShouldReturnOnlyAdoIntegrationAsync()
+        {
+            _gitHubProfileRepository.GetByUserIdAsync(42).Returns((GitHubProfile?)null);
+            _adoProfileRepository.GetByUserIdAsync(42).Returns(new AdoProfile
+            {
+                Id = 2,
+                AdoUserId = "ado-user-1",
+                AdoLogin = "Jane Doe",
+                AccessToken = "ado-token",
+                AuthMethod = DevInbox.Web.Features.Sync.Domain.IntegrationAuthMethod.Pat,
+                Status = DevInbox.Web.Features.Sync.Domain.IntegrationStatus.Active
+            });
+
+            var result = await _controller.MeAsync();
+
+            Assert.Single(result.Integrations);
+            Assert.Equal(IntegrationType.Ado, result.Integrations[0].Type);
+        }
+
+        [Fact(DisplayName = "MeAsync should return both GitHub and ADO integrations when both are connected")]
+        public async Task MeAsyncShouldReturnBothIntegrationsAsync()
+        {
+            _gitHubProfileRepository.GetByUserIdAsync(42).Returns(new GitHubProfile
+            {
+                Id = 1,
+                GitHubUserId = 100,
+                GitHubLogin = "octocat",
+                AccessToken = "gh-token",
+                AuthMethod = DevInbox.Web.Features.Sync.Domain.IntegrationAuthMethod.Pat,
+                Status = DevInbox.Web.Features.Sync.Domain.IntegrationStatus.Active
+            });
+            _adoProfileRepository.GetByUserIdAsync(42).Returns(new AdoProfile
+            {
+                Id = 2,
+                AdoUserId = "ado-user-1",
+                AdoLogin = "Jane Doe",
+                AccessToken = "ado-token",
+                AuthMethod = DevInbox.Web.Features.Sync.Domain.IntegrationAuthMethod.Pat,
+                Status = DevInbox.Web.Features.Sync.Domain.IntegrationStatus.Active
+            });
+
+            var result = await _controller.MeAsync();
+
+            Assert.Equal(2, result.Integrations.Count);
+            Assert.Contains(result.Integrations, i => i.Type == IntegrationType.Github);
+            Assert.Contains(result.Integrations, i => i.Type == IntegrationType.Ado);
+        }
+    }
+
+    /// <summary>
     /// Tests for GitHub OAuth endpoints that require a real HttpContext to assert on redirect responses.
     /// </summary>
     public class GitHubOAuthEndpoints
@@ -148,7 +261,12 @@ public class UserControllerTests
             _jwtTokenService = Substitute.For<IJwtTokenService>();
 
             _controller = new UserController(
-                _userService, _jwtTokenService, accessor, _githubAuthService, Substitute.For<IGitHubProfileRepository>());
+                _userService,
+                _jwtTokenService,
+                accessor,
+                _githubAuthService,
+                Substitute.For<IGitHubProfileRepository>(),
+                Substitute.For<IAdoProfileRepository>());
         }
 
         [Fact(DisplayName = "GithubAuthAsync should redirect to the authorization URL returned by the service")]
@@ -173,7 +291,7 @@ public class UserControllerTests
 
             await _controller.GithubAuthCallbackAsync(GithubCode, GithubState);
 
-            _jwtTokenService.Received(1).IssueAccessToken(Arg.Is<User>(u => u.Email == TestEmail && u.Id == 0));
+            _jwtTokenService.Received(1).IssueAccessToken(Arg.Is<User>(u => u.Email == TestEmail && u.Id == 42));
             Assert.Equal(302, _httpContext.Response.StatusCode);
             Assert.Equal(RedirectUrl, _httpContext.Response.Headers.Location.ToString());
         }

@@ -22,11 +22,11 @@ const richContentSx = {
   wordBreak: 'break-word',
   fontSize: '0.875rem',
   lineHeight: 1.6,
-  '& p': { m: 0, mb: 1, '&:last-child': { mb: 0 } },
+  '& p': { margin: 0, marginBottom: 1, '&:last-child': { marginBottom: 0 } },
   '& ul, & ol': { my: 1, pl: 3 },
   '& pre': {
     bgcolor: 'action.hover',
-    p: 1.5,
+    padding: 1.5,
     borderRadius: 1,
     overflow: 'auto',
   },
@@ -37,9 +37,9 @@ const richContentSx = {
     fontFamily: 'monospace',
     fontSize: '0.85em',
   },
-  '& pre code': { bgcolor: 'transparent', p: 0 },
+  '& pre code': { bgcolor: 'transparent', padding: 0 },
   '& blockquote': {
-    m: 0,
+    margin: 0,
     pl: 1.5,
     borderLeft: 3,
     borderColor: 'divider',
@@ -54,6 +54,7 @@ const MarkdownContent = ({ children }: { children: string }) => (
   <ReactMarkdown
     remarkPlugins={[remarkGfm]}
     components={{
+      // eslint-disable-next-line id-length -- react-markdown's `components` API keys map to HTML tag names (here, the anchor tag).
       a: ({ href, children: linkChildren }) => (
         <Link href={href} target="_blank" rel="noopener noreferrer">
           {linkChildren}

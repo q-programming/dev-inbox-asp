@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
@@ -8,7 +8,10 @@ import { createQueryClient } from '@shared/api/queryClient';
 import { authKeys } from '@shared/hooks/useAuthQuery.ts';
 import { inboxKeys } from '@feature/inbox/hooks/useInboxQuery';
 import { IntegrationStatus, IntegrationType } from '@api';
-import { useConnectGithubPatMutation, useDisconnectGithubMutation } from './useIntegrationsMutation';
+import {
+  useConnectIntegrationPatMutation,
+  useDisconnectIntegrationMutation,
+} from './useIntegrationsMutation';
 
 function makeWrapper() {
   const client = createQueryClient();
@@ -20,35 +23,63 @@ function makeWrapper() {
   };
 }
 
-// Store/UI sync (badge, identity.integrations) happens via useAuthBootstrap's /me
-// refetch — mounted only in AuthGuard — once authKeys.me is invalidated below.
-// These hook tests verify only what the mutation itself owns: the request and
-// the cache invalidation it triggers.
-describe('useConnectGithubPatMutation', () => {
-  it('invalidates the auth.me and inbox queries after a successful connect', async () => {
-    server.use(
-      http.post('/api/integrations/github/pat', () =>
-        HttpResponse.json({ id: 5, status: IntegrationStatus.ACTIVE, type: IntegrationType.Github }),
-      ),
-    );
+beforeEach(() => {
+  vi.restoreAllMocks();
+});
 
-    const { client, Wrapper } = makeWrapper();
-    const invalidateQueriesSpy = vi.spyOn(client, 'invalidateQueries');
-    const { result } = renderHook(() => useConnectGithubPatMutation(), { wrapper: Wrapper });
+describe('useConnectIntegrationPatMutation', () => {
+  it.each([
+    {
+      integration: IntegrationType.Github,
+      path: '/api/integrations/github/pat',
+      otherPath: '/api/integrations/ado/pat',
+    },
+    {
+      integration: IntegrationType.Ado,
+      path: '/api/integrations/ado/pat',
+      otherPath: '/api/integrations/github/pat',
+    },
+  ])(
+    'should post to $path and invalidate auth + inbox queries for $integration',
+    async ({ integration, path, otherPath }) => {
+      let matchedCalls = 0;
+      let otherCalls = 0;
 
-    result.current.mutate({ token: 'ghp_abc' });
+      server.use(
+        http.post(path, () => {
+          matchedCalls += 1;
+          return HttpResponse.json({ id: 5, status: IntegrationStatus.ACTIVE, type: integration });
+        }),
+        http.post(otherPath, () => {
+          otherCalls += 1;
+          return HttpResponse.json({ id: 99, status: IntegrationStatus.ACTIVE, type: integration });
+        }),
+      );
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: authKeys.me });
-    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.all });
-  });
+      const { client, Wrapper } = makeWrapper();
+      const invalidateQueriesSpy = vi.spyOn(client, 'invalidateQueries');
+      const { result } = renderHook(() => useConnectIntegrationPatMutation(integration), {
+        wrapper: Wrapper,
+      });
 
-  it('does not invalidate any queries when the PAT is rejected', async () => {
+      result.current.mutate({ token: 'token-value' });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(matchedCalls).toBe(1);
+      expect(otherCalls).toBe(0);
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: authKeys.me });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.all });
+    },
+  );
+
+  it('should not invalidate any queries when the PAT is rejected', async () => {
     server.use(http.post('/api/integrations/github/pat', () => HttpResponse.json({}, { status: 400 })));
 
     const { client, Wrapper } = makeWrapper();
     const invalidateQueriesSpy = vi.spyOn(client, 'invalidateQueries');
-    const { result } = renderHook(() => useConnectGithubPatMutation(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useConnectIntegrationPatMutation(IntegrationType.Github), {
+      wrapper: Wrapper,
+    });
 
     result.current.mutate({ token: 'ghp_bad' });
 
@@ -57,27 +88,59 @@ describe('useConnectGithubPatMutation', () => {
   });
 });
 
-describe('useDisconnectGithubMutation', () => {
-  it('invalidates the auth.me and inbox queries after a successful disconnect', async () => {
-    server.use(http.delete('/api/integrations/github', () => new HttpResponse(null, { status: 204 })));
+describe('useDisconnectIntegrationMutation', () => {
+  it.each([
+    {
+      integration: IntegrationType.Github,
+      path: '/api/integrations/github',
+      otherPath: '/api/integrations/ado',
+    },
+    {
+      integration: IntegrationType.Ado,
+      path: '/api/integrations/ado',
+      otherPath: '/api/integrations/github',
+    },
+  ])(
+    'should delete $path and invalidate auth + inbox queries for $integration',
+    async ({ integration, path, otherPath }) => {
+      let matchedCalls = 0;
+      let otherCalls = 0;
 
-    const { client, Wrapper } = makeWrapper();
-    const invalidateQueriesSpy = vi.spyOn(client, 'invalidateQueries');
-    const { result } = renderHook(() => useDisconnectGithubMutation(), { wrapper: Wrapper });
+      server.use(
+        http.delete(path, () => {
+          matchedCalls += 1;
+          return new HttpResponse(null, { status: 204 });
+        }),
+        http.delete(otherPath, () => {
+          otherCalls += 1;
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
 
-    result.current.mutate();
+      const { client, Wrapper } = makeWrapper();
+      const invalidateQueriesSpy = vi.spyOn(client, 'invalidateQueries');
+      const { result } = renderHook(() => useDisconnectIntegrationMutation(integration), {
+        wrapper: Wrapper,
+      });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: authKeys.me });
-    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.all });
-  });
+      result.current.mutate();
 
-  it('does not invalidate any queries when disconnect fails', async () => {
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(matchedCalls).toBe(1);
+      expect(otherCalls).toBe(0);
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: authKeys.me });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.all });
+    },
+  );
+
+  it('should not invalidate any queries when disconnect fails', async () => {
     server.use(http.delete('/api/integrations/github', () => HttpResponse.json({}, { status: 500 })));
 
     const { client, Wrapper } = makeWrapper();
     const invalidateQueriesSpy = vi.spyOn(client, 'invalidateQueries');
-    const { result } = renderHook(() => useDisconnectGithubMutation(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useDisconnectIntegrationMutation(IntegrationType.Github), {
+      wrapper: Wrapper,
+    });
 
     result.current.mutate();
 

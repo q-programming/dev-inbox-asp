@@ -17,10 +17,10 @@ public class GithubOptions
     /// leading slash. Without this, "https://host/github" + "user" resolves to "https://host/user",
     /// silently discarding "/github".
     /// </summary>
-    public string BaseAddress { get; set; } = "https://api.github.com";
+    public string BaseUrl { get; set; } = "https://api.github.com";
 
-    /// <summary><see cref="BaseAddress"/> guaranteed to end with "/" so relative paths append correctly.</summary>
-    public string NormalizedBaseAddress => BaseAddress.EndsWith('/') ? BaseAddress : $"{BaseAddress}/";
+    /// <summary><see cref="BaseUrl"/> guaranteed to end with "/" so relative paths append correctly.</summary>
+    public string NormalizedBaseAddress => BaseUrl.EndsWith('/') ? BaseUrl : $"{BaseUrl}/";
 
     /// <summary>REST endpoint for <c>GitHubClient.GetCurrentUserAsync</c> — combined via <see cref="Uri"/>, not string concatenation, to avoid duplicate slashes.</summary>
     public string UserUri => new Uri(new Uri(NormalizedBaseAddress), "user").ToString();

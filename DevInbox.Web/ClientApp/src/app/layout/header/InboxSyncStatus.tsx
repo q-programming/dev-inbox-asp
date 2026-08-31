@@ -79,6 +79,7 @@ export const InboxSyncStatus = () => {
       <IconButton
         size="small"
         aria-label="sync"
+        data-testid="inbox-sync-button"
         disabled={isSyncRunning}
         onClick={() => {
           addAlert({

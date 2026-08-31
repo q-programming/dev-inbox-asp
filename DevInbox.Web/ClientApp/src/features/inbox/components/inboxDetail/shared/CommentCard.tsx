@@ -36,7 +36,7 @@ const CommentCard = ({
   authorTestId,
   bodyTestId,
 }: ICommentCard) => (
-  <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover', minWidth: 0, mt: 1 }}>
+  <Paper variant="outlined" sx={{ padding: 2, bgcolor: 'action.hover', minWidth: 0, mt: 1 }}>
     <Stack
       direction="row"
       sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}

@@ -13,8 +13,8 @@ import IntegrationIcon from '@shared/components/integrationIcon/IntegrationIcon.
 import { IntegrationStatus, IntegrationType } from '@api';
 import useUserStore from '@shared/store/user.store';
 import {
-  useConnectGithubPatMutation,
-  useDisconnectGithubMutation,
+  useConnectIntegrationPatMutation,
+  useDisconnectIntegrationMutation,
 } from '@feature/integrations/hooks/useIntegrationsMutation';
 import ConfirmModal from '@shared/components/confirmModal/ConfirmModal';
 
@@ -40,8 +40,8 @@ const GithubIntegrationCard = memo(() => {
   const [token, setToken] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [isDisconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
-  const connectPat = useConnectGithubPatMutation();
-  const disconnect = useDisconnectGithubMutation();
+  const connectPat = useConnectIntegrationPatMutation(IntegrationType.Github);
+  const disconnect = useDisconnectIntegrationMutation(IntegrationType.Github);
 
   const handleConnectPat = () => {
     if (!token.trim()) {

@@ -1,0 +1,14 @@
+{
+  "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+  "displayName": "John Doe",
+  "publicAlias": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+  "emailAddress": "john@doe.com",
+  "coreRevision": 5,
+  "timeStamp": "2026-01-15T09:30:00.000Z",
+  "revision": 5,
+  "avatar": {
+    "value": "https://dev.azure.com/_apis/GraphProfile/MemberAvatars/aad.ZjZhNGQyZDEtOWI1Yy00ZjJhLThlMWQtM2M3YjJhMWU5ZjAw",
+    "size": "medium"
+  },
+  "descriptor": "aad.ZjZhNGQyZDEtOWI1Yy00ZjJhLThlMWQtM2M3YjJhMWU5ZjAw"
+}

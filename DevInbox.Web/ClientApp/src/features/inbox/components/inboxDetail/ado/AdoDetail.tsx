@@ -68,7 +68,7 @@ const AdoDetail = ({ details }: IAdoDetail) => {
           )}
         </Stack>
 
-        <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
+        <Paper variant="outlined" sx={{ padding: 2, minWidth: 0 }}>
           {(!!workItem.state || !!workItem.area) && (
             <Box
               sx={{

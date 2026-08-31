@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using DevInbox.Web.Features.ADO.Domain;
 using DevInbox.Web.Features.GitHub.Domain;
 
 namespace DevInbox.Web.Features.Identity.Domain;
@@ -14,6 +15,7 @@ public class User
     public string? Password { get; set; }
     public AccountType? Type { get; set; } = AccountType.REGULAR;
     public GitHubProfile? GitHubProfile { get; set; }
+    public AdoProfile? AdoProfile { get; set; }
     public Inbox.Domain.Inbox Inbox { get; set; } = null!;
 
     public enum AccountType

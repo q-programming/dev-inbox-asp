@@ -1,4 +1,5 @@
 using GitHubMockServer;
+using GitHubMockServer.Ado;
 using GitHubMockServer.GitHub;
 using Serilog;
 using WireMock.Server;
@@ -25,8 +26,9 @@ var gitHubFixturesDir = Path.Combine(AppContext.BaseDirectory, "GitHub", "Fixtur
 GitHubMappings.Register(server, gitHubFixturesDir);
 Log.Information("GitHub GraphQL mocked at /github/graphql (fixtures: {FixturesDir})", gitHubFixturesDir);
 
-// ADO / Jira / other services: register their mappings here as they're added, e.g.
-//   AdoMappings.Register(server, Path.Combine(AppContext.BaseDirectory, "Ado", "Fixtures"));
+var adoFixturesDir = Path.Combine(AppContext.BaseDirectory, "Ado", "Fixtures");
+AdoMappings.Register(server, adoFixturesDir);
+Log.Information("ADO profile mocked at /ado/_apis/profile/profiles/me (fixtures: {FixturesDir})", adoFixturesDir);
 
 Log.Information("Press Ctrl+C to stop.");
 var exit = new ManualResetEventSlim(false);

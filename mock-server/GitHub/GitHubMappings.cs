@@ -21,7 +21,7 @@ internal static class GitHubMappings
     /// REST endpoint behind <c>GitHubClient.GetCurrentUserAsync</c>, which requests the relative
     /// path "user" against the "github" HttpClient. That client's BaseAddress is
     /// <c>GithubOptions.NormalizedBaseAddress</c> (guaranteed to end with "/"), so "user" correctly
-    /// appends under whatever path prefix "GitHub:BaseAddress" configures — "/github/user" here.
+    /// appends under whatever path prefix "GitHub:BaseUrl" configures — "/github/user" here.
     /// </summary>
     private const string CurrentUserPath = "/github/user";
 

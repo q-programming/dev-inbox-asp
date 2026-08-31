@@ -33,9 +33,9 @@ Mocks the two GraphQL operations used by `GitHubClient`, plus the REST `GET /use
 GraphQL is served at **`POST /github/graphql`**. The `/user` mock is registered at the server
 **root** (`GET /user`, not `/github/user`) — see the comment on `GitHubMappings.CurrentUserPath`:
 `GitHubClient` requests the absolute-path relative URI `"/user"`, and .NET's `HttpClient` combines
-an absolute-path relative URI with `BaseAddress` by discarding the base's path entirely (RFC 3986),
+an absolute-path relative URI with `BaseUrl` by discarding the base's path entirely (RFC 3986),
 so the request always lands on `{scheme}://{host}:{port}/user` regardless of any path segment in
-`GitHub:BaseAddress`. This is inherent `HttpClient` behavior (and matches real GitHub too, since
+`GitHub:BaseUrl`. This is inherent `HttpClient` behavior (and matches real GitHub too, since
 `https://api.github.com` has no path to lose) — not something to work around in `GitHubClient`.
 
 **Not mocked:** OAuth login — you still need a real (or otherwise stubbed) login flow to reach an

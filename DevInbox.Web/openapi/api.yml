@@ -619,7 +619,7 @@ components:
         type:
           $ref: "#/components/schemas/IntegrationType"
         authMethod:
-          $ref: "#/components/schemas/IntegrationType"       
+          $ref: "#/components/schemas/IntegrationAuthMethod"       
 
     IntegrationType:
       type: string

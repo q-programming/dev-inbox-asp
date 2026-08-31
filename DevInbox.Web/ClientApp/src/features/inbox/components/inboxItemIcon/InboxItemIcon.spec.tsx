@@ -32,7 +32,7 @@ describe('InboxItemIcon', () => {
     it.each([
       ['unknown source type', 'Other'],
       ['undefined source type', undefined],
-    ])('does not render an icon for %s', (_, sourceType) => {
+    ])('does not render an icon for %s', (_description, sourceType) => {
       renderWithProviders(<InboxItemIcon item={makeItem({ sourceType } as Partial<InboxItemSummary>)} />);
 
       expect(screen.getByTestId('inbox-item-icon')).toBeTruthy();

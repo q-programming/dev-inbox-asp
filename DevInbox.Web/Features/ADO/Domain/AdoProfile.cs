@@ -3,10 +3,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Sync.Domain;
 
-namespace DevInbox.Web.Features.GitHub.Domain;
+namespace DevInbox.Web.Features.ADO.Domain;
 
-[Table("gh_profile")]
-public class GitHubProfile
+[Table("ado_profile")]
+public class AdoProfile
 {
     public long Id { get; set; }
 
@@ -15,18 +15,19 @@ public class GitHubProfile
     [ForeignKey(nameof(UserId))]
     public User User { get; set; } = null!;
 
-    public long GitHubUserId { get; set; }
+    /// <summary>Azure DevOps profile GUID (string, not numeric — ADO identifies profiles by GUID, unlike GitHub's numeric user id).</summary>
+    public string AdoUserId { get; set; } = null!;
 
-    public string GitHubLogin { get; set; } = null!;
+    public string AdoLogin { get; set; } = null!;
 
     public string? AvatarUrl { get; set; }
 
-    [Column("github_token")]
+    [Column("ado_token")]
     [MaxLength(512)]
     public string? AccessToken { get; set; }
 
     /// <summary>How the stored <see cref="AccessToken"/> was obtained — determines refresh behavior.</summary>
-    public IntegrationAuthMethod AuthMethod { get; set; } = IntegrationAuthMethod.OAuthApp;
+    public IntegrationAuthMethod AuthMethod { get; set; } = IntegrationAuthMethod.Pat;
 
     /// <summary>
     /// Expiry date for a PAT-based token, as reported by the user at connect time. Null for
@@ -36,8 +37,8 @@ public class GitHubProfile
 
     /// <summary>
     /// Health of the stored token. Flipped to <see cref="IntegrationStatus.Invalid"/> when a
-    /// GitHub API call fails with 401 — the user must reconnect. Not the same as "expired": expiry is
-    /// a known future date (PAT only); invalid means GitHub has already rejected the token.
+    /// Ado API call fails with 401 — the user must reconnect. Not the same as "expired": expiry is
+    /// a known future date (PAT only); invalid means Ado  has already rejected the token.
     /// </summary>
     public IntegrationStatus Status { get; set; } = IntegrationStatus.Active;
 }

@@ -40,6 +40,6 @@ describe('IntegrationsSection', () => {
 
   it('renders the Azure DevOps integration card', () => {
     renderWithProviders(<IntegrationsSection />);
-    expect(screen.getByTestId('ado-coming-soon-badge')).toBeTruthy();
+    expect(screen.getByTestId('ado-pat-connect-btn')).toBeTruthy();
   });
 });

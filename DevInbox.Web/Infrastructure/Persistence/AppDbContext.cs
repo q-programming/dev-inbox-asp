@@ -1,3 +1,4 @@
+using DevInbox.Web.Features.ADO.Domain;
 using DevInbox.Web.Features.Audit.Domain;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity.Domain;
@@ -18,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
     public DbSet<InboxItem> InboxItems => Set<InboxItem>();
     public DbSet<InboxItemState> InboxItemStates => Set<InboxItemState>();
     public DbSet<Note> Notes => Set<Note>();
+    public DbSet<AdoProfile> AdoProfiles => Set<AdoProfile>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -40,6 +42,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
             entity.Property(audit => audit.EventType).HasConversion<string>();
         });
         modelBuilder.Entity<GitHubProfile>(entity =>
+        {
+            entity.Property(profile => profile.AccessToken).HasConversion(encryptedString);
+            entity.Property(profile => profile.AuthMethod).HasConversion<string>();
+            entity.Property(profile => profile.Status).HasConversion<string>();
+        });
+        modelBuilder.Entity<AdoProfile>(entity =>
         {
             entity.Property(profile => profile.AccessToken).HasConversion(encryptedString);
             entity.Property(profile => profile.AuthMethod).HasConversion<string>();
