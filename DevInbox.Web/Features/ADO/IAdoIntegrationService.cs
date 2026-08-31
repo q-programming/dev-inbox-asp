@@ -10,6 +10,8 @@ public interface IAdoIntegrationService
     /// <summary>
     /// Connects (or reconnects) Azure DevOps for the current user using a Personal Access Token.
     /// Validates the token against Azure DevOps before storing it. Persists the profile itself.
+    /// The set of usable organizations/projects is resolved lazily by the sync that follows
+    /// connecting, not by this call.
     /// </summary>
     Task<IntegrationDto> ConnectPatAsync(long userId, string token, DateTimeOffset? expiresAt, CancellationToken ct = default);
 

@@ -206,6 +206,82 @@ describe('AdoIntegrationCard', () => {
       resolveRequest?.();
       await waitFor(() => expect(screen.getByTestId('ado-disconnect-btn')).toBeEnabled());
     });
+
+    it('lists the discovered organizations', async () => {
+      server.use(
+        http.get('/api/integrations/ado/organizations', () =>
+          HttpResponse.json([{ name: 'contoso' }, { name: 'fabrikam' }]),
+        ),
+      );
+      renderWithProviders(<AdoIntegrationCard />);
+
+      await waitFor(() => expect(screen.getAllByTestId('ado-organization-chip')).toHaveLength(2));
+      expect(screen.getByText('contoso')).toBeTruthy();
+      expect(screen.getByText('fabrikam')).toBeTruthy();
+    });
+
+    it('shows a message when no organizations are found yet', async () => {
+      server.use(http.get('/api/integrations/ado/organizations', () => HttpResponse.json([])));
+      renderWithProviders(<AdoIntegrationCard />);
+
+      await waitFor(() =>
+        expect(
+          screen.getByText('No organizations found yet — add one below, or trigger a sync to auto-discover them.'),
+        ).toBeTruthy(),
+      );
+    });
+
+    it('adds an organization and shows it in the list on success', async () => {
+      server.use(
+        http.get('/api/integrations/ado/organizations', () => HttpResponse.json([{ name: 'contoso' }])),
+        http.post('/api/integrations/ado/organizations', async ({ request }) => {
+          const body = (await request.json()) as { organizationName?: string };
+          return HttpResponse.json([{ name: 'contoso' }, { name: body.organizationName }]);
+        }),
+      );
+      const user = userEvent.setup();
+      renderWithProviders(<AdoIntegrationCard />);
+
+      await waitFor(() => expect(screen.getAllByTestId('ado-organization-chip')).toHaveLength(1));
+
+      await user.type(screen.getByTestId('ado-add-organization-input').querySelector('input')!, 'fabrikam');
+      await user.click(screen.getByTestId('ado-add-organization-btn'));
+
+      await waitFor(() => expect(screen.getAllByTestId('ado-organization-chip')).toHaveLength(2));
+      expect(screen.getByText('fabrikam')).toBeTruthy();
+      expect(screen.getByTestId('ado-add-organization-input').querySelector('input')).toHaveValue('');
+    });
+
+    it('shows an error message when adding an organization fails', async () => {
+      server.use(
+        http.get('/api/integrations/ado/organizations', () => HttpResponse.json([])),
+        http.post('/api/integrations/ado/organizations', () => HttpResponse.json({}, { status: 400 })),
+      );
+      const user = userEvent.setup();
+      renderWithProviders(<AdoIntegrationCard />);
+
+      await user.type(screen.getByTestId('ado-add-organization-input').querySelector('input')!, 'unreachable');
+      await user.click(screen.getByTestId('ado-add-organization-btn'));
+
+      await waitFor(() =>
+        expect(
+          useAlertStore
+            .getState()
+            .alerts.some(
+              (alert) =>
+                alert.message ===
+                'Could not access that organization with the connected token — please check the name and try again.',
+            ),
+        ).toBe(true),
+      );
+      expect(screen.getByTestId('ado-add-organization-input').querySelector('input')).toHaveValue('unreachable');
+    });
+
+    it('disables the add button until an organization name is entered', () => {
+      server.use(http.get('/api/integrations/ado/organizations', () => HttpResponse.json([])));
+      renderWithProviders(<AdoIntegrationCard />);
+      expect(screen.getByTestId('ado-add-organization-btn')).toBeDisabled();
+    });
   });
 
   describe('expired token state', () => {

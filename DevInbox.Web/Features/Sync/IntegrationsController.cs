@@ -14,6 +14,7 @@ namespace DevInbox.Web.Features.GitHub;
 public class IntegrationsController(
     IGitHubIntegrationService gitHubIntegrationService,
     IAdoIntegrationService adoIntegrationService,
+    IAdoService adoService,
     IUserService userService,
     IPublisher publisher) : IIntegrationsBaseController, IComponent
 {
@@ -22,9 +23,24 @@ public class IntegrationsController(
         var user = await userService.GetCurrentUserAsync();
         var integration = await adoIntegrationService.ConnectPatAsync(user.Id, body.Token, body.ExpiresAt);
         // Freshly connected — the inbox's last sync checkpoint predates any ADO data, so force a
-        // full sync rather than an incremental one that would find nothing new.
+        // full sync rather than an incremental one that would find nothing new. This also performs
+        // the first organization/project discovery, since none is cached yet.
         await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email, ForceFullSync: true));
         return integration;
+    }
+
+    public async Task<ICollection<AdoOrganizationDto>> GetAdoOrganizationsAsync()
+    {
+        var user = await userService.GetCurrentUserAsync();
+        var organizations = await adoService.GetOrganizationsAsync(user.Id);
+        return organizations.Select(name => new AdoOrganizationDto { Name = name }).ToList();
+    }
+
+    public async Task<ICollection<AdoOrganizationDto>> AddAdoOrganizationAsync(AddAdoOrganizationRequest body)
+    {
+        var user = await userService.GetCurrentUserAsync();
+        var organizations = await adoService.AddOrganizationAsync(user.Id, body.OrganizationName);
+        return organizations.Select(name => new AdoOrganizationDto { Name = name }).ToList();
     }
 
     public async Task<IntegrationDto> ConnectGithubPatAsync(ConnectPatRequest body)

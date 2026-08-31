@@ -39,6 +39,9 @@ public class AdoIntegrationService(
 
         var existing = await profileRepository.GetByUserIdAsync(userId);
         var adoProfile = existing ?? new AdoProfile { UserId = userId };
+        // The usable-organizations/projects caches are intentionally left untouched here —
+        // they're resolved lazily (discovered + probed) by the forced full sync that follows every
+        // connect, rather than duplicating that discovery logic on the connect path itself.
         UpdateProfile(adoProfile, profile, token, Sync.Domain.IntegrationAuthMethod.Pat, expiresAt);
 
         if (existing is null)

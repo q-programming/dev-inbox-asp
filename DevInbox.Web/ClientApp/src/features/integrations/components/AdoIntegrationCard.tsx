@@ -11,6 +11,8 @@ import IntegrationIcon from '@shared/components/integrationIcon/IntegrationIcon.
 import { IntegrationStatus, IntegrationType } from '@api';
 import useUserStore from '@shared/store/user.store';
 import {
+  useAddAdoOrganizationMutation,
+  useAdoOrganizationsQuery,
   useConnectIntegrationPatMutation,
   useDisconnectIntegrationMutation,
 } from '@feature/integrations/hooks/useIntegrationsMutation';
@@ -26,8 +28,11 @@ const AdoIntegrationCard = memo(() => {
   const [token, setToken] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [isDisconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
+  const [newOrganization, setNewOrganization] = useState('');
   const connectPat = useConnectIntegrationPatMutation(IntegrationType.Ado);
   const disconnect = useDisconnectIntegrationMutation(IntegrationType.Ado);
+  const organizationsQuery = useAdoOrganizationsQuery(isConnected);
+  const addOrganization = useAddAdoOrganizationMutation();
 
   const handleConnectPat = () => {
     if (!token.trim()) {
@@ -37,6 +42,13 @@ const AdoIntegrationCard = memo(() => {
       { token: token.trim(), expiresAt: expiresAt ? new Date(expiresAt) : undefined },
       { onSuccess: () => setToken('') },
     );
+  };
+
+  const handleAddOrganization = () => {
+    if (!newOrganization.trim()) {
+      return;
+    }
+    addOrganization.mutate(newOrganization.trim(), { onSuccess: () => setNewOrganization('') });
   };
 
   return (
@@ -119,6 +131,50 @@ const AdoIntegrationCard = memo(() => {
           >
             Connect with token
           </Button>
+        </Stack>
+      )}
+
+      {isConnected && (
+        <Stack spacing={1.5}>
+          <Typography variant="subtitle2">Organizations</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            Automatically discovered from your token, plus any you add manually. Sync fetches work
+            items and pull requests across every project in each of these organizations.
+          </Typography>
+          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }} data-testid="ado-organizations-list">
+            {organizationsQuery.isLoading && (
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Loading organizations…
+              </Typography>
+            )}
+            {organizationsQuery.data?.length === 0 && !organizationsQuery.isLoading && (
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                No organizations found yet — add one below, or trigger a sync to auto-discover them.
+              </Typography>
+            )}
+            {organizationsQuery.data?.map((org) => (
+              <Chip key={org.name} label={org.name} size="small" data-testid="ado-organization-chip" />
+            ))}
+          </Stack>
+          <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
+            <TextField
+              label="Add organization"
+              size="small"
+              value={newOrganization}
+              onChange={(event) => setNewOrganization(event.target.value)}
+              placeholder="e.g. contoso"
+              data-testid="ado-add-organization-input"
+            />
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleAddOrganization}
+              disabled={!newOrganization.trim() || addOrganization.isPending}
+              data-testid="ado-add-organization-btn"
+            >
+              Add
+            </Button>
+          </Stack>
         </Stack>
       )}
 

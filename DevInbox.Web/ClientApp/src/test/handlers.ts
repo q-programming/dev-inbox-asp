@@ -53,4 +53,5 @@ export const handlers = [
     HttpResponse.json({ id: 2, status: 'ACTIVE', type: 'ADO' }),
   ),
   http.delete('/api/integrations/ado', () => new HttpResponse(null, { status: 204 })),
+  http.get('/api/integrations/ado/organizations', () => HttpResponse.json([])),
 ];

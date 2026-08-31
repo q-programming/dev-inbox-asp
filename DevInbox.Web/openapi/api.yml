@@ -190,6 +190,53 @@ paths:
           description: Invalid or unreachable PAT
         "401":
           description: No authenticated user          
+  /integrations/ado/organizations:
+    get:
+      operationId: getAdoOrganizations
+      security:
+        - cookieAuth: []
+      tags: [integrations]
+      summary: List the Azure DevOps organizations currently usable by the connected PAT (auto-discovered and/or manually added)
+      responses:
+        "200":
+          description: Usable Azure DevOps organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdoOrganizationDto"
+        "401":
+          description: No authenticated user
+        "404":
+          description: No Azure Devops integration connected
+    post:
+      operationId: addAdoOrganization
+      security:
+        - cookieAuth: []
+      tags: [integrations]
+      summary: Manually add an Azure DevOps organization, validating that the connected PAT can access it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddAdoOrganizationRequest"
+      responses:
+        "200":
+          description: Usable Azure DevOps organizations, including the newly added one
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdoOrganizationDto"
+        "400":
+          description: The PAT cannot access the given organization
+        "401":
+          description: No authenticated user
+        "404":
+          description: No Azure Devops integration connected
 
   /integrations/github:
     delete:
@@ -647,6 +694,24 @@ components:
           format: date-time
           nullable: true
           description: Optional expiry date for the PAT — used to proactively warn the user before it expires.
+
+    AdoOrganizationDto:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: Azure DevOps organization name (e.g. "contoso" for https://dev.azure.com/contoso).
+
+    AddAdoOrganizationRequest:
+      type: object
+      additionalProperties: false
+      required: [organizationName]
+      properties:
+        organizationName:
+          type: string
+          description: Azure DevOps organization name to add — validated against the connected PAT before being stored.
 
     # ── Settings ───────────────────────────────────────────────
     Theme:

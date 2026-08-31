@@ -1,0 +1,31 @@
+{
+  "id": 502,
+  "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/502",
+  "fields": {
+    "System.Title": "Fix flaky WIQL pagination test",
+    "System.WorkItemType": "Bug",
+    "System.State": "Closed",
+    "System.TeamProject": "Alpha",
+    "System.AreaPath": "Alpha\\Backend",
+    "System.Tags": "bug",
+    "System.Description": "The WIQL pagination test intermittently fails when the mock server returns work items out of order. Add explicit ordering to the query to make the test deterministic.",
+    "System.AssignedTo": {
+      "displayName": "John Doe",
+      "uniqueName": "john@doe.com",
+      "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+    },
+    "System.CreatedBy": {
+      "displayName": "John Doe",
+      "uniqueName": "john@doe.com",
+      "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+    },
+    "System.CreatedDate": "2026-01-05T09:00:00.000Z",
+    "System.ChangedDate": "2026-01-12T11:00:00.000Z"
+  },
+  "relations": [
+    {
+      "rel": "System.LinkTypes.Hierarchy-Reverse",
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/501"
+    }
+  ]
+}

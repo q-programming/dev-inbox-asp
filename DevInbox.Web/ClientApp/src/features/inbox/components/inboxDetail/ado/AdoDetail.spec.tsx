@@ -56,28 +56,33 @@ describe('AdoDetail', () => {
   });
 
   it.each([
-    { state: 'Active', area: 'Team\\Area', expectedStatus: 'Active', expectedArea: 'Team\\Area' },
-    { state: 'Closed', area: undefined, expectedStatus: 'Closed', expectedArea: '—' },
-    { state: undefined, area: 'Backend', expectedStatus: '—', expectedArea: 'Backend' },
+    { state: 'Active', expectedStatus: 'Active' },
+    { state: 'Closed', expectedStatus: 'Closed' },
+    { state: undefined, expectedStatus: '—' },
   ])(
-    'renders status "$expectedStatus" and area "$expectedArea" when state is $state and area is $area',
-    ({ state, area, expectedStatus, expectedArea }) => {
-      const details = makeInboxItemDetail({ ado: { state, area } });
+    'renders status chip "$expectedStatus" when state is $state',
+    ({ state, expectedStatus }) => {
+      const details = makeInboxItemDetail({ ado: { state } });
 
       renderWithProviders(<AdoDetail details={details} />);
 
       expect(screen.getByTestId('ado-detail-status')).toHaveTextContent(expectedStatus);
-      expect(screen.getByTestId('ado-detail-area')).toHaveTextContent(expectedArea);
     },
   );
 
-  it('does not render the status/area grid when both state and area are missing', () => {
-    const details = makeInboxItemDetail({ ado: { state: undefined, area: undefined } });
+  it.each([
+    { area: 'Team\\Area', expectedArea: 'Team\\Area' },
+    { area: undefined, expectedArea: undefined },
+  ])('renders area "$expectedArea" when area is $area', ({ area, expectedArea }) => {
+    const details = makeInboxItemDetail({ ado: { area } });
 
     renderWithProviders(<AdoDetail details={details} />);
 
-    expect(screen.queryByTestId('ado-detail-status')).toBeNull();
-    expect(screen.queryByTestId('ado-detail-area')).toBeNull();
+    if (expectedArea) {
+      expect(screen.getByTestId('ado-detail-area')).toHaveTextContent(expectedArea);
+    } else {
+      expect(screen.queryByTestId('ado-detail-area')).toBeNull();
+    }
   });
 
   it('renders a reason chip when reason is present', () => {

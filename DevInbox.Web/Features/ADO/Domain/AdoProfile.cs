@@ -41,4 +41,38 @@ public class AdoProfile
     /// a known future date (PAT only); invalid means Ado  has already rejected the token.
     /// </summary>
     public IntegrationStatus Status { get; set; } = IntegrationStatus.Active;
+
+    /// <summary>
+    /// JSON-serialized cache of the Azure DevOps organizations this user's PAT can actually reach —
+    /// a union of what was auto-discovered via the accounts API (<c>GET _apis/accounts?memberId=</c>)
+    /// and any organizations the user added manually. A PAT can be scoped to a single organization,
+    /// so this must not be assumed complete from discovery alone; each candidate organization is
+    /// probed (a cheap "list projects" call) before being kept in this list. Refreshed on connect,
+    /// on a forced full sync, or once <see cref="OrganizationsSyncedAt"/> is older than the cache's
+    /// TTL.
+    /// </summary>
+    [Column("ado_organizations")]
+    public string? OrganizationsJson { get; set; }
+
+    /// <summary>When <see cref="OrganizationsJson"/> was last refreshed/probed.</summary>
+    public DateTimeOffset? OrganizationsSyncedAt { get; set; }
+
+    /// <summary>
+    /// JSON-serialized cache of the Azure DevOps projects (organization + id + name) this user's PAT
+    /// can see across every usable organization — populated by <c>GET {org}/_apis/projects</c> for
+    /// each organization in <see cref="OrganizationsJson"/>. Cached here so a normal sync doesn't
+    /// need to re-list projects every time; refreshed on connect, on a forced full sync, or once
+    /// <see cref="ProjectsSyncedAt"/> is older than the cache's TTL.
+    /// </summary>
+    [Column("ado_projects")]
+    public string? ProjectsJson { get; set; }
+
+    /// <summary>When <see cref="ProjectsJson"/> was last refreshed from Azure DevOps.</summary>
+    public DateTimeOffset? ProjectsSyncedAt { get; set; }
 }
+
+/// <summary>A single Azure DevOps organization the user's PAT can reach, as cached in <see cref="AdoProfile.OrganizationsJson"/>.</summary>
+public sealed record AdoOrganizationRef(string Name);
+
+/// <summary>A single Azure DevOps project, as cached in <see cref="AdoProfile.ProjectsJson"/> — tagged with its owning organization since projects across organizations are no longer disambiguated by a single profile-level org.</summary>
+public sealed record AdoProjectRef(string Organization, string Id, string Name);

@@ -1,10 +1,15 @@
-import { ConnectPatRequest, IntegrationDto, IntegrationsClient, IntegrationType } from '@api';
+import { ConnectPatRequest, IntegrationDto, IntegrationsClient, IntegrationType, AdoOrganizationDto } from '@api';
 import { inboxKeys } from '@feature/inbox/hooks/useInboxQuery';
 import { ApiError, apiFetch, BASE_URL } from '@shared/api/httpClient';
 import { authKeys } from '@shared/hooks/useAuthQuery.ts';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export const integrationsApi = new IntegrationsClient(BASE_URL, { fetch: apiFetch });
+
+export const adoOrganizationsKeys = {
+  all: ['integrations', 'ado', 'organizations'] as const,
+};
+
 
 /** Connects GitHub via a Personal Access Token. */
 export const useConnectIntegrationPatMutation = (integration: IntegrationType) => {
@@ -29,6 +34,33 @@ export const useConnectIntegrationPatMutation = (integration: IntegrationType) =
         error instanceof ApiError && error.status === 400
           ? 'Could not validate that token — please check it and try again.'
           : 'Failed to connect . Please try again.',
+    },
+  });
+};
+
+/** Lists the Azure DevOps organizations currently usable by the connected PAT (auto-discovered and/or manually added). */
+export const useAdoOrganizationsQuery = (enabled: boolean) =>
+  useQuery<AdoOrganizationDto[], ApiError>({
+    queryKey: adoOrganizationsKeys.all,
+    queryFn: () => integrationsApi.getAdoOrganizations(),
+    enabled,
+  });
+
+/** Manually adds an Azure DevOps organization, validated server-side against the connected PAT. */
+export const useAddAdoOrganizationMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<AdoOrganizationDto[], ApiError, string>({
+    mutationFn: (organizationName) => integrationsApi.addAdoOrganization({ organizationName }),
+    onSuccess: (organizations) => {
+      queryClient.setQueryData(adoOrganizationsKeys.all, organizations);
+      // A newly-added organization is only picked up by the next sync's project discovery.
+      queryClient.invalidateQueries({ queryKey: inboxKeys.all });
+    },
+    meta: {
+      errorMessage: (error: Error) =>
+        error instanceof ApiError && error.status === 400
+          ? 'Could not access that organization with the connected token — please check the name and try again.'
+          : 'Failed to add organization. Please try again.',
     },
   });
 };
