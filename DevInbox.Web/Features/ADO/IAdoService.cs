@@ -24,14 +24,4 @@ public interface IAdoService
         DateTimeOffset? updatedSince = null,
         bool forceFullSync = false,
         CancellationToken ct = default);
-
-    /// <summary>Returns the Azure DevOps organizations currently usable by the given user's connected PAT.</summary>
-    Task<IReadOnlyList<string>> GetOrganizationsAsync(long userId, CancellationToken ct = default);
-
-    /// <summary>
-    /// Adds an organization to the user's usable-organizations list, after validating the PAT can
-    /// actually reach it (a cheap "list projects" probe). Throws <see cref="BadRequestException"/>
-    /// if the PAT cannot access the given organization.
-    /// </summary>
-    Task<IReadOnlyList<string>> AddOrganizationAsync(long userId, string organizationName, CancellationToken ct = default);
 }

@@ -93,11 +93,8 @@ public class UserController(
             integrations.Add(_integrationMapper.ToIntegrationDto(gitHubProfile));
         }
 
-        var adoProfile = await adoProfileRepository.GetByUserIdAsync(userId);
-        if (adoProfile is not null)
-        {
-            integrations.Add(_adoIntegrationMapper.ToIntegrationDto(adoProfile));
-        }
+        var adoProfiles = await adoProfileRepository.GetAllByUserIdAsync(userId);
+        integrations.AddRange(adoProfiles.Select(_adoIntegrationMapper.ToIntegrationDto));
 
         return integrations;
     }

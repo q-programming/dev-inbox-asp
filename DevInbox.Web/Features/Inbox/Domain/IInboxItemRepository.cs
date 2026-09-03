@@ -54,6 +54,6 @@ public interface IInboxItemRepository : IRepository<InboxItem>
     /// <param name="userId">The ID of the user whose inbox items should be deleted.</param>
     /// <param name="source">The source of the inbox items to delete.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    Task DeleteBySourceAsync(long userId, ItemSource source);
+    Task DeleteBySourceAsync(long userId, ItemSource source, string? organization = null);
 }
 

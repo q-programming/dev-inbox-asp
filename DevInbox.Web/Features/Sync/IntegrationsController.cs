@@ -14,33 +14,24 @@ namespace DevInbox.Web.Features.GitHub;
 public class IntegrationsController(
     IGitHubIntegrationService gitHubIntegrationService,
     IAdoIntegrationService adoIntegrationService,
-    IAdoService adoService,
     IUserService userService,
     IPublisher publisher) : IIntegrationsBaseController, IComponent
 {
     public async Task<IntegrationDto> ConnectAdoPatAsync(ConnectPatRequest body)
     {
+        if (string.IsNullOrWhiteSpace(body.Organization))
+        {
+            throw new BadRequestException("An Azure DevOps organization name is required.");
+        }
+
         var user = await userService.GetCurrentUserAsync();
-        var integration = await adoIntegrationService.ConnectPatAsync(user.Id, body.Token, body.ExpiresAt);
-        // Freshly connected — the inbox's last sync checkpoint predates any ADO data, so force a
-        // full sync rather than an incremental one that would find nothing new. This also performs
-        // the first organization/project discovery, since none is cached yet.
+        var integration = await adoIntegrationService.ConnectPatAsync(user.Id, body.Organization, body.Token, body.ExpiresAt);
+        // Freshly connected — the inbox's last sync checkpoint predates any data from this
+        // organization, so force a full sync rather than an incremental one that would find
+        // nothing new. This also performs the first project discovery for this organization, since
+        // none is cached yet.
         await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email, ForceFullSync: true));
         return integration;
-    }
-
-    public async Task<ICollection<AdoOrganizationDto>> GetAdoOrganizationsAsync()
-    {
-        var user = await userService.GetCurrentUserAsync();
-        var organizations = await adoService.GetOrganizationsAsync(user.Id);
-        return organizations.Select(name => new AdoOrganizationDto { Name = name }).ToList();
-    }
-
-    public async Task<ICollection<AdoOrganizationDto>> AddAdoOrganizationAsync(AddAdoOrganizationRequest body)
-    {
-        var user = await userService.GetCurrentUserAsync();
-        var organizations = await adoService.AddOrganizationAsync(user.Id, body.OrganizationName);
-        return organizations.Select(name => new AdoOrganizationDto { Name = name }).ToList();
     }
 
     public async Task<IntegrationDto> ConnectGithubPatAsync(ConnectPatRequest body)
@@ -53,13 +44,14 @@ public class IntegrationsController(
         return integration;
     }
 
-    public async Task DisconnectAdoAsync()
+    public async Task DisconnectAdoAsync(string organization)
     {
         var user = await userService.GetCurrentUserAsync();
-        await adoIntegrationService.DisconnectAsync(user.Id);
-        // Cleanup runs synchronously — the user expects previously-synced ADO items gone from
-        // their inbox immediately, not eventually via a background handler.
-        await publisher.Publish(new IntegrationDisconnectedEvent(user.Id, ItemSource.Ado));
+        await adoIntegrationService.DisconnectAsync(user.Id, organization);
+        // Cleanup runs synchronously — the user expects previously-synced items from this
+        // organization gone from their inbox immediately, not eventually via a background handler.
+        // Other connected organizations' items are untouched (see IntegrationDisconnectedEvent).
+        await publisher.Publish(new IntegrationDisconnectedEvent(user.Id, ItemSource.Ado, organization));
     }
 
     public async Task DisconnectGithubAsync()

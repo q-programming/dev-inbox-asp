@@ -25,7 +25,17 @@ public class AdoClientTests
         _mockHttp = new MockHttpMessageHandler();
         var httpClient = _mockHttp.ToHttpClient();
         httpClient.BaseAddress = new Uri(BaseUrl);
-        _client = new AdoClient(httpClient);
+        _client = new AdoClient(httpClient, new SingleClientHttpClientFactory(httpClient));
+    }
+
+    /// <summary>
+    /// Test double that always returns the same <see cref="HttpClient"/> — good enough here since
+    /// tests point both the org-scoped and accounts-host clients at the same
+    /// <see cref="MockHttpMessageHandler"/>/base address.
+    /// </summary>
+    private sealed class SingleClientHttpClientFactory(HttpClient httpClient) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => httpClient;
     }
 
     [Fact(DisplayName = "GetCurrentUserProfileAsync should return the deserialized ADO profile and send Basic auth with empty username")]
@@ -86,21 +96,20 @@ public class AdoClientTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => _client.GetCurrentUserProfileAsync(Pat));
     }
 
-    [Fact(DisplayName = "GetAccountsAsync should return the deserialized organization list for the given member id")]
-    public async Task GetAccountsAsyncShouldReturnAccountsAsync()
+    [Fact(DisplayName = "GetConnectionDataAsync should return the deserialized authenticated user for the given organization")]
+    public async Task GetConnectionDataAsyncShouldReturnAuthenticatedUserAsync()
     {
-        const string memberId = "ado-user-1";
-        _mockHttp.When(HttpMethod.Get, $"{BaseUrl}_apis/accounts")
-            .WithQueryString("memberId", memberId)
+        _mockHttp.When(HttpMethod.Get, $"{BaseUrl}{Organization}/_apis/connectionData")
+            .WithQueryString("api-version", "7.0-preview")
             .Respond("application/json", """
-                { "count": 2, "value": [ { "accountId": "a1", "accountName": "contoso" }, { "accountId": "a2", "accountName": "fabrikam" } ] }
+                { "authenticatedUser": { "id": "ado-user-1", "providerDisplayName": "John Doe", "properties": { "Account": { "$value": "john@doe.com" } } } }
                 """);
 
-        var result = await _client.GetAccountsAsync(Pat, memberId);
+        var result = await _client.GetConnectionDataAsync(Pat, Organization);
 
-        Assert.Equal(2, result.Count);
-        Assert.Equal("contoso", result[0].AccountName);
-        Assert.Equal("fabrikam", result[1].AccountName);
+        Assert.Equal("ado-user-1", result.AuthenticatedUser.Id);
+        Assert.Equal("John Doe", result.AuthenticatedUser.ProviderDisplayName);
+        Assert.Equal("john@doe.com", result.AuthenticatedUser.Properties?.Account?.Value);
     }
 
     [Fact(DisplayName = "GetProjectsAsync should return the deserialized project list")]
@@ -182,8 +191,34 @@ public class AdoClientTests
         await _client.GetPullRequestsAsync(Pat, Organization, "MyProject", reviewerId: "reviewer-1", creatorId: "creator-1");
 
         Assert.NotNull(requestUri);
-        Assert.Contains("searchCriteria.reviewerId=reviewer-1", requestUri!.Query);
+        Assert.Contains("searchCriteria.status=all", requestUri!.Query);
+        Assert.Contains("searchCriteria.reviewerId=reviewer-1", requestUri.Query);
         Assert.Contains("searchCriteria.creatorId=creator-1", requestUri.Query);
+    }
+
+    [Theory(DisplayName = "GetPullRequestsAsync should serialize the search status as its lower-camel-case ADO literal")]
+    [InlineData(AdoPullRequestSearchStatus.Active, "active")]
+    [InlineData(AdoPullRequestSearchStatus.Abandoned, "abandoned")]
+    [InlineData(AdoPullRequestSearchStatus.Completed, "completed")]
+    [InlineData(AdoPullRequestSearchStatus.All, "all")]
+    [InlineData(AdoPullRequestSearchStatus.NotSet, "notSet")]
+    public async Task GetPullRequestsAsyncShouldSerializeSearchStatusAsync(AdoPullRequestSearchStatus status, string expectedQueryValue)
+    {
+        Uri? requestUri = null;
+        _mockHttp.When(HttpMethod.Get, $"{BaseUrl}{Organization}/MyProject/_apis/git/pullrequests")
+            .Respond(request =>
+            {
+                requestUri = request.RequestUri;
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""{ "count": 0, "value": [] }""", Encoding.UTF8, "application/json")
+                };
+            });
+
+        await _client.GetPullRequestsAsync(Pat, Organization, "MyProject", status);
+
+        Assert.NotNull(requestUri);
+        Assert.Contains($"searchCriteria.status={expectedQueryValue}", requestUri!.Query);
     }
 
     [Fact(DisplayName = "GetWorkItemDetailAsync should return the fully expanded work item")]

@@ -14,6 +14,10 @@ public static class AdoServiceCollectionExtensions
         {
             client.BaseAddress = new Uri(adoOptions.NormalizedBaseAddress);
         }).AddStandardResilienceHandler();
+        services.AddHttpClient(AdoClient.AccountsHttpClientName, (sp, client) =>
+        {
+            client.BaseAddress = new Uri(adoOptions.NormalizedAccountsBaseAddress);
+        }).AddStandardResilienceHandler();
         return services;
     }
 }

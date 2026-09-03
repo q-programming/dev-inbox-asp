@@ -1,0 +1,25 @@
+{
+  "authenticatedUser": {
+    "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+    "descriptor": "aad.ZjZhNGQyZDEtOWI1Yy00ZjJhLThlMWQtM2M3YjJhMWU5ZjAw",
+    "subjectDescriptor": "aad.ZjZhNGQyZDEtOWI1Yy00ZjJhLThlMWQtM2M3YjJhMWU5ZjAw",
+    "providerDisplayName": "John Doe",
+    "isActive": true,
+    "properties": {
+      "Account": {
+        "$type": "System.String",
+        "$value": "john@doe.com"
+      }
+    }
+  },
+  "authorizedUser": {
+    "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+    "providerDisplayName": "John Doe"
+  },
+  "instanceId": "00000000-0000-0000-0000-000000000000",
+  "deploymentId": "00000000-0000-0000-0000-000000000000",
+  "deploymentType": "hosted",
+  "locationServiceData": {
+    "serviceOwner": "00000000-0000-0000-0000-000000000000"
+  }
+}

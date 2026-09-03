@@ -6,20 +6,23 @@ public interface IAdoClient
 {
     /// <summary>
     /// Resolves the profile of the PAT's owning user via <c>GET _apis/profile/profiles/me</c> —
-    /// used to validate a PAT at connect time (a bad/expired PAT fails this call) and to seed the
-    /// stored <see cref="Domain.AdoProfile"/>'s identity fields.
+    /// only reliable for a PAT scoped to "all accessible organizations" (see
+    /// <see cref="GetConnectionDataAsync"/> for the organization-scoped alternative used at PAT
+    /// connect time). Kept for OAuth App parity with <c>GitHubClient</c>, though ADO has no OAuth
+    /// App flow wired up yet.
     /// </summary>
     Task<AdoUserProfileDTO> GetCurrentUserProfileAsync(string personalAccessToken, CancellationToken ct = default);
 
     /// <summary>
-    /// Lists every Azure DevOps organization ("account") the given member belongs to, via
-    /// <c>GET _apis/accounts?memberId={memberId}</c> — used to auto-discover organizations at
-    /// connect time without requiring the user to type one in. Only as reliable as the PAT's own
-    /// scope: a PAT restricted to one organization may still list others here that it can't
-    /// actually reach, so callers must probe each result (see <see cref="GetProjectsAsync"/>)
-    /// before trusting it.
+    /// Validates a PAT and resolves the authenticated user's identity for one organization, via
+    /// <c>GET {organization}/_apis/connectionData?api-version=7.0-preview</c>. Used at connect time
+    /// instead of <see cref="GetCurrentUserProfileAsync"/> because it's organization-scoped and
+    /// therefore works with a PAT restricted to a single organization — the norm going forward
+    /// since Microsoft is deprecating "all accessible organizations" PATs
+    /// (https://aka.ms/GlobalPATDeprecation, effective Dec 1 2026). Each connected organization gets
+    /// its own <see cref="Domain.AdoProfile"/>/PAT rather than one PAT covering many organizations.
     /// </summary>
-    Task<IReadOnlyList<AdoAccountDTO>> GetAccountsAsync(string personalAccessToken, string memberId, CancellationToken ct = default);
+    Task<AdoConnectionDataDTO> GetConnectionDataAsync(string personalAccessToken, string organization, CancellationToken ct = default);
 
     /// <summary>
     /// Lists every project visible to the given PAT within the given organization, via
@@ -52,6 +55,7 @@ public interface IAdoClient
         string personalAccessToken,
         string organization,
         string project,
+        AdoPullRequestSearchStatus status = AdoPullRequestSearchStatus.All,
         string? reviewerId = null,
         string? creatorId = null,
         CancellationToken ct = default);

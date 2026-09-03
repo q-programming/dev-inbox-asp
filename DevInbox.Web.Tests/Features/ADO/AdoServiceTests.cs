@@ -1,9 +1,11 @@
 using DevInbox.Web.Features.ADO;
 using DevInbox.Web.Features.ADO.Client;
 using DevInbox.Web.Features.ADO.Client.DTO;
+using DevInbox.Web.Features.ADO.Config;
 using DevInbox.Web.Features.ADO.Domain;
 using DevInbox.Web.Features.Inbox.Domain;
 using DomainIntegrationStatus = DevInbox.Web.Features.Sync.Domain.IntegrationStatus;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 
 namespace DevInbox.Web.Tests.Features.ADO;
@@ -24,11 +26,17 @@ public class AdoServiceTests
         _profileRepository = Substitute.For<IAdoProfileRepository>();
         _inboxItemRepository = Substitute.For<IInboxItemRepository>();
         _adoClient = Substitute.For<IAdoClient>();
-        _service = new AdoService(_profileRepository, _inboxItemRepository, _adoClient, Substitute.For<ILogger<AdoService>>());
+        _service = new AdoService(
+            _profileRepository,
+            _inboxItemRepository,
+            _adoClient,
+            Options.Create(new AdoOptions()),
+            Substitute.For<ILogger<AdoService>>());
 
-        _profileRepository.GetByUserIdAsync(UserId).Returns(new AdoProfile
+        _profileRepository.GetByUserIdAndOrganizationAsync(UserId, "contoso").Returns(new AdoProfile
         {
             UserId = UserId,
+            Organization = "contoso",
             AdoUserId = "ado-user-1",
             AdoLogin = "Jane Doe",
             AccessToken = Pat,

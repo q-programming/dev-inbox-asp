@@ -15,7 +15,7 @@ public class User
     public string? Password { get; set; }
     public AccountType? Type { get; set; } = AccountType.REGULAR;
     public GitHubProfile? GitHubProfile { get; set; }
-    public AdoProfile? AdoProfile { get; set; }
+    public ICollection<AdoProfile> AdoProfiles { get; set; } = new List<AdoProfile>();
     public Inbox.Domain.Inbox Inbox { get; set; } = null!;
 
     public enum AccountType

@@ -6,7 +6,7 @@ public class IntegrationDisconnectedHandler(IInboxService inboxService, ILogger<
 {
     public async Task Handle(IntegrationDisconnectedEvent message, CancellationToken cancellationToken)
     {
-        logger.LogInformation("Handling {ItemSource} integration disconnected event for user {UserId}", message.Source, message.UserId);
-        await inboxService.DeleteInboxItemsBySourceAsync(message.UserId, message.Source, cancellationToken);
+        logger.LogInformation("Handling {ItemSource} integration disconnected event for user {UserId}{Organization}", message.Source, message.UserId, message.Organization is null ? string.Empty : $" (organization {message.Organization})");
+        await inboxService.DeleteInboxItemsBySourceAsync(message.UserId, message.Source, message.Organization, cancellationToken);
     }
 }

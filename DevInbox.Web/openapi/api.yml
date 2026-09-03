@@ -172,7 +172,12 @@ paths:
       security:
         - cookieAuth: []
       tags: [integrations]
-      summary: Connect (or reconnect) Azure Devops using a Personal Access Token
+      summary: Connect (or reconnect) an Azure DevOps organization using a Personal Access Token
+      description: >
+        One organization = one PAT/connection — Azure DevOps PATs are organization-scoped
+        (Microsoft is deprecating "all accessible organizations" PATs, see
+        https://aka.ms/GlobalPATDeprecation). Call this once per organization the user wants to
+        connect; calling it again for an already-connected organization reconnects/replaces its PAT.
       requestBody:
         required: true
         content:
@@ -181,62 +186,15 @@ paths:
               $ref: "#/components/schemas/ConnectPatRequest"
       responses:
         "200":
-          description: Azure Devops integration connected
+          description: Azure DevOps organization connected
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/IntegrationDto"
         "400":
-          description: Invalid or unreachable PAT
+          description: Invalid or unreachable PAT, or missing organization
         "401":
           description: No authenticated user          
-  /integrations/ado/organizations:
-    get:
-      operationId: getAdoOrganizations
-      security:
-        - cookieAuth: []
-      tags: [integrations]
-      summary: List the Azure DevOps organizations currently usable by the connected PAT (auto-discovered and/or manually added)
-      responses:
-        "200":
-          description: Usable Azure DevOps organizations
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AdoOrganizationDto"
-        "401":
-          description: No authenticated user
-        "404":
-          description: No Azure Devops integration connected
-    post:
-      operationId: addAdoOrganization
-      security:
-        - cookieAuth: []
-      tags: [integrations]
-      summary: Manually add an Azure DevOps organization, validating that the connected PAT can access it
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AddAdoOrganizationRequest"
-      responses:
-        "200":
-          description: Usable Azure DevOps organizations, including the newly added one
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AdoOrganizationDto"
-        "400":
-          description: The PAT cannot access the given organization
-        "401":
-          description: No authenticated user
-        "404":
-          description: No Azure Devops integration connected
 
   /integrations/github:
     delete:
@@ -252,20 +210,27 @@ paths:
           description: No authenticated user
         "404":
           description: No GitHub integration to disconnect
-  /integrations/ado:
+  /integrations/ado/{organization}:
     delete:
       operationId: disconnectAdo
       security:
         - cookieAuth: []
       tags: [integrations]
-      summary: Disconnect the Azure Devops integration for the current user
+      summary: Disconnect a single Azure DevOps organization for the current user
+      description: Removes that organization's PAT and every inbox item previously synced from it — other connected organizations are left untouched.
+      parameters:
+        - name: organization
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "204":
-          description: Azure Devops integration disconnected
+          description: Azure DevOps organization disconnected
         "401":
           description: No authenticated user
         "404":
-          description: No Azure Devops integration to disconnect          
+          description: No Azure DevOps integration for that organization to disconnect          
 
   # ── Settings ─────────────────────────────────────────────────
   /settings:
@@ -667,6 +632,10 @@ components:
           $ref: "#/components/schemas/IntegrationType"
         authMethod:
           $ref: "#/components/schemas/IntegrationAuthMethod"       
+        organization:
+          type: string
+          nullable: true
+          description: Azure DevOps organization name this connection is scoped to (e.g. "contoso"). Always null for GitHub — Ado connects one organization at a time (see AdoProfile), so a user may have several Ado integration entries, one per organization.
 
     IntegrationType:
       type: string
@@ -694,24 +663,10 @@ components:
           format: date-time
           nullable: true
           description: Optional expiry date for the PAT — used to proactively warn the user before it expires.
-
-    AdoOrganizationDto:
-      type: object
-      additionalProperties: false
-      required: [name]
-      properties:
-        name:
+        organization:
           type: string
-          description: Azure DevOps organization name (e.g. "contoso" for https://dev.azure.com/contoso).
-
-    AddAdoOrganizationRequest:
-      type: object
-      additionalProperties: false
-      required: [organizationName]
-      properties:
-        organizationName:
-          type: string
-          description: Azure DevOps organization name to add — validated against the connected PAT before being stored.
+          nullable: true
+          description: Azure DevOps organization name (e.g. "contoso" for https://dev.azure.com/contoso). Required when connecting Ado; ignored for GitHub.
 
     # ── Settings ───────────────────────────────────────────────
     Theme:

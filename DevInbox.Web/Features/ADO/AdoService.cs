@@ -1,9 +1,11 @@
 using System.Text.Json;
 using DevInbox.Web.Features.ADO.Client;
 using DevInbox.Web.Features.ADO.Client.DTO;
+using DevInbox.Web.Features.ADO.Config;
 using DevInbox.Web.Features.ADO.Domain;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
+using Microsoft.Extensions.Options;
 using InboxReason = DevInbox.Web.Features.Inbox.Domain.InboxReason;
 using ItemSource = DevInbox.Web.Features.Inbox.Domain.ItemSource;
 using ItemType = DevInbox.Web.Features.Inbox.Domain.ItemType;
@@ -14,14 +16,9 @@ public class AdoService(
     IAdoProfileRepository repository,
     IInboxItemRepository inboxItemRepository,
     IAdoClient adoClient,
+    IOptions<AdoOptions> options,
     ILogger<AdoService> logger) : IService, IAdoService
 {
-    /// <summary>
-    /// How long the cached organization list (<see cref="AdoProfile.OrganizationsJson"/>) is
-    /// trusted before a normal sync re-discovers/re-probes it.
-    /// </summary>
-    private static readonly TimeSpan OrganizationsCacheTtl = TimeSpan.FromHours(24);
-
     /// <summary>
     /// How long the cached project list (<see cref="AdoProfile.ProjectsJson"/>) is trusted before a
     /// normal sync re-discovers it — bounds the "a project was added/removed" staleness window
@@ -39,9 +36,14 @@ public class AdoService(
             throw new InvalidOperationException($"Inbox item {item.Id} has no ADO organization/project reference to look up.");
         }
 
+        // Both work item and PR Repository encodings start with "{organization}/..." — see
+        // BuildWorkItemRepository/BuildPrRepository — so the organization can be extracted before
+        // knowing which shape the rest of the string has.
+        var organization = item.Repository.Split('/', 2)[0];
+
         // item.InboxId doubles as the owning user's id (Inbox's key is the user's own id).
-        var profile = await repository.GetByUserIdAsync(item.InboxId)
-            ?? throw new InvalidOperationException($"No ADO profile found for user {item.InboxId}.");
+        var profile = await repository.GetByUserIdAndOrganizationAsync(item.InboxId, organization)
+            ?? throw new InvalidOperationException($"No ADO profile found for user {item.InboxId} and organization '{organization}'.");
 
         var accessToken = profile.AccessToken
             ?? throw new InvalidOperationException($"No stored access token for ADO profile {profile.AdoLogin}.");
@@ -171,15 +173,31 @@ public class AdoService(
         bool forceFullSync = false,
         CancellationToken ct = default)
     {
-        var profile = await repository.GetByUserIdAsync(userId);
-        if (profile == null)
+        // Each profile is a distinct organization+PAT pair — sync every connected organization
+        // independently so one org's failure (invalid PAT, unauthorized, etc.) doesn't block the
+        // others.
+        var profiles = await repository.GetAllByUserIdAsync(userId);
+        if (profiles.Count == 0)
         {
             logger.LogWarning("No ADO profile found for user {UserId}", userId);
             return;
         }
+
+        foreach (var profile in profiles)
+        {
+            await SyncProfileAsync(profile, updatedSince, forceFullSync, ct);
+        }
+    }
+
+    private async Task SyncProfileAsync(
+        AdoProfile profile,
+        DateTimeOffset? updatedSince,
+        bool forceFullSync,
+        CancellationToken ct)
+    {
         if (profile.Status != Sync.Domain.IntegrationStatus.Active)
         {
-            logger.LogWarning("ADO profile for user {UserId} is not active (status: {Status})", userId, profile.Status);
+            logger.LogWarning("ADO profile for user {UserId}/organization {Organization} is not active (status: {Status})", profile.UserId, profile.Organization, profile.Status);
             return;
         }
 
@@ -191,14 +209,13 @@ public class AdoService(
         var isInitialSync = updatedSince is null || forceFullSync;
 
         logger.LogInformation(
-            "[ADO] Starting {SyncKind} sync for {AdoLogin}",
-            isInitialSync ? "initial/full" : $"incremental (since {updatedSince:O})", profile.AdoLogin);
+            "[ADO] Starting {SyncKind} sync for {AdoLogin} (organization {Organization})",
+            isInitialSync ? "initial/full" : $"incremental (since {updatedSince:O})", profile.AdoLogin, profile.Organization);
 
         IReadOnlyList<AdoProjectRef> projects;
         try
         {
-            var organizations = await ResolveOrganizationsAsync(profile, accessToken, forceFullSync, ct);
-            projects = await ResolveProjectsAsync(profile, accessToken, organizations, forceFullSync, ct);
+            projects = await ResolveProjectsAsync(profile, accessToken, forceFullSync, ct);
         }
         catch (Exception ex) when (IsUnauthorized(ex))
         {
@@ -208,7 +225,7 @@ public class AdoService(
 
         if (projects.Count == 0)
         {
-            logger.LogInformation("[ADO] No accessible projects for {AdoLogin} — nothing to sync", profile.AdoLogin);
+            logger.LogInformation("[ADO] No accessible projects for {AdoLogin} (organization {Organization}) — nothing to sync", profile.AdoLogin, profile.Organization);
             return;
         }
 
@@ -220,8 +237,8 @@ public class AdoService(
             var pullRequests = results.SelectMany(r => r.PullRequests).ToList();
 
             logger.LogInformation(
-                "[ADO] Fetched {WorkItemCount} work item(s) and {PrCount} pull request(s) across {ProjectCount} project(s) for {AdoLogin}",
-                workItems.Count, pullRequests.Count, projects.Count, profile.AdoLogin);
+                "[ADO] Fetched {WorkItemCount} work item(s) and {PrCount} pull request(s) across {ProjectCount} project(s) for {AdoLogin} (organization {Organization})",
+                workItems.Count, pullRequests.Count, projects.Count, profile.AdoLogin, profile.Organization);
 
             await UpsertWorkItemsAsync(profile, workItems);
             await UpsertPullRequestsAsync(profile, pullRequests);
@@ -232,111 +249,18 @@ public class AdoService(
             return;
         }
 
-        logger.LogInformation("[ADO] Synchronization completed for {AdoLogin}", profile.AdoLogin);
-    }
-
-    /// <summary>
-    /// Returns the cached organization list from <see cref="AdoProfile.OrganizationsJson"/> when
-    /// still fresh, otherwise re-discovers it (accounts lookup) and re-probes every candidate,
-    /// merging in any manually-added organizations already on the profile so a stale/failed
-    /// discovery never silently drops them.
-    /// </summary>
-    private async Task<IReadOnlyList<string>> ResolveOrganizationsAsync(
-        AdoProfile profile,
-        string accessToken,
-        bool forceFullSync,
-        CancellationToken ct)
-    {
-        var cacheIsStale = forceFullSync
-            || string.IsNullOrEmpty(profile.OrganizationsJson)
-            || profile.OrganizationsSyncedAt is null
-            || DateTimeOffset.UtcNow - profile.OrganizationsSyncedAt > OrganizationsCacheTtl;
-
-        if (!cacheIsStale)
-        {
-            var cached = JsonSerializer.Deserialize<List<AdoOrganizationRef>>(profile.OrganizationsJson!);
-            if (cached is { Count: > 0 })
-            {
-                return cached.Select(o => o.Name).ToList();
-            }
-        }
-
-        var manuallyAdded = string.IsNullOrEmpty(profile.OrganizationsJson)
-            ? []
-            : JsonSerializer.Deserialize<List<AdoOrganizationRef>>(profile.OrganizationsJson!) ?? [];
-
-        var organizations = await DiscoverOrganizationsAsync(profile.AdoUserId, accessToken, ct);
-        var merged = organizations
-            .Select(o => o.Name)
-            .Concat(manuallyAdded.Select(o => o.Name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        await PersistOrganizationsAsync(profile, merged);
-        return merged;
-    }
-
-    /// <summary>
-    /// Discovers every organization the user's PAT can reach, via the accounts API followed by a
-    /// cheap "list projects" probe per candidate — the accounts API alone isn't trustworthy since a
-    /// PAT scoped to a single organization can still list others there that it can't actually call.
-    /// </summary>
-    private async Task<List<AdoOrganizationRef>> DiscoverOrganizationsAsync(string memberId, string accessToken, CancellationToken ct)
-    {
-        var candidates = await adoClient.GetAccountsAsync(accessToken, memberId, ct);
-        var usable = new List<AdoOrganizationRef>();
-
-        foreach (var candidate in candidates)
-        {
-            if (await ProbeOrganizationAsync(candidate.AccountName, accessToken, ct))
-            {
-                usable.Add(new AdoOrganizationRef(candidate.AccountName));
-            }
-        }
-
-        return usable;
-    }
-
-    /// <summary>
-    /// Checks whether the PAT can actually reach the given organization — a single cheap
-    /// <c>GET _apis/projects?$top=1</c> call. Used both for auto-discovered candidates and for
-    /// manually-added organization names.
-    /// </summary>
-    private async Task<bool> ProbeOrganizationAsync(string organization, string accessToken, CancellationToken ct)
-    {
-        try
-        {
-            await adoClient.GetProjectsAsync(accessToken, organization, ct);
-            return true;
-        }
-        catch (HttpRequestException ex)
-        {
-            // Any non-2xx here (401/403 access denied, 404 unknown org name, etc.) means this
-            // organization isn't usable with the stored PAT — unlike the outer sync's 401-only
-            // check, this must not be narrowed to 401 alone, since an inaccessible/nonexistent
-            // organization is expected and shouldn't be conflated with "the whole PAT is invalid".
-            logger.LogInformation(ex, "[ADO] Organization '{Organization}' is not reachable by the stored PAT — dropping it", organization);
-            return false;
-        }
-    }
-
-    private async Task PersistOrganizationsAsync(AdoProfile profile, List<string> organizations)
-    {
-        profile.OrganizationsJson = JsonSerializer.Serialize(organizations.Select(o => new AdoOrganizationRef(o)).ToList());
-        profile.OrganizationsSyncedAt = DateTimeOffset.UtcNow;
-        await repository.UpdateAsync(profile);
+        logger.LogInformation("[ADO] Synchronization completed for {AdoLogin} (organization {Organization})", profile.AdoLogin, profile.Organization);
     }
 
     /// <summary>
     /// Returns the cached project list from <see cref="AdoProfile.ProjectsJson"/> when it's still
-    /// fresh, otherwise re-discovers it (one <see cref="IAdoClient.GetProjectsAsync"/> call per
-    /// organization) and persists the refreshed cache — saving discovery calls on every
-    /// normal/incremental sync.
+    /// fresh, otherwise re-discovers it (a single <see cref="IAdoClient.GetProjectsAsync"/> call for
+    /// this profile's organization) and persists the refreshed cache — saving a discovery call on
+    /// every normal/incremental sync.
     /// </summary>
     private async Task<IReadOnlyList<AdoProjectRef>> ResolveProjectsAsync(
         AdoProfile profile,
         string accessToken,
-        IReadOnlyList<string> organizations,
         bool forceFullSync,
         CancellationToken ct)
     {
@@ -354,12 +278,8 @@ public class AdoService(
             }
         }
 
-        var projectRefs = new List<AdoProjectRef>();
-        foreach (var organization in organizations)
-        {
-            var projects = await adoClient.GetProjectsAsync(accessToken, organization, ct);
-            projectRefs.AddRange(projects.Select(p => new AdoProjectRef(organization, p.Id, p.Name)));
-        }
+        var projects = await adoClient.GetProjectsAsync(accessToken, profile.Organization, ct);
+        var projectRefs = projects.Select(p => new AdoProjectRef(p.Id, p.Name)).DistinctBy(p => p.Id).ToList();
 
         profile.ProjectsJson = JsonSerializer.Serialize(projectRefs);
         profile.ProjectsSyncedAt = DateTimeOffset.UtcNow;
@@ -371,9 +291,9 @@ public class AdoService(
     /// <summary>
     /// Runs the work item WIQL+batch and the two PR searches (creator/reviewer) for a single
     /// project — 4 calls total (1 WIQL + 1 batch + 2 PR searches), the unit of parallelism across
-    /// projects in <see cref="SyncWorkItemsAsync"/>.
+    /// projects in <see cref="SyncProfileAsync"/>.
     /// </summary>
-    private async Task<(List<(AdoWorkItemDTO WorkItem, string Organization)> WorkItems, List<(AdoPullRequestDTO PullRequest, string Organization, InboxReason Reason)> PullRequests)> SyncProjectAsync(
+    private async Task<(List<AdoWorkItemDTO> WorkItems, List<(AdoPullRequestDTO PullRequest, InboxReason Reason)> PullRequests)> SyncProjectAsync(
         AdoProfile profile,
         string accessToken,
         AdoProjectRef project,
@@ -382,78 +302,88 @@ public class AdoService(
         CancellationToken ct)
     {
         var wiql = BuildWiql(updatedSince, isInitialSync);
-        var ids = await adoClient.QueryWorkItemIdsAsync(accessToken, project.Organization, project.Name, wiql, ct);
+        var ids = await adoClient.QueryWorkItemIdsAsync(accessToken, profile.Organization, project.Name, wiql, ct);
         var workItems = ids.Count == 0
             ? []
-            : (await adoClient.GetWorkItemsBatchAsync(accessToken, project.Organization, project.Name, ids, ct))
-                .Select(w => (w, project.Organization)).ToList();
+            : (await adoClient.GetWorkItemsBatchAsync(accessToken, profile.Organization, project.Name, ids, ct)).ToList();
 
         // Two separate searches (creatorId / reviewerId) rather than one, since Azure DevOps'
         // pull request search criteria only accepts one identity filter per call — the search also
         // doubles as reason-inference: whichever call a PR came from tells us Authored vs
-        // ReviewRequested without needing extra client-side comparisons.
+        // ReviewRequested without needing extra client-side comparisons. A first-ever sync only
+        // asks for currently-active PRs (mirrors GitHub's "is:open" initial-sync bound); an
+        // incremental sync widens to "all" statuses so a close/abandon that happened since the last
+        // sync still surfaces (see IsClosedPullRequest/CreatePullRequest for how that's handled).
+        var searchStatus = isInitialSync ? AdoPullRequestSearchStatus.Active : AdoPullRequestSearchStatus.All;
         var authored = await adoClient.GetPullRequestsAsync(
-            accessToken, project.Organization, project.Name, creatorId: profile.AdoUserId, ct: ct);
+            accessToken, profile.Organization, project.Name, searchStatus, creatorId: profile.AdoUserId, ct: ct);
         var reviewRequested = await adoClient.GetPullRequestsAsync(
-            accessToken, project.Organization, project.Name, reviewerId: profile.AdoUserId, ct: ct);
+            accessToken, profile.Organization, project.Name, searchStatus, reviewerId: profile.AdoUserId, ct: ct);
 
         var seenIds = new HashSet<int>();
-        var pullRequests = new List<(AdoPullRequestDTO, string, InboxReason)>();
+        var pullRequests = new List<(AdoPullRequestDTO, InboxReason)>();
         foreach (var pr in authored)
         {
             if (seenIds.Add(pr.PullRequestId))
             {
-                pullRequests.Add((pr, project.Organization, InboxReason.Authored));
+                pullRequests.Add((pr, InboxReason.Authored));
             }
         }
         foreach (var pr in reviewRequested)
         {
             if (seenIds.Add(pr.PullRequestId))
             {
-                pullRequests.Add((pr, project.Organization, InboxReason.ReviewRequested));
+                pullRequests.Add((pr, InboxReason.ReviewRequested));
             }
         }
 
         return (workItems, pullRequests);
     }
 
-    /// <summary>    /// Builds the WIQL used to find work items "assigned to or authored by" the current user. A
-    /// first-time/full sync has no incremental checkpoint, so it isn't date-bounded at all — there's
-    /// no "open work items only" equivalent (state is process-template specific), so the initial
-    /// sync is simply unbounded by date.
+    /// <summary>
+    /// Builds the WIQL used to find work items "assigned to or authored by" the current user.
+    /// Work items have no universal "open" state across Azure DevOps process templates, so unlike
+    /// GitHub's PR-based initial sync (which just asks for <c>is:open</c>), a first-time sync is
+    /// bounded by a rolling date cutoff instead (<see cref="AdoOptions.InitialSyncLookbackDays"/>) —
+    /// this keeps the initial call's payload/cost bounded regardless of project age, without relying
+    /// on state names that vary per template (Agile/Scrum/Basic/CMMI).
     /// </summary>
-    private static string BuildWiql(DateTimeOffset? updatedSince, bool isInitialSync)
+    private string BuildWiql(DateTimeOffset? updatedSince, bool isInitialSync)
     {
         var where = "([System.AssignedTo] = @Me OR [System.CreatedBy] = @Me)";
-        if (!isInitialSync && updatedSince is { } since)
+        var since = isInitialSync
+            ? DateTimeOffset.UtcNow.AddDays(-options.Value.InitialSyncLookbackDays)
+            : updatedSince;
+        if (since is { } cutoff)
         {
             // WIQL date literals are 'YYYY-MM-DD' — no time-of-day precision.
-            where += $" AND [System.ChangedDate] >= '{since:yyyy-MM-dd}'";
+            where += $" AND [System.ChangedDate] >= '{cutoff:yyyy-MM-dd}'";
         }
 
         return $"SELECT [System.Id] FROM WorkItems WHERE {where} ORDER BY [System.ChangedDate] DESC";
     }
 
-    private async Task UpsertWorkItemsAsync(AdoProfile profile, List<(AdoWorkItemDTO WorkItem, string Organization)> workItems)
+    private async Task UpsertWorkItemsAsync(AdoProfile profile, List<AdoWorkItemDTO> workItems)
     {
         if (workItems.Count == 0)
         {
             return;
         }
 
-        var repositories = workItems.Select(w => BuildWorkItemRepository(w.Organization, w.WorkItem)).Distinct().ToList();
-        var externalIds = workItems.Select(w => w.WorkItem.Id.ToString()).Distinct().ToList();
+        var repositories = workItems.Select(w => BuildWorkItemRepository(profile.Organization, w)).Distinct().ToList();
+        var externalIds = workItems.Select(w => w.Id.ToString()).Distinct().ToList();
 
         var existingItems = await inboxItemRepository.GetExistingItemsAsync(
             profile.UserId, ItemSource.Ado, ItemType.WorkItem, repositories, externalIds);
         var existingByKey = existingItems.ToDictionary(i => (i.Repository!, i.ExternalId!));
 
         var newItems = new List<InboxItem>();
+        var newItemKeys = new HashSet<(string Repository, string ExternalId)>();
         var updatedCount = 0;
 
-        foreach (var (workItem, organization) in workItems)
+        foreach (var workItem in workItems)
         {
-            var key = (BuildWorkItemRepository(organization, workItem), workItem.Id.ToString());
+            var key = (BuildWorkItemRepository(profile.Organization, workItem), workItem.Id.ToString());
             if (existingByKey.TryGetValue(key, out var existing))
             {
                 if (UpdateExistingWorkItem(existing, workItem))
@@ -461,9 +391,13 @@ public class AdoService(
                     updatedCount++;
                 }
             }
-            else
+            else if (newItemKeys.Add(key))
             {
-                newItems.Add(CreateWorkItem(profile, organization, workItem));
+                // Guards against the same work item id appearing more than once in this batch
+                // (e.g. a project list momentarily containing a duplicate entry) — without this,
+                // every duplicate occurrence would otherwise create its own separate InboxItem row,
+                // since existingByKey only reflects rows already persisted before this call started.
+                newItems.Add(CreateWorkItem(profile, profile.Organization, workItem));
             }
         }
 
@@ -482,14 +416,14 @@ public class AdoService(
             profile.AdoLogin, newItems.Count, updatedCount);
     }
 
-    private async Task UpsertPullRequestsAsync(AdoProfile profile, List<(AdoPullRequestDTO PullRequest, string Organization, InboxReason Reason)> pullRequests)
+    private async Task UpsertPullRequestsAsync(AdoProfile profile, List<(AdoPullRequestDTO PullRequest, InboxReason Reason)> pullRequests)
     {
         if (pullRequests.Count == 0)
         {
             return;
         }
 
-        var repositories = pullRequests.Select(p => BuildPrRepository(p.Organization, p.PullRequest)).Distinct().ToList();
+        var repositories = pullRequests.Select(p => BuildPrRepository(profile.Organization, p.PullRequest)).Distinct().ToList();
         var externalIds = pullRequests.Select(p => p.PullRequest.PullRequestId.ToString()).Distinct().ToList();
 
         var existingItems = await inboxItemRepository.GetExistingItemsAsync(
@@ -497,11 +431,12 @@ public class AdoService(
         var existingByKey = existingItems.ToDictionary(i => (i.Repository!, i.ExternalId!));
 
         var newItems = new List<InboxItem>();
+        var newItemKeys = new HashSet<(string Repository, string ExternalId)>();
         var updatedCount = 0;
 
-        foreach (var (pr, organization, reason) in pullRequests)
+        foreach (var (pr, reason) in pullRequests)
         {
-            var key = (BuildPrRepository(organization, pr), pr.PullRequestId.ToString());
+            var key = (BuildPrRepository(profile.Organization, pr), pr.PullRequestId.ToString());
             if (existingByKey.TryGetValue(key, out var existing))
             {
                 if (UpdateExistingPullRequest(existing, pr))
@@ -509,9 +444,11 @@ public class AdoService(
                     updatedCount++;
                 }
             }
-            else
+            else if (newItemKeys.Add(key))
             {
-                newItems.Add(CreatePullRequest(profile, organization, pr, reason));
+                // See the matching guard in UpsertWorkItemsAsync — protects against the same PR
+                // appearing more than once in this batch (e.g. across duplicate project entries).
+                newItems.Add(CreatePullRequest(profile, profile.Organization, pr, reason));
             }
         }
 
@@ -575,7 +512,7 @@ public class AdoService(
             ExternalId = workItem.Id.ToString(),
             Repository = BuildWorkItemRepository(organization, workItem),
             Title = workItem.Fields.Title,
-            Reason = InferWorkItemReason(workItem, profile.AdoUserId),
+            Reason = InferWorkItemReason(workItem, profile),
             ActivityAt = workItem.Fields.ChangedDate ?? DateTimeOffset.UtcNow,
             CreatedAt = workItem.Fields.CreatedDate ?? DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
@@ -635,11 +572,30 @@ public class AdoService(
         workItem.Fields.State is { } state && ClosedWorkItemStates.Contains(state, StringComparer.OrdinalIgnoreCase);
 
     private static bool IsClosedPullRequest(AdoPullRequestDTO pr) =>
-        !string.Equals(pr.Status, "active", StringComparison.OrdinalIgnoreCase);
+        AdoPullRequestSearchStatusExtensions.ParseStatus(pr.Status) != AdoPullRequestSearchStatus.Active;
 
-    private static InboxReason InferWorkItemReason(AdoWorkItemDTO workItem, string adoUserId)
+    /// <summary>
+    /// "Assigned to me" vs "authored by me": <see cref="AdoWorkItemFieldsDTO.AssignedTo"/> takes
+    /// priority over <see cref="AdoWorkItemFieldsDTO.CreatedBy"/> — a work item the current user
+    /// both created and is currently assigned to is more actionable as "assigned to me" than
+    /// "authored by me" (mirrors how GitHub's reason inference treats an active review/assignment
+    /// as more relevant than plain authorship). Falls back to "authored" only when the current user
+    /// isn't the assignee, and to "assigned" if neither identity matches (WIQL only ever returns
+    /// items matching <c>AssignedTo = @Me OR CreatedBy = @Me</c>, so one of the two always should).
+    /// Matching is done via identity id primarily, but some Azure DevOps organizations (notably ones
+    /// migrated between identity providers) return a different "id" from <c>_apis/connectionData</c>
+    /// than the one embedded in work item identity-ref fields — so the profile's stored email
+    /// (<see cref="AdoProfile.AdoEmail"/>) is checked too as a resilient fallback, since
+    /// <c>uniqueName</c> stays stable across both surfaces.
+    /// </summary>
+    private static InboxReason InferWorkItemReason(AdoWorkItemDTO workItem, AdoProfile profile)
     {
-        if (string.Equals(workItem.Fields.CreatedBy?.Id, adoUserId, StringComparison.OrdinalIgnoreCase))
+        if (IsMe(workItem.Fields.AssignedTo, profile))
+        {
+            return InboxReason.Assigned;
+        }
+
+        if (IsMe(workItem.Fields.CreatedBy, profile))
         {
             return InboxReason.Authored;
         }
@@ -647,45 +603,9 @@ public class AdoService(
         return InboxReason.Assigned;
     }
 
-    public async Task<IReadOnlyList<string>> GetOrganizationsAsync(long userId, CancellationToken ct = default)
-    {
-        var profile = await repository.GetByUserIdAsync(userId)
-            ?? throw new BadRequestException("No Azure DevOps integration is connected.");
-
-        if (string.IsNullOrEmpty(profile.OrganizationsJson))
-        {
-            return [];
-        }
-
-        var cached = JsonSerializer.Deserialize<List<AdoOrganizationRef>>(profile.OrganizationsJson);
-        return cached?.Select(o => o.Name).ToList() ?? [];
-    }
-
-    public async Task<IReadOnlyList<string>> AddOrganizationAsync(long userId, string organizationName, CancellationToken ct = default)
-    {
-        var profile = await repository.GetByUserIdAsync(userId)
-            ?? throw new BadRequestException("No Azure DevOps integration is connected.");
-
-        var accessToken = profile.AccessToken
-            ?? throw new BadRequestException("No Azure DevOps integration is connected.");
-
-        if (!await ProbeOrganizationAsync(organizationName, accessToken, ct))
-        {
-            throw new BadRequestException($"The connected Azure DevOps PAT cannot access organization '{organizationName}'.");
-        }
-
-        var existing = string.IsNullOrEmpty(profile.OrganizationsJson)
-            ? []
-            : JsonSerializer.Deserialize<List<AdoOrganizationRef>>(profile.OrganizationsJson) ?? [];
-
-        var merged = existing.Select(o => o.Name)
-            .Append(organizationName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        await PersistOrganizationsAsync(profile, merged);
-        return merged;
-    }
+    private static bool IsMe(AdoIdentityRefDTO? identity, AdoProfile profile) =>
+        string.Equals(identity?.Id, profile.AdoUserId, StringComparison.OrdinalIgnoreCase)
+        || (!string.IsNullOrEmpty(profile.AdoEmail) && string.Equals(identity?.UniqueName, profile.AdoEmail, StringComparison.OrdinalIgnoreCase));
 
     private async Task MarkInvalidAsync(AdoProfile profile, Exception ex)
     {

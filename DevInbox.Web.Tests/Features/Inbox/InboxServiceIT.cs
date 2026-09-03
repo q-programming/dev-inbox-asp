@@ -210,7 +210,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var attachedNote = await AddNoteAsync(_user.Id, attachedToInboxItemId: githubItem.Id);
         var standaloneNote = await AddNoteAsync(_user.Id, attachedToInboxItemId: null);
 
-        await _service.DeleteInboxItemsBySourceAsync(_user.Id, ItemSource.GitHub, CancellationToken.None);
+        await _service.DeleteInboxItemsBySourceAsync(_user.Id, ItemSource.GitHub, organization: null, CancellationToken.None);
 
         var remainingItemIds = await DataBase.InboxItems.AsNoTracking().Select(i => i.Id).ToListAsync();
         Assert.DoesNotContain(githubItem.Id, remainingItemIds);

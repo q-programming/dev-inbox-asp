@@ -204,9 +204,9 @@ public class InboxService(
     }
 
 
-    public async Task DeleteInboxItemsBySourceAsync(long userId, ItemSource source, CancellationToken cancellationToken)
+    public async Task DeleteInboxItemsBySourceAsync(long userId, ItemSource source, string? organization, CancellationToken cancellationToken)
     {
-        await inboxItemRepository.DeleteBySourceAsync(userId, source);
+        await inboxItemRepository.DeleteBySourceAsync(userId, source, organization);
     }
 
     private long GetCurrentUserId()

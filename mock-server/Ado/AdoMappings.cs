@@ -9,10 +9,10 @@ namespace GitHubMockServer.Ado;
 /// Registers WireMock.NET mappings for Azure DevOps REST endpoints, served under
 /// <c>/ado</c> on the shared mock server so multiple external services (GitHub, ADO, Jira, ...)
 /// can each own a path prefix on one process/port instead of needing a server each.
-/// Mocks the full multi-org sync mechanism: PAT validation (profile), organization discovery
-/// (accounts + a per-organization projects probe), the per-project WIQL/work-item-batch/PR-search
-/// calls issued by <see cref="DevInbox.Web.Features.ADO.AdoService"/>, and the single work
-/// item/pull request detail + comment fetches used by the inbox detail view
+/// Mocks the full connect + sync flow: org-scoped PAT validation/identity (connectionData), the
+/// per-project WIQL/work-item-batch/PR-search calls issued by
+/// <see cref="DevInbox.Web.Features.ADO.AdoService"/>, and the single work item/pull request
+/// detail + comment fetches used by the inbox detail view
 /// (<see cref="DevInbox.Web.Features.ADO.AdoService.GetDetailsAsync"/>).
 /// Seeds a single organization ("contoso") with two projects ("Alpha", "Beta") — Alpha has four
 /// work items (501-504) and four pull requests (2087, 2101, 2110, 2124) seeded, each with its own
@@ -22,27 +22,18 @@ namespace GitHubMockServer.Ado;
 internal static class AdoMappings
 {
     /// <summary>
-    /// REST endpoint for the future <c>AdoClient.GetCurrentUserProfileAsync</c> call, which will
-    /// request the relative path "_apis/profile/profiles/me" against the "ado" HttpClient. That
-    /// client's BaseAddress is configured via <c>ADO:BaseUrl</c>, so the shared mock server hosts
-    /// it under "/ado/_apis/profile/profiles/me" here.
+    /// REST endpoint for <c>AdoClient.GetCurrentUserProfileAsync</c> — kept for OAuth-parity only
+    /// (unreachable today, see <see cref="DevInbox.Web.Features.ADO.AdoIntegrationService.CreateOAuthProfile"/>);
+    /// the PAT connect flow uses <see cref="DevInbox.Web.Features.ADO.Client.IAdoClient.GetConnectionDataAsync"/> instead.
     /// </summary>
     private const string CurrentUserProfilePath = "/ado/_apis/profile/profiles/me";
 
-    /// <summary>Seeded organization — the only one <see cref="AccountsPath"/> reports as accessible.</summary>
+    /// <summary>Seeded organization whose projects/work items/PRs are populated below.</summary>
     private const string Organization = "contoso";
-
-    /// <summary>
-    /// Global (not organization-scoped) accounts endpoint used to auto-discover organizations —
-    /// see <c>AdoClient.GetAccountsAsync</c>.
-    /// </summary>
-    private const string AccountsPath = "/ado/_apis/accounts";
 
     public static void Register(WireMockServer server, string fixturesDir)
     {
-        // GET /_apis/profile/profiles/me — REST call used to validate an ADO PAT by resolving the
-        // authenticated user's profile. Query string matching is intentionally lax, mirroring the
-        // GitHub mappings style, so api-version does not need to be matched exactly.
+        // GET /_apis/profile/profiles/me — kept for OAuth parity only, see CurrentUserProfilePath.
         server
             .Given(Request.Create()
                 .WithPath(CurrentUserProfilePath)
@@ -53,18 +44,20 @@ internal static class AdoMappings
                 .WithHeader("Content-Type", "application/json")
                 .WithBodyFromFile(System.IO.Path.Combine(fixturesDir, "current-user-profile.json")));
 
-        // GET /_apis/accounts?memberId=... — organization discovery. Matching is lax on the
-        // memberId value (any value is accepted) since the mock only ever seeds one identity.
+        // GET /{organization}/_apis/connectionData — org-scoped PAT validation + identity
+        // resolution (AdoClient.GetConnectionDataAsync), the primary connect-flow call now that
+        // Azure DevOps is deprecating "all accessible organizations" PATs. Matched against any
+        // organization name (WildcardMatcher) since the multi-org design lets a user connect any
+        // organization name they type in, unlike /_apis/projects which only 200s for "contoso".
         server
             .Given(Request.Create()
-                .WithPath(AccountsPath)
-                .WithParam("memberId")
+                .WithPath(new WildcardMatcher("/ado/*/_apis/connectionData"))
                 .UsingGet())
-            .WithTitle("ADO: GET /_apis/accounts (organization discovery)")
+            .WithTitle("ADO: GET /{organization}/_apis/connectionData")
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
-                .WithBodyFromFile(System.IO.Path.Combine(fixturesDir, "accounts.json")));
+                .WithBodyFromFile(System.IO.Path.Combine(fixturesDir, "connection-data.json")));
 
         // GET /{organization}/_apis/projects — used both for real project discovery and as the
         // cheap "can this PAT reach this organization" probe (AdoService.ProbeOrganizationAsync).

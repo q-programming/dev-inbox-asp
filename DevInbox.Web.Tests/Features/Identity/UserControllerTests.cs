@@ -156,7 +156,7 @@ public class UserControllerTests
         public async Task MeAsyncShouldReturnEmptyIntegrationsWhenNothingConnectedAsync()
         {
             _gitHubProfileRepository.GetByUserIdAsync(42).Returns((GitHubProfile?)null);
-            _adoProfileRepository.GetByUserIdAsync(42).Returns((AdoProfile?)null);
+            _adoProfileRepository.GetAllByUserIdAsync(42).Returns(new List<AdoProfile>());
 
             var result = await _controller.MeAsync();
 
@@ -175,7 +175,7 @@ public class UserControllerTests
                 AuthMethod = DevInbox.Web.Features.Sync.Domain.IntegrationAuthMethod.Pat,
                 Status = DevInbox.Web.Features.Sync.Domain.IntegrationStatus.Active
             });
-            _adoProfileRepository.GetByUserIdAsync(42).Returns((AdoProfile?)null);
+            _adoProfileRepository.GetAllByUserIdAsync(42).Returns(new List<AdoProfile>());
 
             var result = await _controller.MeAsync();
 
@@ -187,14 +187,18 @@ public class UserControllerTests
         public async Task MeAsyncShouldReturnOnlyAdoIntegrationAsync()
         {
             _gitHubProfileRepository.GetByUserIdAsync(42).Returns((GitHubProfile?)null);
-            _adoProfileRepository.GetByUserIdAsync(42).Returns(new AdoProfile
+            _adoProfileRepository.GetAllByUserIdAsync(42).Returns(new List<AdoProfile>
             {
-                Id = 2,
-                AdoUserId = "ado-user-1",
-                AdoLogin = "Jane Doe",
-                AccessToken = "ado-token",
-                AuthMethod = DevInbox.Web.Features.Sync.Domain.IntegrationAuthMethod.Pat,
-                Status = DevInbox.Web.Features.Sync.Domain.IntegrationStatus.Active
+                new AdoProfile
+                {
+                    Id = 2,
+                    Organization = "contoso",
+                    AdoUserId = "ado-user-1",
+                    AdoLogin = "Jane Doe",
+                    AccessToken = "ado-token",
+                    AuthMethod = DevInbox.Web.Features.Sync.Domain.IntegrationAuthMethod.Pat,
+                    Status = DevInbox.Web.Features.Sync.Domain.IntegrationStatus.Active
+                }
             });
 
             var result = await _controller.MeAsync();
@@ -215,14 +219,18 @@ public class UserControllerTests
                 AuthMethod = DevInbox.Web.Features.Sync.Domain.IntegrationAuthMethod.Pat,
                 Status = DevInbox.Web.Features.Sync.Domain.IntegrationStatus.Active
             });
-            _adoProfileRepository.GetByUserIdAsync(42).Returns(new AdoProfile
+            _adoProfileRepository.GetAllByUserIdAsync(42).Returns(new List<AdoProfile>
             {
-                Id = 2,
-                AdoUserId = "ado-user-1",
-                AdoLogin = "Jane Doe",
-                AccessToken = "ado-token",
-                AuthMethod = DevInbox.Web.Features.Sync.Domain.IntegrationAuthMethod.Pat,
-                Status = DevInbox.Web.Features.Sync.Domain.IntegrationStatus.Active
+                new AdoProfile
+                {
+                    Id = 2,
+                    Organization = "contoso",
+                    AdoUserId = "ado-user-1",
+                    AdoLogin = "Jane Doe",
+                    AccessToken = "ado-token",
+                    AuthMethod = DevInbox.Web.Features.Sync.Domain.IntegrationAuthMethod.Pat,
+                    Status = DevInbox.Web.Features.Sync.Domain.IntegrationStatus.Active
+                }
             });
 
             var result = await _controller.MeAsync();

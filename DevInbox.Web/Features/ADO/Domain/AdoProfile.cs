@@ -5,6 +5,14 @@ using DevInbox.Web.Features.Sync.Domain;
 
 namespace DevInbox.Web.Features.ADO.Domain;
 
+/// <summary>
+/// Represents one user's connection to a single Azure DevOps organization — one row (and one PAT)
+/// per organization, not per user, since Azure DevOps Personal Access Tokens are now
+/// organization-scoped (Microsoft is deprecating "all accessible organizations" PATs, see
+/// https://aka.ms/GlobalPATDeprecation, effective Dec 1 2026). A user who works across multiple
+/// ADO organizations connects each one separately (see <see cref="AdoIntegrationService.ConnectPatAsync"/>);
+/// disconnecting one organization only removes that organization's inbox items, leaving the rest intact.
+/// </summary>
 [Table("ado_profile")]
 public class AdoProfile
 {
@@ -15,10 +23,22 @@ public class AdoProfile
     [ForeignKey(nameof(UserId))]
     public User User { get; set; } = null!;
 
-    /// <summary>Azure DevOps profile GUID (string, not numeric — ADO identifies profiles by GUID, unlike GitHub's numeric user id).</summary>
+    /// <summary>Azure DevOps organization name this profile/PAT is scoped to, e.g. "contoso" for https://dev.azure.com/contoso.</summary>
+    public string Organization { get; set; } = null!;
+
+    /// <summary>Azure DevOps identity GUID (string, not numeric — ADO identifies identities by GUID, unlike GitHub's numeric user id).</summary>
     public string AdoUserId { get; set; } = null!;
 
     public string AdoLogin { get; set; } = null!;
+
+    /// <summary>
+    /// The identity's unique name/email (e.g. "jane@contoso.com"), used as a fallback match for
+    /// "authored by me" inference alongside <see cref="AdoUserId"/> — some Azure DevOps
+    /// organizations (notably AAD-backed ones) surface a different identity "id" from
+    /// <c>_apis/connectionData</c> than the "id" embedded in work item identity-ref fields
+    /// (AssignedTo/CreatedBy), while the unique name/email stays consistent across both surfaces.
+    /// </summary>
+    public string? AdoEmail { get; set; }
 
     public string? AvatarUrl { get; set; }
 
@@ -43,26 +63,10 @@ public class AdoProfile
     public IntegrationStatus Status { get; set; } = IntegrationStatus.Active;
 
     /// <summary>
-    /// JSON-serialized cache of the Azure DevOps organizations this user's PAT can actually reach —
-    /// a union of what was auto-discovered via the accounts API (<c>GET _apis/accounts?memberId=</c>)
-    /// and any organizations the user added manually. A PAT can be scoped to a single organization,
-    /// so this must not be assumed complete from discovery alone; each candidate organization is
-    /// probed (a cheap "list projects" call) before being kept in this list. Refreshed on connect,
-    /// on a forced full sync, or once <see cref="OrganizationsSyncedAt"/> is older than the cache's
-    /// TTL.
-    /// </summary>
-    [Column("ado_organizations")]
-    public string? OrganizationsJson { get; set; }
-
-    /// <summary>When <see cref="OrganizationsJson"/> was last refreshed/probed.</summary>
-    public DateTimeOffset? OrganizationsSyncedAt { get; set; }
-
-    /// <summary>
-    /// JSON-serialized cache of the Azure DevOps projects (organization + id + name) this user's PAT
-    /// can see across every usable organization — populated by <c>GET {org}/_apis/projects</c> for
-    /// each organization in <see cref="OrganizationsJson"/>. Cached here so a normal sync doesn't
-    /// need to re-list projects every time; refreshed on connect, on a forced full sync, or once
-    /// <see cref="ProjectsSyncedAt"/> is older than the cache's TTL.
+    /// JSON-serialized cache of the projects (id + name) this profile's PAT can see within
+    /// <see cref="Organization"/> — populated by <c>GET {organization}/_apis/projects</c>. Cached
+    /// here so a normal sync doesn't need to re-list projects every time; refreshed on connect, on
+    /// a forced full sync, or once <see cref="ProjectsSyncedAt"/> is older than the cache's TTL.
     /// </summary>
     [Column("ado_projects")]
     public string? ProjectsJson { get; set; }
@@ -71,8 +75,5 @@ public class AdoProfile
     public DateTimeOffset? ProjectsSyncedAt { get; set; }
 }
 
-/// <summary>A single Azure DevOps organization the user's PAT can reach, as cached in <see cref="AdoProfile.OrganizationsJson"/>.</summary>
-public sealed record AdoOrganizationRef(string Name);
-
-/// <summary>A single Azure DevOps project, as cached in <see cref="AdoProfile.ProjectsJson"/> — tagged with its owning organization since projects across organizations are no longer disambiguated by a single profile-level org.</summary>
-public sealed record AdoProjectRef(string Organization, string Id, string Name);
+/// <summary>A single Azure DevOps project, as cached in <see cref="AdoProfile.ProjectsJson"/> — always within <see cref="AdoProfile.Organization"/>, so it isn't tagged with an organization itself.</summary>
+public sealed record AdoProjectRef(string Id, string Name);

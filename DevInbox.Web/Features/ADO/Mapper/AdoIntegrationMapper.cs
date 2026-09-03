@@ -29,8 +29,6 @@ public partial class AdoIntegrationMapper
     [MapperIgnoreSource(nameof(AdoProfile.AvatarUrl))]
     [MapperIgnoreSource(nameof(AdoProfile.AdoLogin))]
     [MapperIgnoreSource(nameof(AdoProfile.AdoUserId))]
-    [MapperIgnoreSource(nameof(AdoProfile.OrganizationsJson))]
-    [MapperIgnoreSource(nameof(AdoProfile.OrganizationsSyncedAt))]
     [MapperIgnoreSource(nameof(AdoProfile.ProjectsJson))]
     [MapperIgnoreSource(nameof(AdoProfile.ProjectsSyncedAt))]
     private partial IntegrationDto MapCore(AdoProfile profile);

@@ -41,7 +41,7 @@ const GithubIntegrationCard = memo(() => {
   const [expiresAt, setExpiresAt] = useState('');
   const [isDisconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
   const connectPat = useConnectIntegrationPatMutation(IntegrationType.Github);
-  const disconnect = useDisconnectIntegrationMutation(IntegrationType.Github);
+  const disconnect = useDisconnectIntegrationMutation();
 
   const handleConnectPat = () => {
     if (!token.trim()) {

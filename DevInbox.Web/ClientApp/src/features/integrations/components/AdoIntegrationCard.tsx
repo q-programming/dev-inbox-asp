@@ -1,54 +1,107 @@
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
+import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import IntegrationIcon from '@shared/components/integrationIcon/IntegrationIcon.tsx';
-import { IntegrationStatus, IntegrationType } from '@api';
+import { IntegrationDto, IntegrationStatus, IntegrationType } from '@api';
 import useUserStore from '@shared/store/user.store';
 import {
-  useAddAdoOrganizationMutation,
-  useAdoOrganizationsQuery,
   useConnectIntegrationPatMutation,
-  useDisconnectIntegrationMutation,
+  useDisconnectAdoOrganizationMutation,
 } from '@feature/integrations/hooks/useIntegrationsMutation';
 import ConfirmModal from '@shared/components/confirmModal/ConfirmModal';
 
-const AdoIntegrationCard = memo(() => {
-  const integration = useUserStore((state) =>
-    state.identity?.integrations?.find((entry) => entry.type === IntegrationType.Ado),
-  );
-  const isConnected = integration?.status === IntegrationStatus.ACTIVE;
-  const isExpired = integration?.status === IntegrationStatus.EXPIRED;
+/**
+ * Renders one connected Azure DevOps organization — its own status badge and disconnect action,
+ * mirroring the GitHub card's connected-state layout so the two integrations look consistent.
+ */
+const AdoOrganizationRow = memo(({ integration }: { integration: IntegrationDto }) => {
+  const isConnected = integration.status === IntegrationStatus.ACTIVE;
+  const isExpired = integration.status === IntegrationStatus.EXPIRED;
+  const [isDisconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
+  const disconnect = useDisconnectAdoOrganizationMutation();
 
+  return (
+    <Stack
+      direction="row"
+      sx={{ alignItems: 'center', gap: 1.5, py: 0.5 }}
+      data-testid="ado-organization-row"
+    >
+      <Typography variant="body2" sx={{ fontWeight: 600, flex: 1 }} data-testid="ado-organization-name">
+        {integration.organization}
+      </Typography>
+      {isConnected && (
+        <Chip
+          icon={<CheckCircleIcon />}
+          label="Connected"
+          color="success"
+          size="small"
+          data-testid="ado-connected-badge"
+        />
+      )}
+      {isExpired && (
+        <Chip label="Token expired" color="warning" size="small" data-testid="ado-expired-badge" />
+      )}
+      <Button
+        variant="outlined"
+        color="inherit"
+        size="small"
+        onClick={() => setDisconnectConfirmOpen(true)}
+        disabled={disconnect.isPending}
+        data-testid="ado-disconnect-btn"
+      >
+        Disconnect
+      </Button>
+      <ConfirmModal
+        open={isDisconnectConfirmOpen}
+        title={`Disconnect "${integration.organization}"?`}
+        body="This action cannot be undone, and all work items and pull requests previously synced from this organization (and attached notes) will be removed from your inbox. Other connected organizations are not affected."
+        confirmLabel="Disconnect"
+        cancelLabel="Cancel"
+        loading={disconnect.isPending}
+        onConfirm={() => {
+          disconnect.mutate(integration.organization!);
+          setDisconnectConfirmOpen(false);
+        }}
+        onCancel={() => setDisconnectConfirmOpen(false)}
+      />
+    </Stack>
+  );
+});
+AdoOrganizationRow.displayName = 'AdoOrganizationRow';
+
+/**
+ * Azure DevOps integration card — unlike GitHub, ADO Personal Access Tokens are scoped to a single
+ * organization (Microsoft is deprecating "all accessible organizations" PATs), so a user connects
+ * one organization at a time and may end up with several independent connections, each with its
+ * own status and disconnect action.
+ */
+const AdoIntegrationCard = memo(() => {
+  const allIntegrations = useUserStore((state) => state.identity?.integrations);
+  const integrations = useMemo(
+    () => allIntegrations?.filter((entry) => entry.type === IntegrationType.Ado) ?? [],
+    [allIntegrations],
+  );
+
+  const [organization, setOrganization] = useState('');
   const [token, setToken] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
-  const [isDisconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
-  const [newOrganization, setNewOrganization] = useState('');
   const connectPat = useConnectIntegrationPatMutation(IntegrationType.Ado);
-  const disconnect = useDisconnectIntegrationMutation(IntegrationType.Ado);
-  const organizationsQuery = useAdoOrganizationsQuery(isConnected);
-  const addOrganization = useAddAdoOrganizationMutation();
 
   const handleConnectPat = () => {
-    if (!token.trim()) {
+    if (!organization.trim() || !token.trim()) {
       return;
     }
     connectPat.mutate(
-      { token: token.trim(), expiresAt: expiresAt ? new Date(expiresAt) : undefined },
-      { onSuccess: () => setToken('') },
+      { organization: organization.trim(), token: token.trim(), expiresAt: expiresAt ? new Date(expiresAt) : undefined },
+      { onSuccess: () => { setOrganization(''); setToken(''); setExpiresAt(''); } },
     );
-  };
-
-  const handleAddOrganization = () => {
-    if (!newOrganization.trim()) {
-      return;
-    }
-    addOrganization.mutate(newOrganization.trim(), { onSuccess: () => setNewOrganization('') });
   };
 
   return (
@@ -60,137 +113,77 @@ const AdoIntegrationCard = memo(() => {
             Azure DevOps
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Track assigned and mentioned work items from your ADO organization.
+            Track assigned work items and pull requests across one or more Azure DevOps organizations.
           </Typography>
         </Box>
-        {isConnected && (
+        {integrations.length > 0 && (
           <Chip
             icon={<CheckCircleIcon />}
-            label="Connected"
+            label={`${integrations.length} connected`}
             color="success"
             size="small"
             data-testid="ado-connected-badge"
           />
         )}
-        {isExpired && (
-          <Chip
-            label="Token expired"
-            color="warning"
-            size="small"
-            data-testid="ado-expired-badge"
-          />
-        )}
       </Stack>
 
-      {(isConnected || isExpired) && (
-        <Button
-          variant="outlined"
-          color="inherit"
+      {integrations.length > 0 && (
+        <Stack spacing={0.5} data-testid="ado-organizations-list">
+          {integrations.map((integration) => (
+            <AdoOrganizationRow key={integration.organization} integration={integration} />
+          ))}
+        </Stack>
+      )}
+
+      {integrations.length > 0 && <Divider />}
+
+      <Stack spacing={1.5}>
+        <Typography variant="subtitle2">
+          {integrations.length > 0 ? 'Connect another organization' : 'Connect an organization'}
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          Azure DevOps Personal Access Tokens are scoped to a single organization — use a PAT scoped
+          to <code>vso.work</code> (read), <code>vso.code</code> (read) and <code>vso.project</code>{' '}
+          (read) for the organization you want to track.
+        </Typography>
+        <TextField
+          label="Organization"
           size="small"
-          onClick={() => setDisconnectConfirmOpen(true)}
-          disabled={disconnect.isPending}
+          value={organization}
+          onChange={(event) => setOrganization(event.target.value)}
+          placeholder="e.g. contoso"
+          data-testid="ado-organization-input"
+        />
+        <TextField
+          label="Personal Access Token"
+          type="password"
+          size="small"
+          fullWidth
+          value={token}
+          onChange={(event) => setToken(event.target.value)}
+          data-testid="ado-pat-input"
+        />
+        <TextField
+          label="Expires on (optional)"
+          type="date"
+          size="small"
+          value={expiresAt}
+          onChange={(event) => setExpiresAt(event.target.value)}
+          slotProps={{ inputLabel: { shrink: true } }}
+          sx={{ maxWidth: 220 }}
+          data-testid="ado-pat-expires-on-input"
+        />
+        <Button
+          variant="contained"
+          size="small"
+          onClick={handleConnectPat}
+          disabled={!organization.trim() || !token.trim() || connectPat.isPending}
           sx={{ alignSelf: 'flex-start' }}
-          data-testid="ado-disconnect-btn"
+          data-testid="ado-pat-connect-btn"
         >
-          Disconnect
+          Connect
         </Button>
-      )}
-
-      {!isConnected && (
-        <Stack spacing={1.5}>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Use a Personal Access Token scoped to <code>vso.work</code> (read) and{' '}
-            <code>vso.profile</code> (read) to let Dev Inbox track your assigned work items.
-          </Typography>
-          <TextField
-            label="Personal Access Token"
-            type="password"
-            size="small"
-            fullWidth
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-            data-testid="ado-pat-input"
-          />
-          <TextField
-            label="Expires on (optional)"
-            type="date"
-            size="small"
-            value={expiresAt}
-            onChange={(event) => setExpiresAt(event.target.value)}
-            slotProps={{ inputLabel: { shrink: true } }}
-            sx={{ maxWidth: 220 }}
-            data-testid="ado-pat-expires-on-input"
-          />
-          <Button
-            variant="contained"
-            size="small"
-            onClick={handleConnectPat}
-            disabled={!token.trim() || connectPat.isPending}
-            sx={{ alignSelf: 'flex-start' }}
-            data-testid="ado-pat-connect-btn"
-          >
-            Connect with token
-          </Button>
-        </Stack>
-      )}
-
-      {isConnected && (
-        <Stack spacing={1.5}>
-          <Typography variant="subtitle2">Organizations</Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Automatically discovered from your token, plus any you add manually. Sync fetches work
-            items and pull requests across every project in each of these organizations.
-          </Typography>
-          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }} data-testid="ado-organizations-list">
-            {organizationsQuery.isLoading && (
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Loading organizations…
-              </Typography>
-            )}
-            {organizationsQuery.data?.length === 0 && !organizationsQuery.isLoading && (
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                No organizations found yet — add one below, or trigger a sync to auto-discover them.
-              </Typography>
-            )}
-            {organizationsQuery.data?.map((org) => (
-              <Chip key={org.name} label={org.name} size="small" data-testid="ado-organization-chip" />
-            ))}
-          </Stack>
-          <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
-            <TextField
-              label="Add organization"
-              size="small"
-              value={newOrganization}
-              onChange={(event) => setNewOrganization(event.target.value)}
-              placeholder="e.g. contoso"
-              data-testid="ado-add-organization-input"
-            />
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleAddOrganization}
-              disabled={!newOrganization.trim() || addOrganization.isPending}
-              data-testid="ado-add-organization-btn"
-            >
-              Add
-            </Button>
-          </Stack>
-        </Stack>
-      )}
-
-      <ConfirmModal
-        open={isDisconnectConfirmOpen}
-        title="Disconnect Azure DevOps integration?"
-        body="This action cannot be undone, and all work items previously synced from Azure DevOps and attached notes will be removed from your inbox."
-        confirmLabel="Disconnect"
-        cancelLabel="Cancel"
-        loading={disconnect.isPending}
-        onConfirm={() => {
-          disconnect.mutate();
-          setDisconnectConfirmOpen(false);
-        }}
-        onCancel={() => setDisconnectConfirmOpen(false)}
-      />
+      </Stack>
     </Paper>
   );
 });
