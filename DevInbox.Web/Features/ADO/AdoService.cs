@@ -252,13 +252,25 @@ public class AdoService(
 
             var workItems = results.SelectMany(r => r.WorkItems).ToList();
             var pullRequests = results.SelectMany(r => r.PullRequests).ToList();
+            var staleProjectCount = results.Count(r => r.ProjectIsStale);
 
             logger.LogInformation(
-                "[ADO] Fetched {WorkItemCount} work item(s) and {PrCount} pull request(s) across {ProjectCount} project(s) for {AdoLogin} (organization {Organization})",
-                workItems.Count, pullRequests.Count, projects.Count, profile.AdoLogin, profile.Organization);
+                "[ADO] Fetched {WorkItemCount} work item(s) and {PrCount} pull request(s) across {ProjectCount} project(s) for {AdoLogin} (organization {Organization}){StaleSuffix}",
+                workItems.Count, pullRequests.Count, projects.Count, profile.AdoLogin, profile.Organization,
+                staleProjectCount > 0 ? $" ({staleProjectCount} stale project(s) skipped, cache invalidated)" : string.Empty);
 
             await UpsertWorkItemsAsync(profile, workItems);
             await UpsertPullRequestsAsync(profile, pullRequests);
+
+            // At least one cached project 404'd (renamed/deleted/access revoked since it was last
+            // discovered) — drop the cache so the *next* sync re-runs discovery instead of hitting
+            // the same dead project on every future sync until the 24h TTL happens to expire.
+            if (staleProjectCount > 0)
+            {
+                profile.ProjectsJson = null;
+                profile.ProjectsSyncedAt = null;
+                await repository.UpdateAsync(profile);
+            }
         }
         catch (Exception ex) when (IsUnauthorized(ex))
         {
@@ -308,9 +320,12 @@ public class AdoService(
     /// <summary>
     /// Runs the work item WIQL+batch and the two PR searches (creator/reviewer) for a single
     /// project — 4 calls total (1 WIQL + 1 batch + 2 PR searches), the unit of parallelism across
-    /// projects in <see cref="SyncProfileAsync"/>.
+    /// projects in <see cref="SyncProfileAsync"/>. A 404 anywhere in here means the project itself
+    /// is gone/inaccessible (renamed, deleted, permissions revoked — the cached project list is
+    /// stale) rather than a real error, so it's isolated to this one project (<see cref="ProjectIsStale"/>)
+    /// instead of failing the whole <c>Task.WhenAll</c> batch and losing every other project's results.
     /// </summary>
-    private async Task<(List<AdoWorkItemDTO> WorkItems, List<(AdoPullRequestDTO PullRequest, InboxReason Reason)> PullRequests)> SyncProjectAsync(
+    private async Task<(List<AdoWorkItemDTO> WorkItems, List<(AdoPullRequestDTO PullRequest, InboxReason Reason)> PullRequests, bool ProjectIsStale)> SyncProjectAsync(
         AdoProfile profile,
         string accessToken,
         AdoProjectRef project,
@@ -318,43 +333,53 @@ public class AdoService(
         bool isInitialSync,
         CancellationToken ct)
     {
-        var wiql = BuildWiql(updatedSince, isInitialSync);
-        var ids = await adoClient.QueryWorkItemIdsAsync(accessToken, profile.Organization, project.Name, wiql, ct);
-        var workItems = ids.Count == 0
-            ? []
-            : (await adoClient.GetWorkItemsBatchAsync(accessToken, profile.Organization, project.Name, ids, ct)).ToList();
-
-        // Two separate searches (creatorId / reviewerId) rather than one, since Azure DevOps'
-        // pull request search criteria only accepts one identity filter per call — the search also
-        // doubles as reason-inference: whichever call a PR came from tells us Authored vs
-        // ReviewRequested without needing extra client-side comparisons. A first-ever sync only
-        // asks for currently-active PRs (mirrors GitHub's "is:open" initial-sync bound); an
-        // incremental sync widens to "all" statuses so a close/abandon that happened since the last
-        // sync still surfaces (see IsClosedPullRequest/CreatePullRequest for how that's handled).
-        var searchStatus = isInitialSync ? AdoPullRequestSearchStatus.Active : AdoPullRequestSearchStatus.All;
-        var authored = await adoClient.GetPullRequestsAsync(
-            accessToken, profile.Organization, project.Name, searchStatus, creatorId: profile.AdoUserId, ct: ct);
-        var reviewRequested = await adoClient.GetPullRequestsAsync(
-            accessToken, profile.Organization, project.Name, searchStatus, reviewerId: profile.AdoUserId, ct: ct);
-
-        var seenIds = new HashSet<int>();
-        var pullRequests = new List<(AdoPullRequestDTO, InboxReason)>();
-        foreach (var pr in authored)
+        try
         {
-            if (seenIds.Add(pr.PullRequestId))
-            {
-                pullRequests.Add((pr, InboxReason.Authored));
-            }
-        }
-        foreach (var pr in reviewRequested)
-        {
-            if (seenIds.Add(pr.PullRequestId))
-            {
-                pullRequests.Add((pr, InboxReason.ReviewRequested));
-            }
-        }
+            var wiql = BuildWiql(updatedSince, isInitialSync);
+            var ids = await adoClient.QueryWorkItemIdsAsync(accessToken, profile.Organization, project.Name, wiql, ct);
+            var workItems = ids.Count == 0
+                ? []
+                : (await adoClient.GetWorkItemsBatchAsync(accessToken, profile.Organization, project.Name, ids, ct)).ToList();
 
-        return (workItems, pullRequests);
+            // Two separate searches (creatorId / reviewerId) rather than one, since Azure DevOps'
+            // pull request search criteria only accepts one identity filter per call — the search also
+            // doubles as reason-inference: whichever call a PR came from tells us Authored vs
+            // ReviewRequested without needing extra client-side comparisons. A first-ever sync only
+            // asks for currently-active PRs (mirrors GitHub's "is:open" initial-sync bound); an
+            // incremental sync widens to "all" statuses so a close/abandon that happened since the last
+            // sync still surfaces (see IsClosedPullRequest/CreatePullRequest for how that's handled).
+            var searchStatus = isInitialSync ? AdoPullRequestSearchStatus.Active : AdoPullRequestSearchStatus.All;
+            var authored = await adoClient.GetPullRequestsAsync(
+                accessToken, profile.Organization, project.Name, searchStatus, creatorId: profile.AdoUserId, ct: ct);
+            var reviewRequested = await adoClient.GetPullRequestsAsync(
+                accessToken, profile.Organization, project.Name, searchStatus, reviewerId: profile.AdoUserId, ct: ct);
+
+            var seenIds = new HashSet<int>();
+            var pullRequests = new List<(AdoPullRequestDTO, InboxReason)>();
+            foreach (var pr in authored)
+            {
+                if (seenIds.Add(pr.PullRequestId))
+                {
+                    pullRequests.Add((pr, InboxReason.Authored));
+                }
+            }
+            foreach (var pr in reviewRequested)
+            {
+                if (seenIds.Add(pr.PullRequestId))
+                {
+                    pullRequests.Add((pr, InboxReason.ReviewRequested));
+                }
+            }
+
+            return (workItems, pullRequests, false);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            logger.LogWarning(
+                "[ADO] Project '{Project}' ({Organization}) returned 404 — likely renamed/deleted/inaccessible since it was last discovered; skipping it for this sync",
+                project.Name, profile.Organization);
+            return ([], [], true);
+        }
     }
 
     /// <summary>
