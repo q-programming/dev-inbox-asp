@@ -1,0 +1,60 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwABCD8",
+        "number": 115,
+        "title": "Show area path as inbox item source badge",
+        "url": "https://github.com/acme/dev-inbox/pull/115",
+        "state": "OPEN",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-08-13T11:20:00Z",
+        "updatedAt": "2026-08-15T09:10:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 64,
+        "deletions": 6,
+        "changedFiles": 5,
+        "reviewDecision": null,
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "amaj",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+        },
+        "comments": {
+          "totalCount": 1
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "frontend"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": []
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Displays the ADO area path (or GitHub repo) as a small badge on each inbox item so the source organization/project is obvious at a glance.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Thanks for the update, taking a look.",
+              "url": "https://github.com/acme/dev-inbox/pull/115#issuecomment-1",
+              "createdAt": "2026-08-15T09:10:00Z",
+              "author": {
+                "login": "amaj",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

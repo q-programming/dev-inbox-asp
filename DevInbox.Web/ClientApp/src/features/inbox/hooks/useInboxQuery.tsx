@@ -1,11 +1,14 @@
-import { InboxClient, InboxReason, ItemSource, ItemStatus, ItemType, SyncClient } from '@api';
+import { InboxClient, InboxReason, ItemSource, ItemStatus, ItemType, SyncClient, type InboxPage } from '@api';
 import { ApiError, apiFetch, BASE_URL } from '@shared/api/httpClient';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { heartbeatKeys } from './useInboxHeartBeat';
 import type { InboxFilter } from '../utils/inboxFilter';
 
 export const syncApi = new SyncClient(BASE_URL, { fetch: apiFetch });
 export const inboxApi = new InboxClient(BASE_URL, { fetch: apiFetch });
+
+/** Number of inbox items requested per page, both for the initial load and every subsequent infinite-scroll fetch. */
+export const INBOX_PAGE_SIZE = 20;
 
 export const inboxKeys = {
   all: ['inbox'] as const,
@@ -14,19 +17,35 @@ export const inboxKeys = {
   summary: ['inbox', 'summary'] as const,
 } as const;
 
+/**
+ * Infinite-scroll inbox query. Pages are fetched 20 items at a time and cached individually
+ * by TanStack Query, so scrolling back up never re-fetches pages already in cache.
+ * Consumers should flatten `data.pages[].items` for rendering (see `flattenInboxPages`).
+ */
 export const useInboxQuery = (filter?: InboxFilter) =>
-  useQuery({
+  useInfiniteQuery({
     queryKey: [...inboxKeys.items, filter?.source, filter?.itemType, filter?.reason, filter?.status],
-    queryFn: () =>
+    queryFn: ({ pageParam }) =>
       inboxApi.listInboxItems(
-        0,
-        20,
+        pageParam,
+        INBOX_PAGE_SIZE,
         filter?.source as ItemSource | undefined,
         filter?.itemType as ItemType | undefined,
         filter?.status as ItemStatus | undefined,
         filter?.reason as InboxReason | undefined,
       ),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      const page = lastPage.page ?? 0;
+      const size = lastPage.size ?? INBOX_PAGE_SIZE;
+      const totalElements = lastPage.totalElements ?? 0;
+      const loaded = (page + 1) * size;
+      return loaded < totalElements ? page + 1 : undefined;
+    },
   });
+
+/** Flattens the pages of an infinite inbox query into a single item array for rendering. */
+export const flattenInboxPages = (pages?: InboxPage[]) => pages?.flatMap((page) => page.items ?? []) ?? [];
 
 export const useInboxSummaryQuery = () =>
   useQuery({

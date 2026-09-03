@@ -1,8 +1,10 @@
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { useInboxItemQuery } from '@feature/inbox/hooks/useInboxQuery';
+import { inboxKeys, useInboxItemQuery } from '@feature/inbox/hooks/useInboxQuery';
 import { useInboxStore } from '@feature/inbox/store/inbox.store';
+import { ApiError } from '@shared/api/httpClient';
+import { useQueryClient } from '@tanstack/react-query';
 import { ItemSource } from '@api';
 import AdoDetail from './ado/AdoDetail';
 import GithubDetail from './github/GithubDetail';
@@ -13,16 +15,26 @@ import { useEffect } from 'react';
 const InboxDetailPanel = () => {
   const { selectedItemId, closeItem } = useInboxStore();
   const { addAlert } = useAlertStore();
-  const { isLoading, data: details, isError } = useInboxItemQuery(selectedItemId);
+  const queryClient = useQueryClient();
+  const { isLoading, data: details, isError, error } = useInboxItemQuery(selectedItemId);
   useEffect(() => {
     if (isError) {
+      const isGone = error instanceof ApiError && error.status === 404;
       addAlert({
-        message: 'Failed to load inbox item details.',
+        message: isGone
+          ? 'This item no longer exists and has been removed from your inbox.'
+          : 'Failed to load inbox item details.',
         type: AlertType.ERROR,
       });
       closeItem();
+      if (isGone) {
+        // The backend already deleted the stale item (e.g. its ADO work item/PR/project was
+        // removed) — refresh the list/summary so it disappears from the UI without a manual sync.
+        queryClient.invalidateQueries({ queryKey: inboxKeys.items });
+        queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
+      }
     }
-  }, [isError, addAlert, closeItem]);
+  }, [isError, error, addAlert, closeItem, queryClient]);
 
   if (selectedItemId == null) {
     return null;

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <None Include="GitHub\Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Ado\Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

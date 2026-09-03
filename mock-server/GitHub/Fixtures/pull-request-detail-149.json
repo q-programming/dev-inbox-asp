@@ -1,0 +1,69 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn149",
+        "number": 149,
+        "title": "Add settings toggle for compact inbox view",
+        "url": "https://github.com/acme/dev-inbox/pull/149",
+        "state": "CLOSED",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-03-20T09:00:00Z",
+        "updatedAt": "2026-03-20T09:00:00Z",
+        "closedAt": "2026-03-22T14:00:00Z",
+        "mergedAt": null,
+        "additions": 67,
+        "deletions": 21,
+        "changedFiles": 2,
+        "reviewDecision": "CHANGES_REQUESTED",
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "amaj",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+        },
+        "comments": {
+          "totalCount": 3
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": []
+        },
+        "reviews": {
+          "nodes": [
+            {
+              "state": "CHANGES_REQUESTED",
+              "submittedAt": "2026-03-22T14:00:00Z",
+              "author": {
+                "login": "tnowak",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+              }
+            }
+          ]
+        },
+        "body": "Auto-generated fixture PR #149 for pagination testing: add settings toggle for compact inbox view.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/149#issuecomment-1",
+              "createdAt": "2026-03-20T09:00:00Z",
+              "author": {
+                "login": "jkowalski",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

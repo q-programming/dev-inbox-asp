@@ -38,7 +38,7 @@ describe('InboxItemBadges', () => {
       ['reason is unknown', makeItem({ reason: InboxReason.Unknown })],
       ['priority is undefined', makeItem({ reason: InboxReason.Assigned })],
       ['priority is none', makeItem({ reason: InboxReason.Assigned, priority: Priority.None })],
-    ])('omits the corresponding chips when %s', (_, item) => {
+    ])('omits the corresponding chips when %s', (_description, item) => {
       renderWithProviders(<InboxItemBadges item={item} />);
 
       if(!item.reason || item.reason === InboxReason.Unknown) {

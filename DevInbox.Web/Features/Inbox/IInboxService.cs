@@ -14,5 +14,5 @@ public interface IInboxService
     Task<InboxItemDetail> GetInboxItemByIdAsync(long id);
     Task MarkInboxItemDoneAsync(long id, bool isDone);
     Task SaveInboxItemAsync(long id, bool save);
-    Task DeleteInboxItemsBySourceAsync(long userId, Domain.ItemSource gitHub, CancellationToken cancellationToken);
+    Task DeleteInboxItemsBySourceAsync(long userId, Domain.ItemSource source, string? organization, CancellationToken cancellationToken);
 }

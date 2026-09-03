@@ -1,0 +1,239 @@
+{
+  "count": 9,
+  "value": [
+    {
+      "pullRequestId": 2101,
+      "title": "Add ADO organization discovery",
+      "status": "active",
+      "creationDate": "2026-01-13T10:00:00.000Z",
+      "closedDate": null,
+      "createdBy": {
+        "displayName": "John Doe",
+        "uniqueName": "john@doe.com",
+        "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d",
+          "displayName": "Jane Smith",
+          "vote": 0
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2124,
+      "title": "Cache ADO project discovery per profile",
+      "status": "completed",
+      "creationDate": "2026-01-02T09:00:00.000Z",
+      "closedDate": "2026-01-04T13:00:00.000Z",
+      "createdBy": {
+        "displayName": "John Doe",
+        "uniqueName": "john@doe.com",
+        "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d",
+          "displayName": "Jane Smith",
+          "vote": 10
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2135,
+      "title": "Add retry policy to ADO work item batch fetch",
+      "status": "active",
+      "creationDate": "2026-01-20T09:00:00.000Z",
+      "closedDate": null,
+      "createdBy": {
+        "displayName": "John Doe",
+        "uniqueName": "john@doe.com",
+        "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d",
+          "displayName": "Jane Smith",
+          "vote": 0
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2140,
+      "title": "Extract PR reason inference into its own helper",
+      "status": "completed",
+      "creationDate": "2026-01-10T10:00:00.000Z",
+      "closedDate": "2026-01-12T14:00:00.000Z",
+      "createdBy": {
+        "displayName": "John Doe",
+        "uniqueName": "john@doe.com",
+        "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d",
+          "displayName": "Jane Smith",
+          "vote": 10
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2160,
+      "title": "Add pagination support to inbox item list",
+      "status": "active",
+      "creationDate": "2026-02-01T09:00:00.000Z",
+      "closedDate": null,
+      "createdBy": {
+        "displayName": "John Doe",
+        "uniqueName": "john@doe.com",
+        "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d",
+          "displayName": "Jane Smith",
+          "vote": 0
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2170,
+      "title": "Add telemetry for sync duration per profile",
+      "status": "active",
+      "creationDate": "2026-02-03T09:00:00.000Z",
+      "closedDate": null,
+      "createdBy": {
+        "displayName": "John Doe",
+        "uniqueName": "john@doe.com",
+        "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d",
+          "displayName": "Jane Smith",
+          "vote": 0
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2180,
+      "title": "Add empty state illustration to inbox",
+      "status": "active",
+      "creationDate": "2026-02-05T09:00:00.000Z",
+      "closedDate": null,
+      "createdBy": {
+        "displayName": "John Doe",
+        "uniqueName": "john@doe.com",
+        "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d",
+          "displayName": "Jane Smith",
+          "vote": 0
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2190,
+      "title": "Add integration test for PAT expiry warning",
+      "status": "active",
+      "creationDate": "2026-02-07T09:00:00.000Z",
+      "closedDate": null,
+      "createdBy": {
+        "displayName": "John Doe",
+        "uniqueName": "john@doe.com",
+        "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d",
+          "displayName": "Jane Smith",
+          "vote": 0
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2200,
+      "title": "Add iteration path to work item metadata",
+      "status": "active",
+      "creationDate": "2026-02-09T09:00:00.000Z",
+      "closedDate": null,
+      "createdBy": {
+        "displayName": "John Doe",
+        "uniqueName": "john@doe.com",
+        "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d",
+          "displayName": "Jane Smith",
+          "vote": 0
+        }
+      ]
+    }
+  ]
+}

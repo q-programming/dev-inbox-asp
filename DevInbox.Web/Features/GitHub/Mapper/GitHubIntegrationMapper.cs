@@ -23,6 +23,12 @@ public partial class GitHubIntegrationMapper
 
     [MapperIgnoreTarget(nameof(IntegrationDto.Type))]
     [MapperIgnoreTarget(nameof(IntegrationDto.Status))]
+    [MapperIgnoreSource(nameof(GitHubProfile.AccessToken))]
+    [MapperIgnoreSource(nameof(GitHubProfile.UserId))]
+    [MapperIgnoreSource(nameof(GitHubProfile.User))]
+    [MapperIgnoreSource(nameof(GitHubProfile.AvatarUrl))]
+    [MapperIgnoreSource(nameof(GitHubProfile.GitHubLogin))]
+    [MapperIgnoreSource(nameof(GitHubProfile.GitHubUserId))]
     private partial IntegrationDto MapCore(GitHubProfile profile);
 
     /// <summary>
@@ -33,7 +39,7 @@ public partial class GitHubIntegrationMapper
     private static IntegrationStatus ResolveStatus(GitHubProfile profile)
     {
         var isPastExpiry = profile.TokenExpiresAt is { } expiresAt && expiresAt <= DateTimeOffset.UtcNow;
-        return profile.Status == GitHubIntegrationStatus.Invalid || isPastExpiry
+        return profile.Status == Sync.Domain.IntegrationStatus.Invalid || isPastExpiry
             ? IntegrationStatus.EXPIRED
             : IntegrationStatus.ACTIVE;
     }

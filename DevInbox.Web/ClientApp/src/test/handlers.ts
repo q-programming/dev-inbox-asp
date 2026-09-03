@@ -6,6 +6,7 @@ const mockUser = {
   firstName: 'John',
   lastName: 'Doe',
   accountType: 'REGULAR',
+  integrations: [],
 };
 
 export const handlers = [
@@ -43,4 +44,14 @@ export const handlers = [
   http.post('/api/auth/login', () => HttpResponse.json(mockUser)),
   http.post('/api/auth/register', () => HttpResponse.json(mockUser, { status: 201 })),
   http.post('/api/auth/logout', () => new HttpResponse(null, { status: 204 })),
+
+  http.post('/api/integrations/github/pat', () =>
+    HttpResponse.json({ id: 1, status: 'ACTIVE', type: 'GITHUB' }),
+  ),
+  http.delete('/api/integrations/github', () => new HttpResponse(null, { status: 204 })),
+  http.post('/api/integrations/ado/pat', () =>
+    HttpResponse.json({ id: 2, status: 'ACTIVE', type: 'ADO' }),
+  ),
+  http.delete('/api/integrations/ado', () => new HttpResponse(null, { status: 204 })),
+  http.get('/api/integrations/ado/organizations', () => HttpResponse.json([])),
 ];

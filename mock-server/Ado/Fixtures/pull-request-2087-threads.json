@@ -1,0 +1,29 @@
+{
+  "value": [
+    {
+      "isDeleted": false,
+      "comments": [
+        {
+          "content": "Much easier to follow now, thanks for splitting these up.",
+          "author": {
+            "displayName": "John Doe",
+            "uniqueName": "john@doe.com",
+            "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+          },
+          "publishedDate": "2026-01-11T08:00:00.000Z",
+          "commentType": "text"
+        },
+        {
+          "content": "John Doe voted 10",
+          "author": {
+            "displayName": "John Doe",
+            "uniqueName": "john@doe.com",
+            "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+          },
+          "publishedDate": "2026-01-11T08:05:00.000Z",
+          "commentType": "system"
+        }
+      ]
+    }
+  ]
+}

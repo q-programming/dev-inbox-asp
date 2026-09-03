@@ -1,0 +1,68 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn130",
+        "number": 130,
+        "title": "Add pagination controls to inbox list",
+        "url": "https://github.com/acme/dev-inbox/pull/130",
+        "state": "OPEN",
+        "isDraft": true,
+        "merged": false,
+        "createdAt": "2026-03-01T09:00:00Z",
+        "updatedAt": "2026-03-01T09:00:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 10,
+        "deletions": 2,
+        "changedFiles": 1,
+        "reviewDecision": "REVIEW_REQUIRED",
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "jkowalski",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+        },
+        "comments": {
+          "totalCount": 0
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": [
+            {
+              "requestedReviewer": {
+                "login": "amaj",
+                "name": "amaj",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+              }
+            }
+          ]
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Auto-generated fixture PR #130 for pagination testing: add pagination controls to inbox list.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/130#issuecomment-1",
+              "createdAt": "2026-03-01T09:00:00Z",
+              "author": {
+                "login": "tnowak",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

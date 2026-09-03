@@ -22,13 +22,13 @@ const InboxDetailFooter = ({ details }: IInboxDetailFooter) => {
 
   if (attachedNote) {
     return (
-      <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+      <Box sx={{ padding: 2, borderTop: '1px solid', borderColor: 'divider' }}>
         <Paper
           data-testid="inbox-detail-attached-note"
           variant="outlined"
           onClick={() => attachedNote.inboxItemId !== undefined && openItem(attachedNote.inboxItemId)}
           sx={{
-            p: 1.5,
+            padding: 1.5,
             cursor: 'pointer',
             bgcolor: (theme) => (theme.palette.mode === 'light' ? '#fdf6e8' : '#2a2618'),
             borderColor: 'note.border',
@@ -77,7 +77,7 @@ const InboxDetailFooter = ({ details }: IInboxDetailFooter) => {
   }
 
   return (
-    <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+    <Box sx={{ padding: 2, borderTop: '1px solid', borderColor: 'divider' }}>
       <Button
         data-testid="inbox-detail-add-note-button"
         onClick={() => open(details)}

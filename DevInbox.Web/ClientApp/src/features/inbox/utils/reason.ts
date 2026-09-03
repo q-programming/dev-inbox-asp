@@ -38,6 +38,16 @@ export const STATE_CHIP_COLOR: Partial<Record<string, ChipProps['color']>> = {
   ["draft"]: 'default',
 };
 
+/** Maps an ADO work item state (case-insensitive) to the chip colour that best conveys its intent. */
+export const ADO_STATE_CHIP_COLOR: Partial<Record<string, ChipProps['color']>> = {
+  ["new"]: 'info',
+  ["active"]: 'info',
+  ["resolved"]: 'success',
+  ["closed"]: 'success',
+  ["done"]: 'success',
+  ["removed"]: 'default',
+};
+
 /** Human readable label for an item type, used in detail panel headers. */
 export const translateItemType = (itemType?: ItemType): string => {
   switch (itemType) {

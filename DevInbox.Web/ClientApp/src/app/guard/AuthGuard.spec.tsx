@@ -15,6 +15,7 @@ vi.mock('@shared/hooks/useAuthQuery', () => ({
 
 /** A connected integration — keeps these tests focused on auth, not onboarding redirects. */
 const connectedIntegrations = [{ type: IntegrationType.Github, status: IntegrationStatus.ACTIVE }];
+const adoOnlyConnectedIntegrations = [{ type: IntegrationType.Ado, status: IntegrationStatus.ACTIVE }];
 
 function renderGuard(initialPath = '/protected') {
   return renderWithProviders(
@@ -93,6 +94,25 @@ describe('AuthGuard', () => {
           email: 'test@example.com',
           accountType: AccountType.REGULAR,
           integrations: connectedIntegrations,
+        },
+      });
+
+      renderGuard();
+
+      expect(screen.getByText('Protected content')).toBeTruthy();
+      expect(screen.queryByText('Login page')).toBeFalsy();
+    });
+
+    it('should render the protected child route when Azure DevOps is the only active integration', () => {
+      useUserStore.setState({
+        status: AuthStatus.AUTHENTICATED,
+        firstName: 'John',
+        lastName: 'Doe',
+        identity: {
+          id: 1,
+          email: 'test@example.com',
+          accountType: AccountType.REGULAR,
+          integrations: adoOnlyConnectedIntegrations,
         },
       });
 

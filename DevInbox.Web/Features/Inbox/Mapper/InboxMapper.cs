@@ -31,6 +31,10 @@ public partial class InboxMapper
     [MapProperty($"{nameof(InboxItem.State)}.{nameof(InboxItemState.Priority)}", nameof(InboxItemDetail.Priority))]
     [MapProperty($"{nameof(InboxItem.State)}.{nameof(InboxItemState.FollowUpAt)}", nameof(InboxItemDetail.FollowUpAt))]
     [MapProperty($"{nameof(InboxItem.State)}.{nameof(InboxItemState.Tags)}", nameof(InboxItemDetail.Tags))]
+    [MapperIgnoreTarget(nameof(InboxItemDetail.Ado))]
+    [MapperIgnoreTarget(nameof(InboxItemDetail.Github))]
+    [MapperIgnoreTarget(nameof(InboxItemDetail.Note))]
+    [MapperIgnoreTarget(nameof(InboxItemDetail.AttachedNote))]
     public partial InboxItemDetail ToInboxItemDetail(InboxItem source);
 
 }

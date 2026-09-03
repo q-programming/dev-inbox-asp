@@ -1,0 +1,29 @@
+{
+  "value": [
+    {
+      "isDeleted": false,
+      "comments": [
+        {
+          "content": "Auto-generated comment for pagination test fixture.",
+          "author": {
+            "displayName": "Jane Smith",
+            "uniqueName": "jane@contoso.com",
+            "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+          },
+          "publishedDate": "2026-02-08T09:00:00.000Z",
+          "commentType": "text"
+        },
+        {
+          "content": "Jane Smith voted 10",
+          "author": {
+            "displayName": "Jane Smith",
+            "uniqueName": "jane@contoso.com",
+            "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+          },
+          "publishedDate": "2026-02-08T09:00:00.000Z",
+          "commentType": "system"
+        }
+      ]
+    }
+  ]
+}

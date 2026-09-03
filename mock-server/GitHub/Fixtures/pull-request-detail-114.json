@@ -1,0 +1,71 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwABCD12",
+        "number": 114,
+        "title": "Add cutoff date to first-time ADO sync",
+        "url": "https://github.com/acme/dev-inbox/pull/114",
+        "state": "OPEN",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-08-12T13:15:00Z",
+        "updatedAt": "2026-08-15T10:20:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 76,
+        "deletions": 5,
+        "changedFiles": 3,
+        "reviewDecision": "REVIEW_REQUIRED",
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "tnowak",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+        },
+        "comments": {
+          "totalCount": 2
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "backend"
+            },
+            {
+              "name": "sync"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": [
+            {
+              "requestedReviewer": {
+                "login": "jkowalski",
+                "name": "jkowalski",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+              }
+            }
+          ]
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Limits the first ADO sync to items changed within the configured lookback window, mirroring the GitHub cutoff-date behavior.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Thanks for the update, taking a look.",
+              "url": "https://github.com/acme/dev-inbox/pull/114#issuecomment-1",
+              "createdAt": "2026-08-15T10:20:00Z",
+              "author": {
+                "login": "jkowalski",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

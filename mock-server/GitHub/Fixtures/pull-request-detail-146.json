@@ -1,0 +1,69 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn146",
+        "number": 146,
+        "title": "Support filtering by multiple labels",
+        "url": "https://github.com/acme/dev-inbox/pull/146",
+        "state": "MERGED",
+        "isDraft": false,
+        "merged": true,
+        "createdAt": "2026-03-17T09:00:00Z",
+        "updatedAt": "2026-03-17T09:00:00Z",
+        "closedAt": "2026-03-19T14:00:00Z",
+        "mergedAt": "2026-03-19T14:00:00Z",
+        "additions": 58,
+        "deletions": 18,
+        "changedFiles": 5,
+        "reviewDecision": "APPROVED",
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "amaj",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+        },
+        "comments": {
+          "totalCount": 0
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": []
+        },
+        "reviews": {
+          "nodes": [
+            {
+              "state": "APPROVED",
+              "submittedAt": "2026-03-19T14:00:00Z",
+              "author": {
+                "login": "tnowak",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+              }
+            }
+          ]
+        },
+        "body": "Auto-generated fixture PR #146 for pagination testing: support filtering by multiple labels.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/146#issuecomment-1",
+              "createdAt": "2026-03-17T09:00:00Z",
+              "author": {
+                "login": "jkowalski",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

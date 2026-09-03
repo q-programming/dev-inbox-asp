@@ -1,0 +1,725 @@
+{
+  "count": 30,
+  "value": [
+    {
+      "id": 501,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/501",
+      "fields": {
+        "System.Title": "Implement inbox sync retry policy",
+        "System.WorkItemType": "User Story",
+        "System.State": "Active",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; sync",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-10T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-14T15:30:00.000Z"
+      }
+    },
+    {
+      "id": 502,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/502",
+      "fields": {
+        "System.Title": "Fix flaky WIQL pagination test",
+        "System.WorkItemType": "Bug",
+        "System.State": "Closed",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "bug",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-05T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-12T11:00:00.000Z"
+      }
+    },
+    {
+      "id": 503,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/503",
+      "fields": {
+        "System.Title": "Add throttling to ADO pull request search",
+        "System.WorkItemType": "Task",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Sync",
+        "System.Tags": "sync; throttling",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-14T08:00:00.000Z",
+        "System.ChangedDate": "2026-01-15T09:00:00.000Z"
+      }
+    },
+    {
+      "id": 504,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/504",
+      "fields": {
+        "System.Title": "Design ADO multi-org discovery UX",
+        "System.WorkItemType": "Feature",
+        "System.State": "Resolved",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Frontend",
+        "System.Tags": "ux; ado",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2025-12-20T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-09T16:00:00.000Z"
+      }
+    },
+    {
+      "id": 505,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/505",
+      "fields": {
+        "System.Title": "Add rate-limit backoff to ADO WIQL calls",
+        "System.WorkItemType": "Task",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; sync",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-16T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-16T09:00:00.000Z"
+      }
+    },
+    {
+      "id": 506,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/506",
+      "fields": {
+        "System.Title": "Investigate flaky pull request comment ordering",
+        "System.WorkItemType": "Bug",
+        "System.State": "Active",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Sync",
+        "System.Tags": "bug; ado",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-17T10:00:00.000Z",
+        "System.ChangedDate": "2026-01-18T09:30:00.000Z"
+      }
+    },
+    {
+      "id": 507,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/507",
+      "fields": {
+        "System.Title": "Support ADO area path filters in saved views",
+        "System.WorkItemType": "User Story",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Frontend",
+        "System.Tags": "frontend; savedviews",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-18T08:00:00.000Z",
+        "System.ChangedDate": "2026-01-18T08:00:00.000Z"
+      }
+    },
+    {
+      "id": 508,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/508",
+      "fields": {
+        "System.Title": "Cache ADO project list per profile",
+        "System.WorkItemType": "Task",
+        "System.State": "Closed",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; performance",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2025-12-15T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-05T09:00:00.000Z"
+      }
+    },
+    {
+      "id": 509,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/509",
+      "fields": {
+        "System.Title": "Document ADO PAT scopes required for sync",
+        "System.WorkItemType": "Task",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Sync",
+        "System.Tags": "docs",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-19T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-19T09:00:00.000Z"
+      }
+    },
+    {
+      "id": 510,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/510",
+      "fields": {
+        "System.Title": "Add ADO work item type icon to inbox list",
+        "System.WorkItemType": "Task",
+        "System.State": "Resolved",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Frontend",
+        "System.Tags": "frontend; ux",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-05T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-10T11:00:00.000Z"
+      }
+    },
+    {
+      "id": 511,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/511",
+      "fields": {
+        "System.Title": "Support ADO webhook-based incremental sync",
+        "System.WorkItemType": "User Story",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; ado",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-01T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-04T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 512,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/512",
+      "fields": {
+        "System.Title": "Add integration test for multi-org profile sync",
+        "System.WorkItemType": "Task",
+        "System.State": "Active",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; ado",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-02T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-05T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 513,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/513",
+      "fields": {
+        "System.Title": "Fix inbox item card overflow on long titles",
+        "System.WorkItemType": "Bug",
+        "System.State": "Active",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Frontend",
+        "System.Tags": "frontend; ado",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-03T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-06T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 514,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/514",
+      "fields": {
+        "System.Title": "Write runbook for rotating an ADO PAT",
+        "System.WorkItemType": "Task",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Docs",
+        "System.Tags": "docs; ado",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-04T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-07T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 515,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/515",
+      "fields": {
+        "System.Title": "Add bulk-dismiss action to inbox list",
+        "System.WorkItemType": "User Story",
+        "System.State": "Active",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Frontend",
+        "System.Tags": "frontend; ado",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-05T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-08T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 516,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/516",
+      "fields": {
+        "System.Title": "Add GitHub Issues (not just PRs) as a source",
+        "System.WorkItemType": "Feature",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; ado",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-06T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-09T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 517,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/517",
+      "fields": {
+        "System.Title": "Add cutoff-date config option for ADO sync",
+        "System.WorkItemType": "Task",
+        "System.State": "Active",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; ado",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-07T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-10T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 518,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/518",
+      "fields": {
+        "System.Title": "Sync fails silently when PAT is close to expiry",
+        "System.WorkItemType": "Bug",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; ado",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-08T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-11T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 519,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/519",
+      "fields": {
+        "System.Title": "Add organization filter chip to SavedViews",
+        "System.WorkItemType": "Task",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Frontend",
+        "System.Tags": "frontend; ado",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-09T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-12T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 520,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/520",
+      "fields": {
+        "System.Title": "Support @mentioned work items in WIQL query",
+        "System.WorkItemType": "User Story",
+        "System.State": "Active",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; ado",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-10T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-13T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 521,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/521",
+      "fields": {
+        "System.Title": "Add loading skeleton to inbox list",
+        "System.WorkItemType": "Task",
+        "System.State": "Active",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Frontend",
+        "System.Tags": "frontend; ado",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-11T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-14T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 522,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/522",
+      "fields": {
+        "System.Title": "Saved view filters reset after page refresh",
+        "System.WorkItemType": "Bug",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Frontend",
+        "System.Tags": "frontend; ado",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-12T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-15T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 523,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/523",
+      "fields": {
+        "System.Title": "Add ADO iteration path to inbox item metadata",
+        "System.WorkItemType": "Feature",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; ado",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-13T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-16T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 524,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/524",
+      "fields": {
+        "System.Title": "Remove dead ADO OAuth code paths",
+        "System.WorkItemType": "Task",
+        "System.State": "Resolved",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; ado",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-14T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-17T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 525,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/525",
+      "fields": {
+        "System.Title": "Spike: evaluate Azure DevOps webhooks vs polling",
+        "System.WorkItemType": "Task",
+        "System.State": "Closed",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; ado",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-15T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-18T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 526,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/526",
+      "fields": {
+        "System.Title": "Show sync progress indicator during manual sync",
+        "System.WorkItemType": "User Story",
+        "System.State": "Active",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Frontend",
+        "System.Tags": "frontend; ado",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-16T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-19T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 527,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/527",
+      "fields": {
+        "System.Title": "Duplicate ADO project entries returned for some orgs",
+        "System.WorkItemType": "Bug",
+        "System.State": "Active",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; ado",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-17T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-20T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 528,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/528",
+      "fields": {
+        "System.Title": "Document multi-org ADO profile data model",
+        "System.WorkItemType": "Task",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Docs",
+        "System.Tags": "docs; ado",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-18T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-21T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 529,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/529",
+      "fields": {
+        "System.Title": "Add rate limit telemetry for ADO API calls",
+        "System.WorkItemType": "Feature",
+        "System.State": "Active",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Backend",
+        "System.Tags": "backend; ado",
+        "System.AssignedTo": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedBy": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedDate": "2026-01-19T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-22T12:00:00.000Z"
+      }
+    },
+    {
+      "id": 530,
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/530",
+      "fields": {
+        "System.Title": "Add empty-state illustration for zero-item inbox",
+        "System.WorkItemType": "Task",
+        "System.State": "New",
+        "System.TeamProject": "Alpha",
+        "System.AreaPath": "Alpha\\Frontend",
+        "System.Tags": "frontend; ado",
+        "System.AssignedTo": {
+          "displayName": "Jane Smith",
+          "uniqueName": "jane@contoso.com",
+          "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+        },
+        "System.CreatedBy": {
+          "displayName": "John Doe",
+          "uniqueName": "john@doe.com",
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+        },
+        "System.CreatedDate": "2026-01-20T09:00:00.000Z",
+        "System.ChangedDate": "2026-01-23T12:00:00.000Z"
+      }
+    }
+  ]
+}

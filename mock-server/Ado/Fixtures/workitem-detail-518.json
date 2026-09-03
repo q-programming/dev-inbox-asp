@@ -1,0 +1,25 @@
+{
+  "id": 518,
+  "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/518",
+  "fields": {
+    "System.Title": "Sync fails silently when PAT is close to expiry",
+    "System.WorkItemType": "Bug",
+    "System.State": "New",
+    "System.TeamProject": "Alpha",
+    "System.AreaPath": "Alpha\\Backend",
+    "System.Tags": "backend; ado",
+    "System.AssignedTo": {
+      "displayName": "Jane Smith",
+      "uniqueName": "jane@contoso.com",
+      "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+    },
+    "System.CreatedBy": {
+      "displayName": "John Doe",
+      "uniqueName": "john@doe.com",
+      "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+    },
+    "System.CreatedDate": "2026-01-08T09:00:00.000Z",
+    "System.ChangedDate": "2026-01-11T12:00:00.000Z",
+    "System.Description": "Auto-generated fixture item #518 for pagination testing (sync fails silently when pat is close to expiry)."
+  }
+}

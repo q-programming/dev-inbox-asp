@@ -1,3 +1,4 @@
+using DevInbox.Web.Features.ADO.Domain;
 using DevInbox.Web.Features.Audit.Domain;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity.Domain;
@@ -18,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
     public DbSet<InboxItem> InboxItems => Set<InboxItem>();
     public DbSet<InboxItemState> InboxItemStates => Set<InboxItemState>();
     public DbSet<Note> Notes => Set<Note>();
+    public DbSet<AdoProfile> AdoProfiles => Set<AdoProfile>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -45,6 +47,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
             entity.Property(profile => profile.AuthMethod).HasConversion<string>();
             entity.Property(profile => profile.Status).HasConversion<string>();
         });
+        modelBuilder.Entity<AdoProfile>(entity =>
+        {
+            entity.Property(profile => profile.AccessToken).HasConversion(encryptedString);
+            entity.Property(profile => profile.AuthMethod).HasConversion<string>();
+            entity.Property(profile => profile.Status).HasConversion<string>();
+            // One profile (and PAT) per organization per user — enforced at the app layer too, but
+            // this catches any race between concurrent connect requests for the same organization.
+            entity.HasIndex(profile => new { profile.UserId, profile.Organization }).IsUnique();
+        });
         modelBuilder.Entity<Inbox>(entity =>
         {
             entity.Property(inbox => inbox.SyncStatus).HasConversion<string>();
@@ -55,6 +66,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
             entity.Property(inbox => inbox.Source).HasConversion<string>();
             entity.Property(inbox => inbox.Reason).HasConversion<string>();
             entity.Property(inbox => inbox.Title).HasConversion(encryptedString);
+            // Backstops the sync upsert logic's own in-memory dedup (see AdoService/GitHubService)
+            // against any race — two concurrent syncs for the same user racing to insert the same
+            // item would otherwise both pass the "does it already exist" check before either commits.
+            entity.HasIndex(item => new { item.InboxId, item.Source, item.Type, item.Repository, item.ExternalId }).IsUnique();
         });
         modelBuilder.Entity<Note>(entity =>
         {

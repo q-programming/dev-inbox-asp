@@ -1,0 +1,23 @@
+{
+  "totalCount": 2,
+  "comments": [
+    {
+      "text": "Let's make sure the state sync also covers 'Removed' items.",
+      "createdBy": {
+        "displayName": "Jane Smith",
+        "uniqueName": "jane@contoso.com",
+        "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+      },
+      "createdDate": "2026-01-13T10:00:00.000Z"
+    },
+    {
+      "text": "Will handle that in the next iteration.",
+      "createdBy": {
+        "displayName": "John Doe",
+        "uniqueName": "john@doe.com",
+        "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+      },
+      "createdDate": "2026-01-14T09:00:00.000Z"
+    }
+  ]
+}

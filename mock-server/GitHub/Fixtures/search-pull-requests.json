@@ -1,7 +1,7 @@
 {
   "data": {
     "search": {
-      "issueCount": 6,
+      "issueCount": 32,
       "pageInfo": {
         "endCursor": "cursor-1",
         "hasNextPage": false
@@ -23,16 +23,40 @@
           "deletions": 12,
           "changedFiles": 6,
           "reviewDecision": "REVIEW_REQUIRED",
-          "repository": { "nameWithOwner": "acme/dev-inbox" },
-          "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" },
-          "comments": { "totalCount": 3 },
-          "labels": { "nodes": [{ "name": "backend" }, { "name": "needs-review" }] },
-          "reviewRequests": {
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "jkowalski",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+          },
+          "comments": {
+            "totalCount": 3
+          },
+          "labels": {
             "nodes": [
-              { "requestedReviewer": { "login": "amaj", "name": "Anna Majewska", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" } }
+              {
+                "name": "backend"
+              },
+              {
+                "name": "needs-review"
+              }
             ]
           },
-          "reviews": { "nodes": [] }
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "amaj",
+                  "name": "Anna Majewska",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
         },
         {
           "id": "PR_kwABCD2",
@@ -50,12 +74,29 @@
           "deletions": 30,
           "changedFiles": 4,
           "reviewDecision": null,
-          "repository": { "nameWithOwner": "acme/dev-inbox" },
-          "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" },
-          "comments": { "totalCount": 1 },
-          "labels": { "nodes": [{ "name": "bug" }] },
-          "reviewRequests": { "nodes": [] },
-          "reviews": { "nodes": [] }
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "jkowalski",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+          },
+          "comments": {
+            "totalCount": 1
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "bug"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": []
+          }
         },
         {
           "id": "PR_kwABCD5",
@@ -73,16 +114,37 @@
           "deletions": 8,
           "changedFiles": 5,
           "reviewDecision": "REVIEW_REQUIRED",
-          "repository": { "nameWithOwner": "acme/dev-inbox" },
-          "author": { "login": "amaj", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" },
-          "comments": { "totalCount": 2 },
-          "labels": { "nodes": [{ "name": "frontend" }] },
-          "reviewRequests": {
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "amaj",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+          },
+          "comments": {
+            "totalCount": 2
+          },
+          "labels": {
             "nodes": [
-              { "requestedReviewer": { "login": "jkowalski", "name": "Jan Kowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" } }
+              {
+                "name": "frontend"
+              }
             ]
           },
-          "reviews": { "nodes": [] }
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "jkowalski",
+                  "name": "Jan Kowalski",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
         },
         {
           "id": "PR_kwABCD6",
@@ -100,12 +162,29 @@
           "deletions": 4,
           "changedFiles": 2,
           "reviewDecision": null,
-          "repository": { "nameWithOwner": "acme/dev-inbox" },
-          "author": { "login": "tnowak", "avatarUrl": "https://avatars.githubusercontent.com/u/1003" },
-          "comments": { "totalCount": 2 },
-          "labels": { "nodes": [{ "name": "frontend" }] },
-          "reviewRequests": { "nodes": [] },
-          "reviews": { "nodes": [] }
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "tnowak",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+          },
+          "comments": {
+            "totalCount": 2
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "frontend"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": []
+          }
         },
         {
           "id": "PR_kwABCD3",
@@ -123,14 +202,36 @@
           "deletions": 20,
           "changedFiles": 18,
           "reviewDecision": "APPROVED",
-          "repository": { "nameWithOwner": "acme/dev-inbox" },
-          "author": { "login": "amaj", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" },
-          "comments": { "totalCount": 8 },
-          "labels": { "nodes": [{ "name": "feature" }] },
-          "reviewRequests": { "nodes": [] },
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "amaj",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+          },
+          "comments": {
+            "totalCount": 8
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "feature"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
           "reviews": {
             "nodes": [
-              { "state": "APPROVED", "submittedAt": "2026-07-15T15:30:00Z", "author": { "login": "jkowalski", "avatarUrl": "https://avatars.githubusercontent.com/u/1001" } }
+              {
+                "state": "APPROVED",
+                "submittedAt": "2026-07-15T15:30:00Z",
+                "author": {
+                  "login": "jkowalski",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+                }
+              }
             ]
           }
         },
@@ -150,14 +251,1251 @@
           "deletions": 60,
           "changedFiles": 3,
           "reviewDecision": "CHANGES_REQUESTED",
-          "repository": { "nameWithOwner": "acme/dev-inbox" },
-          "author": { "login": "tnowak", "avatarUrl": "https://avatars.githubusercontent.com/u/1003" },
-          "comments": { "totalCount": 5 },
-          "labels": { "nodes": [{ "name": "wontfix" }] },
-          "reviewRequests": { "nodes": [] },
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "tnowak",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+          },
+          "comments": {
+            "totalCount": 5
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "wontfix"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
           "reviews": {
             "nodes": [
-              { "state": "CHANGES_REQUESTED", "submittedAt": "2026-06-22T10:00:00Z", "author": { "login": "amaj", "avatarUrl": "https://avatars.githubusercontent.com/u/1002" } }
+              {
+                "state": "CHANGES_REQUESTED",
+                "submittedAt": "2026-06-22T10:00:00Z",
+                "author": {
+                  "login": "amaj",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "PR_kwABCD7",
+          "number": 113,
+          "title": "Add multi-org ADO profile switcher",
+          "url": "https://github.com/acme/dev-inbox/pull/113",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-08-12T09:00:00Z",
+          "updatedAt": "2026-08-14T10:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 210,
+          "deletions": 18,
+          "changedFiles": 9,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "jkowalski",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+          },
+          "comments": {
+            "totalCount": 4
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "backend"
+              },
+              {
+                "name": "ado"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "amaj",
+                  "name": "amaj",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwABCD8",
+          "number": 115,
+          "title": "Show area path as inbox item source badge",
+          "url": "https://github.com/acme/dev-inbox/pull/115",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-08-13T11:20:00Z",
+          "updatedAt": "2026-08-15T09:10:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 64,
+          "deletions": 6,
+          "changedFiles": 5,
+          "reviewDecision": null,
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "amaj",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+          },
+          "comments": {
+            "totalCount": 1
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "frontend"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwABCD9",
+          "number": 116,
+          "title": "Deduplicate inbox items on upsert",
+          "url": "https://github.com/acme/dev-inbox/pull/116",
+          "state": "OPEN",
+          "isDraft": true,
+          "merged": false,
+          "createdAt": "2026-08-14T08:45:00Z",
+          "updatedAt": "2026-08-15T14:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 52,
+          "deletions": 9,
+          "changedFiles": 3,
+          "reviewDecision": null,
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "jkowalski",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+          },
+          "comments": {
+            "totalCount": 2
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "bug"
+              },
+              {
+                "name": "backend"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "tnowak",
+                  "name": "tnowak",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwABCD10",
+          "number": 117,
+          "title": "Add PAT scope validation on connect",
+          "url": "https://github.com/acme/dev-inbox/pull/117",
+          "state": "MERGED",
+          "isDraft": false,
+          "merged": true,
+          "createdAt": "2026-08-01T09:30:00Z",
+          "updatedAt": "2026-08-04T12:00:00Z",
+          "closedAt": "2026-08-04T12:00:00Z",
+          "mergedAt": "2026-08-04T12:00:00Z",
+          "additions": 88,
+          "deletions": 10,
+          "changedFiles": 4,
+          "reviewDecision": "APPROVED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "tnowak",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+          },
+          "comments": {
+            "totalCount": 3
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "ado"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": [
+              {
+                "state": "APPROVED",
+                "submittedAt": "2026-08-04T11:30:00Z",
+                "author": {
+                  "login": "jkowalski",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "PR_kwABCD11",
+          "number": 118,
+          "title": "Fix pagination cutoff in saved views",
+          "url": "https://github.com/acme/dev-inbox/pull/118",
+          "state": "CLOSED",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-07-05T10:00:00Z",
+          "updatedAt": "2026-07-09T15:00:00Z",
+          "closedAt": "2026-07-09T15:00:00Z",
+          "mergedAt": null,
+          "additions": 20,
+          "deletions": 40,
+          "changedFiles": 2,
+          "reviewDecision": "CHANGES_REQUESTED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "amaj",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+          },
+          "comments": {
+            "totalCount": 5
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "wontfix"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": [
+              {
+                "state": "CHANGES_REQUESTED",
+                "submittedAt": "2026-07-07T09:00:00Z",
+                "author": {
+                  "login": "tnowak",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "PR_kwABCD12",
+          "number": 114,
+          "title": "Add cutoff date to first-time ADO sync",
+          "url": "https://github.com/acme/dev-inbox/pull/114",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-08-12T13:15:00Z",
+          "updatedAt": "2026-08-15T10:20:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 76,
+          "deletions": 5,
+          "changedFiles": 3,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "tnowak",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+          },
+          "comments": {
+            "totalCount": 2
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "backend"
+              },
+              {
+                "name": "sync"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "jkowalski",
+                  "name": "jkowalski",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn130",
+          "number": 130,
+          "title": "Add pagination controls to inbox list",
+          "url": "https://github.com/acme/dev-inbox/pull/130",
+          "state": "OPEN",
+          "isDraft": true,
+          "merged": false,
+          "createdAt": "2026-03-01T09:00:00Z",
+          "updatedAt": "2026-03-01T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 10,
+          "deletions": 2,
+          "changedFiles": 1,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "jkowalski",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+          },
+          "comments": {
+            "totalCount": 0
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "amaj",
+                  "name": "amaj",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn131",
+          "number": 131,
+          "title": "Support infinite scroll on mobile inbox view",
+          "url": "https://github.com/acme/dev-inbox/pull/131",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-02T09:00:00Z",
+          "updatedAt": "2026-03-02T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 13,
+          "deletions": 3,
+          "changedFiles": 2,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "amaj",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+          },
+          "comments": {
+            "totalCount": 1
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "tnowak",
+                  "name": "tnowak",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn132",
+          "number": 132,
+          "title": "Add organization badge to ADO-sourced items",
+          "url": "https://github.com/acme/dev-inbox/pull/132",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-03T09:00:00Z",
+          "updatedAt": "2026-03-03T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 16,
+          "deletions": 4,
+          "changedFiles": 3,
+          "reviewDecision": null,
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "tnowak",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+          },
+          "comments": {
+            "totalCount": 2
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn133",
+          "number": 133,
+          "title": "Fix flaky SavedViews e2e test",
+          "url": "https://github.com/acme/dev-inbox/pull/133",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-04T09:00:00Z",
+          "updatedAt": "2026-03-04T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 19,
+          "deletions": 5,
+          "changedFiles": 4,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "jkowalski",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+          },
+          "comments": {
+            "totalCount": 3
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "amaj",
+                  "name": "amaj",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn134",
+          "number": 134,
+          "title": "Add dark mode support to inbox cards",
+          "url": "https://github.com/acme/dev-inbox/pull/134",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-05T09:00:00Z",
+          "updatedAt": "2026-03-05T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 22,
+          "deletions": 6,
+          "changedFiles": 5,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "amaj",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+          },
+          "comments": {
+            "totalCount": 0
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "tnowak",
+                  "name": "tnowak",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn135",
+          "number": 135,
+          "title": "Improve error boundary for failed sync",
+          "url": "https://github.com/acme/dev-inbox/pull/135",
+          "state": "OPEN",
+          "isDraft": true,
+          "merged": false,
+          "createdAt": "2026-03-06T09:00:00Z",
+          "updatedAt": "2026-03-06T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 25,
+          "deletions": 7,
+          "changedFiles": 6,
+          "reviewDecision": null,
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "tnowak",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+          },
+          "comments": {
+            "totalCount": 1
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn136",
+          "number": 136,
+          "title": "Add keyboard navigation to inbox list",
+          "url": "https://github.com/acme/dev-inbox/pull/136",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-07T09:00:00Z",
+          "updatedAt": "2026-03-07T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 28,
+          "deletions": 8,
+          "changedFiles": 1,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "jkowalski",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+          },
+          "comments": {
+            "totalCount": 2
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "amaj",
+                  "name": "amaj",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn137",
+          "number": 137,
+          "title": "Refactor useInboxItems hook for readability",
+          "url": "https://github.com/acme/dev-inbox/pull/137",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-08T09:00:00Z",
+          "updatedAt": "2026-03-08T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 31,
+          "deletions": 9,
+          "changedFiles": 2,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "amaj",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+          },
+          "comments": {
+            "totalCount": 3
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "tnowak",
+                  "name": "tnowak",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn138",
+          "number": 138,
+          "title": "Add unit tests for reason inference helper",
+          "url": "https://github.com/acme/dev-inbox/pull/138",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-09T09:00:00Z",
+          "updatedAt": "2026-03-09T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 34,
+          "deletions": 10,
+          "changedFiles": 3,
+          "reviewDecision": null,
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "tnowak",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+          },
+          "comments": {
+            "totalCount": 0
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn139",
+          "number": 139,
+          "title": "Add retry button to failed sync banner",
+          "url": "https://github.com/acme/dev-inbox/pull/139",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-10T09:00:00Z",
+          "updatedAt": "2026-03-10T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 37,
+          "deletions": 11,
+          "changedFiles": 4,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "jkowalski",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+          },
+          "comments": {
+            "totalCount": 1
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "amaj",
+                  "name": "amaj",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn140",
+          "number": 140,
+          "title": "Support drag-to-reorder in SavedViews",
+          "url": "https://github.com/acme/dev-inbox/pull/140",
+          "state": "OPEN",
+          "isDraft": true,
+          "merged": false,
+          "createdAt": "2026-03-11T09:00:00Z",
+          "updatedAt": "2026-03-11T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 40,
+          "deletions": 12,
+          "changedFiles": 5,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "amaj",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+          },
+          "comments": {
+            "totalCount": 2
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "tnowak",
+                  "name": "tnowak",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn141",
+          "number": 141,
+          "title": "Add loading skeleton to SavedViews page",
+          "url": "https://github.com/acme/dev-inbox/pull/141",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-12T09:00:00Z",
+          "updatedAt": "2026-03-12T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 43,
+          "deletions": 13,
+          "changedFiles": 6,
+          "reviewDecision": null,
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "tnowak",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+          },
+          "comments": {
+            "totalCount": 3
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn142",
+          "number": 142,
+          "title": "Fix timezone bug in inbox item timestamps",
+          "url": "https://github.com/acme/dev-inbox/pull/142",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-13T09:00:00Z",
+          "updatedAt": "2026-03-13T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 46,
+          "deletions": 14,
+          "changedFiles": 1,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "jkowalski",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+          },
+          "comments": {
+            "totalCount": 0
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "amaj",
+                  "name": "amaj",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn143",
+          "number": 143,
+          "title": "Add bulk mark-as-read action",
+          "url": "https://github.com/acme/dev-inbox/pull/143",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-14T09:00:00Z",
+          "updatedAt": "2026-03-14T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 49,
+          "deletions": 15,
+          "changedFiles": 2,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "amaj",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+          },
+          "comments": {
+            "totalCount": 1
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "tnowak",
+                  "name": "tnowak",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn144",
+          "number": 144,
+          "title": "Improve accessibility of inbox item cards",
+          "url": "https://github.com/acme/dev-inbox/pull/144",
+          "state": "OPEN",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-15T09:00:00Z",
+          "updatedAt": "2026-03-15T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 52,
+          "deletions": 16,
+          "changedFiles": 3,
+          "reviewDecision": null,
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "tnowak",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+          },
+          "comments": {
+            "totalCount": 2
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn145",
+          "number": 145,
+          "title": "Add search box to inbox toolbar",
+          "url": "https://github.com/acme/dev-inbox/pull/145",
+          "state": "OPEN",
+          "isDraft": true,
+          "merged": false,
+          "createdAt": "2026-03-16T09:00:00Z",
+          "updatedAt": "2026-03-16T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 55,
+          "deletions": 17,
+          "changedFiles": 4,
+          "reviewDecision": "REVIEW_REQUIRED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "jkowalski",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+          },
+          "comments": {
+            "totalCount": 3
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": [
+              {
+                "requestedReviewer": {
+                  "login": "amaj",
+                  "name": "amaj",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "nodes": []
+          }
+        },
+        {
+          "id": "PR_kwPagn146",
+          "number": 146,
+          "title": "Support filtering by multiple labels",
+          "url": "https://github.com/acme/dev-inbox/pull/146",
+          "state": "MERGED",
+          "isDraft": false,
+          "merged": true,
+          "createdAt": "2026-03-17T09:00:00Z",
+          "updatedAt": "2026-03-17T09:00:00Z",
+          "closedAt": "2026-03-19T14:00:00Z",
+          "mergedAt": "2026-03-19T14:00:00Z",
+          "additions": 58,
+          "deletions": 18,
+          "changedFiles": 5,
+          "reviewDecision": "APPROVED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "amaj",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+          },
+          "comments": {
+            "totalCount": 0
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": [
+              {
+                "state": "APPROVED",
+                "submittedAt": "2026-03-19T14:00:00Z",
+                "author": {
+                  "login": "tnowak",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "PR_kwPagn147",
+          "number": 147,
+          "title": "Add export-to-CSV for inbox items",
+          "url": "https://github.com/acme/dev-inbox/pull/147",
+          "state": "CLOSED",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-18T09:00:00Z",
+          "updatedAt": "2026-03-18T09:00:00Z",
+          "closedAt": "2026-03-20T14:00:00Z",
+          "mergedAt": null,
+          "additions": 61,
+          "deletions": 19,
+          "changedFiles": 6,
+          "reviewDecision": "CHANGES_REQUESTED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "tnowak",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+          },
+          "comments": {
+            "totalCount": 1
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": [
+              {
+                "state": "CHANGES_REQUESTED",
+                "submittedAt": "2026-03-20T14:00:00Z",
+                "author": {
+                  "login": "jkowalski",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "PR_kwPagn148",
+          "number": 148,
+          "title": "Fix memory leak in sync polling hook",
+          "url": "https://github.com/acme/dev-inbox/pull/148",
+          "state": "MERGED",
+          "isDraft": false,
+          "merged": true,
+          "createdAt": "2026-03-19T09:00:00Z",
+          "updatedAt": "2026-03-19T09:00:00Z",
+          "closedAt": "2026-03-21T14:00:00Z",
+          "mergedAt": "2026-03-21T14:00:00Z",
+          "additions": 64,
+          "deletions": 20,
+          "changedFiles": 1,
+          "reviewDecision": "APPROVED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "jkowalski",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+          },
+          "comments": {
+            "totalCount": 2
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": [
+              {
+                "state": "APPROVED",
+                "submittedAt": "2026-03-21T14:00:00Z",
+                "author": {
+                  "login": "amaj",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "PR_kwPagn149",
+          "number": 149,
+          "title": "Add settings toggle for compact inbox view",
+          "url": "https://github.com/acme/dev-inbox/pull/149",
+          "state": "CLOSED",
+          "isDraft": false,
+          "merged": false,
+          "createdAt": "2026-03-20T09:00:00Z",
+          "updatedAt": "2026-03-20T09:00:00Z",
+          "closedAt": "2026-03-22T14:00:00Z",
+          "mergedAt": null,
+          "additions": 67,
+          "deletions": 21,
+          "changedFiles": 2,
+          "reviewDecision": "CHANGES_REQUESTED",
+          "repository": {
+            "nameWithOwner": "acme/dev-inbox"
+          },
+          "author": {
+            "login": "amaj",
+            "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+          },
+          "comments": {
+            "totalCount": 3
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "pagination-test"
+              }
+            ]
+          },
+          "reviewRequests": {
+            "nodes": []
+          },
+          "reviews": {
+            "nodes": [
+              {
+                "state": "CHANGES_REQUESTED",
+                "submittedAt": "2026-03-22T14:00:00Z",
+                "author": {
+                  "login": "tnowak",
+                  "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+                }
+              }
             ]
           }
         }

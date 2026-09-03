@@ -12,7 +12,7 @@ public static class AdoServiceCollectionExtensions
         _ = services.Configure<AdoOptions>(adoSection);
         services.AddHttpClient<IAdoClient, AdoClient>("ado", (sp, client) =>
         {
-            client.BaseAddress = new Uri(adoOptions.BaseUrl);
+            client.BaseAddress = new Uri(adoOptions.NormalizedBaseAddress);
         }).AddStandardResilienceHandler();
         return services;
     }

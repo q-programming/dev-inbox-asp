@@ -21,12 +21,17 @@ internal static class GitHubMappings
     /// REST endpoint behind <c>GitHubClient.GetCurrentUserAsync</c>, which requests the relative
     /// path "user" against the "github" HttpClient. That client's BaseAddress is
     /// <c>GithubOptions.NormalizedBaseAddress</c> (guaranteed to end with "/"), so "user" correctly
-    /// appends under whatever path prefix "GitHub:BaseAddress" configures — "/github/user" here.
+    /// appends under whatever path prefix "GitHub:BaseUrl" configures — "/github/user" here.
     /// </summary>
     private const string CurrentUserPath = "/github/user";
 
-    /// <summary>PR numbers with a seeded detail fixture — matches the 6 PRs in search-pull-requests.json.</summary>
-    private static readonly int[] KnownPullRequestNumbers = [101, 98, 110, 112, 87, 76];
+    /// <summary>PR numbers with a seeded detail fixture — matches the 32 PRs in search-pull-requests.json.</summary>
+    private static readonly int[] KnownPullRequestNumbers =
+    [
+        101, 98, 110, 112, 87, 76, 113, 114, 115, 116, 117, 118,
+        130, 131, 132, 133, 134, 135, 136, 137, 138, 139,
+        140, 141, 142, 143, 144, 145, 146, 147, 148, 149,
+    ];
 
     public static void Register(WireMockServer server, string fixturesDir)
     {

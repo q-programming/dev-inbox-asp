@@ -60,7 +60,7 @@ public class GitHubService(
             logger.LogWarning("No GitHub profile found for user {UserId}", userId);
             return;
         }
-        if (profile.Status != GitHubIntegrationStatus.Active)
+        if (profile.Status != Sync.Domain.IntegrationStatus.Active)
         {
             logger.LogWarning("GitHub profile for user {UserId} is not active (status: {Status})", userId, profile.Status);
             return;
@@ -90,7 +90,7 @@ public class GitHubService(
             // revoked OAuth App grant. Flag it so the user is prompted to reconnect rather than
             // failing silently on every future sync attempt.
             logger.LogWarning(ex, "[GitHub] Token rejected for {GitHubLogin} — marking integration invalid", profile.GitHubLogin);
-            profile.Status = GitHubIntegrationStatus.Invalid;
+            profile.Status = Sync.Domain.IntegrationStatus.Invalid;
             await repository.UpdateAsync(profile);
             return;
         }

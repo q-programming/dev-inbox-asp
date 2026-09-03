@@ -1,0 +1,25 @@
+{
+  "id": 513,
+  "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/513",
+  "fields": {
+    "System.Title": "Fix inbox item card overflow on long titles",
+    "System.WorkItemType": "Bug",
+    "System.State": "Active",
+    "System.TeamProject": "Alpha",
+    "System.AreaPath": "Alpha\\Frontend",
+    "System.Tags": "frontend; ado",
+    "System.AssignedTo": {
+      "displayName": "John Doe",
+      "uniqueName": "john@doe.com",
+      "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+    },
+    "System.CreatedBy": {
+      "displayName": "John Doe",
+      "uniqueName": "john@doe.com",
+      "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+    },
+    "System.CreatedDate": "2026-01-03T09:00:00.000Z",
+    "System.ChangedDate": "2026-01-06T12:00:00.000Z",
+    "System.Description": "Auto-generated fixture item #513 for pagination testing (fix inbox item card overflow on long titles)."
+  }
+}

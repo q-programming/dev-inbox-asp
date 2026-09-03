@@ -152,10 +152,11 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
         }
     }
 
-    public async Task DeleteBySourceAsync(long userId, ItemSource source)
+    public async Task DeleteBySourceAsync(long userId, ItemSource source, string? organization = null)
     {
         var targetIds = await Set
             .Where(i => i.InboxId == userId && i.Source == source)
+            .Where(i => organization == null || (i.Repository != null && i.Repository.StartsWith(organization + "/")))
             .Select(i => i.Id)
             .ToListAsync();
 

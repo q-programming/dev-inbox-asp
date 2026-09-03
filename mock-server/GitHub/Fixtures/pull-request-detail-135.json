@@ -1,0 +1,60 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn135",
+        "number": 135,
+        "title": "Improve error boundary for failed sync",
+        "url": "https://github.com/acme/dev-inbox/pull/135",
+        "state": "OPEN",
+        "isDraft": true,
+        "merged": false,
+        "createdAt": "2026-03-06T09:00:00Z",
+        "updatedAt": "2026-03-06T09:00:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 25,
+        "deletions": 7,
+        "changedFiles": 6,
+        "reviewDecision": null,
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "tnowak",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+        },
+        "comments": {
+          "totalCount": 1
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": []
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Auto-generated fixture PR #135 for pagination testing: improve error boundary for failed sync.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/135#issuecomment-1",
+              "createdAt": "2026-03-06T09:00:00Z",
+              "author": {
+                "login": "amaj",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

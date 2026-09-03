@@ -314,6 +314,36 @@ The project intentionally does **not** use MediatR.
 
 ---
 
+## Commit Message Convention
+
+**Never run `git commit` (or otherwise commit changes) on the developer's behalf.** Once work is done, propose a commit message for the developer to use themselves — do not commit it.
+
+Format:
+
+```text
+AB#<work-item-id> <type>: <short summary>
++ <what was done, one bullet per notable change>
++ <...>
+```
+
+- `<type>` follows conventional-commit types (`feat`, `fix`, `refactor`, `test`, `chore`, etc.).
+- The `AB#<id>` prefix links to the Azure DevOps work item and must come first.
+- Body bullets start with `+` (not `-` or `*`), one line each, focused on the main things added/changed — skip minor/incidental changes.
+- Keep bullets high-level and scannable; do not restate the diff file-by-file.
+
+Example:
+
+```text
+AB#689 feat: Integration connect/disconnect
++ onboarding added
++ delete all inbox items upon integration disconnect
++ catch graphql errors properly for GH integration
++ isDone/isClosed to handle items
++ ADO mock server for local testing
+```
+
+---
+
 ## Test Failure Triage
 
 - When a test fails, **never modify production code to make it pass** without first checking `git status`/`git diff` for that file.

@@ -1,0 +1,68 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn136",
+        "number": 136,
+        "title": "Add keyboard navigation to inbox list",
+        "url": "https://github.com/acme/dev-inbox/pull/136",
+        "state": "OPEN",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-03-07T09:00:00Z",
+        "updatedAt": "2026-03-07T09:00:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 28,
+        "deletions": 8,
+        "changedFiles": 1,
+        "reviewDecision": "REVIEW_REQUIRED",
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "jkowalski",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+        },
+        "comments": {
+          "totalCount": 2
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": [
+            {
+              "requestedReviewer": {
+                "login": "amaj",
+                "name": "amaj",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+              }
+            }
+          ]
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Auto-generated fixture PR #136 for pagination testing: add keyboard navigation to inbox list.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/136#issuecomment-1",
+              "createdAt": "2026-03-07T09:00:00Z",
+              "author": {
+                "login": "tnowak",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

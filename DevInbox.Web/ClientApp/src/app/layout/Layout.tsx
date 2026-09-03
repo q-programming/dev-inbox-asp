@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import Toolbar from '@mui/material/Toolbar';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import AppHeader from './header/AppHeader.tsx';
 import AppSidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './sidebar/AppSidebar.tsx';
 import MobileBottomNav from '@app/layout/mobilebar/MobileBottomNav.tsx';
@@ -12,6 +12,7 @@ import NoteFormModal from '@feature/notes/components/NoteFormModal';
 import { useGlobalShortcuts } from '@shared/hooks/useGlobalShortcuts.ts';
 import { useLeaderKey } from '@shared/hooks/useLeaderKey.ts';
 import { useInboxHeartbeat } from '@feature/inbox/hooks/useInboxHeartBeat.ts';
+import { AppRoute } from '@app/routes.ts';
 
 const TRANSITION = 'width 200ms ease, margin-left 200ms ease';
 
@@ -31,12 +32,22 @@ const AppLayout = () => {
   const handleMenuOpen = useCallback(() => setMobileDrawerOpen((prev) => !prev), []);
   const handleDrawerClose = useCallback(() => setMobileDrawerOpen(false), []);
 
+  // The inbox is a Gmail/Slack-style edge-to-edge list + reading pane, so it opts out of the
+  // padded "content card" spacing every other page (Settings, Notes, ...) relies on — without
+  // this, the list/detail panes would show an unwanted gap and lose width to clip their content.
+  const { pathname } = useLocation();
+  const isInboxRoute = pathname.startsWith(AppRoute.INBOX);
+
   return (
     <Box
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
+        // A fixed height (not minHeight) is required here: it's what lets the flex row below
+        // clip/scroll internally (e.g. the inbox list) instead of growing the whole document,
+        // which previously caused the page itself to scroll and lose the fixed reading pane.
+        height: '100dvh',
+        overflow: 'hidden',
         bgcolor: 'background.default',
       }}
     >
@@ -54,7 +65,7 @@ const AppLayout = () => {
         >
           {/* Push content below the fixed AppBar */}
           <Toolbar sx={{ minHeight: 56 }} />
-          <AppSidebar />
+          <AppSidebar onNavigate={handleDrawerClose} />
         </Drawer>
 
         {/* Sidebar — fixed, width animates on collapse */}
@@ -84,11 +95,21 @@ const AppLayout = () => {
             flexDirection: 'column',
             marginLeft: { xs: 0, md: `${sidebarWidth}px` },
             minHeight: 0,
+            // Flex items default to min-width: auto, which lets intrinsic content (e.g. an
+            // unbreakable chip label) push this pane wider than the viewport instead of
+            // shrinking — that was the real cause of titles/rows clipping without ellipsis
+            // after infinite scroll (longer content pushed the whole main pane past 100vw).
+            minWidth: 0,
             transition: TRANSITION,
           }}
         >
           <Box
-            sx={{ flex: 1, overflowY: 'auto', padding: 3, paddingBottom: { xs: '56px', md: 3 } }}
+            sx={{
+              flex: 1,
+              overflowY: isInboxRoute ? 'hidden' : 'auto',
+              padding: isInboxRoute ? 0 : 3,
+              paddingBottom: isInboxRoute ? { xs: '56px', md: 0 } : { xs: '56px', md: 3 },
+            }}
           >
             <Outlet />
           </Box>

@@ -1,0 +1,31 @@
+{
+  "id": 503,
+  "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/503",
+  "fields": {
+    "System.Title": "Add throttling to ADO pull request search",
+    "System.WorkItemType": "Task",
+    "System.State": "New",
+    "System.TeamProject": "Alpha",
+    "System.AreaPath": "Alpha\\Sync",
+    "System.Tags": "sync; throttling",
+    "System.Description": "The per-project PR search issues two calls (creator + reviewer). Add a shared rate limiter so a large number of projects can't trip ADO's secondary rate limits during a full sync.",
+    "System.AssignedTo": {
+      "displayName": "John Doe",
+      "uniqueName": "john@doe.com",
+      "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+    },
+    "System.CreatedBy": {
+      "displayName": "Jane Smith",
+      "uniqueName": "jane@contoso.com",
+      "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+    },
+    "System.CreatedDate": "2026-01-14T08:00:00.000Z",
+    "System.ChangedDate": "2026-01-15T09:00:00.000Z"
+  },
+  "relations": [
+    {
+      "rel": "System.LinkTypes.Hierarchy-Reverse",
+      "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/501"
+    }
+  ]
+}

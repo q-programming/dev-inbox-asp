@@ -5,11 +5,16 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { formatRelativeTime } from '@utils/date';
-import { REASON_CHIP_COLOR, translateInboxReason } from '@feature/inbox/utils/reason';
+import {
+  ADO_STATE_CHIP_COLOR,
+  REASON_CHIP_COLOR,
+  translateInboxReason,
+} from '@feature/inbox/utils/reason';
 import InboxDetailHeader from '../InboxDetailHeader';
 import InboxDetailFooter from '../InboxDetailFooter';
 import PersonAvatar from '../shared/PersonAvatar';
 import CommentCard from '../shared/CommentCard';
+import RichContent from '../shared/RichContent';
 
 interface IAdoDetail {
   details: InboxItemDetail;
@@ -68,47 +73,75 @@ const AdoDetail = ({ details }: IAdoDetail) => {
           )}
         </Stack>
 
-        <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
-          {(!!workItem.state || !!workItem.area) && (
+        <Paper variant="outlined" sx={{ padding: 2, minWidth: 0 }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}
+          >
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+              <PersonAvatar person={workItem.assignedTo} />
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                  assigned to{' '}
+                  <Box component="span" data-testid="ado-detail-assignee-name">
+                    {workItem.assignedTo?.displayName ??
+                      workItem.assignedTo?.login ??
+                      'unassigned'}
+                  </Box>
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {formatRelativeTime(workItem.createdAt)}
+                </Typography>
+              </Box>
+            </Stack>
+
+            <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+              <Typography
+                data-testid="ado-detail-unread-indicator"
+                data-unread={!details.isDone}
+                variant="caption"
+                sx={{ color: !details.isDone ? 'primary.main' : 'text.secondary' }}
+              >
+                <Box component="span" sx={{ fontWeight: 600 }}>
+                  <Chip
+                    data-testid="ado-detail-status"
+                    label={workItem.state ?? '—'}
+                    color={ADO_STATE_CHIP_COLOR[workItem.state?.toLowerCase() ?? ''] ?? 'default'}
+                    size="small"
+                    sx={{ fontWeight: 600, height: 20, minWidth: 0, marginRight: 0.5 }}
+                  />
+                </Box>
+                {formatRelativeTime(workItem.updatedAt)}
+              </Typography>
+            </Box>
+          </Stack>
+
+          {!!workItem.area && (
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 2fr',
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
                 columnGap: 4,
-                rowGap: 0.5,
-                mb: 2.5,
+                rowGap: 2,
+                mt: 2.5,
               }}
             >
-              <Typography variant="overline" color="text.secondary">
-                Status
-              </Typography>
-              <Typography variant="overline" color="text.secondary">
-                Area Path
-              </Typography>
-              <Typography variant="body2" data-testid="ado-detail-status" noWrap>
-                {workItem.state ?? '—'}
-              </Typography>
-              <Typography variant="body2" data-testid="ado-detail-area" noWrap>
-                {workItem.area ?? '—'}
-              </Typography>
-            </Box>
-          )}
-
-          {!!workItem.description && (
-            <Box sx={{ minWidth: 0 }} data-testid="ado-detail-description">
-              <Typography variant="overline" color="text.secondary">
-                Description
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
-                {workItem.description}
-              </Typography>
+              <Box sx={{ minWidth: 0 }} data-testid="ado-detail-area-section">
+                <Typography variant="overline" color="text.secondary">
+                  Area Path
+                </Typography>
+                <Typography variant="body2" data-testid="ado-detail-area" noWrap sx={{ mt: 0.5 }}>
+                  {workItem.area}
+                </Typography>
+              </Box>
             </Box>
           )}
 
           {!!workItem.tags?.length && (
             <Box sx={{ mt: 2.5 }} data-testid="ado-detail-tags">
               <Typography variant="overline" color="text.secondary">
-                Tags
+                Labels
               </Typography>
               <Stack
                 direction="row"
@@ -122,29 +155,23 @@ const AdoDetail = ({ details }: IAdoDetail) => {
             </Box>
           )}
 
-          <Stack
-            direction="row"
-            spacing={1.5}
-            sx={{ alignItems: 'center', mt: 2.5, minWidth: 0 }}
-          >
-            <PersonAvatar person={workItem.assignedTo} size={28} />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-                assigned to{' '}
-                <Box component="span" data-testid="ado-detail-assignee-name">
-                  {workItem.assignedTo?.displayName ?? workItem.assignedTo?.login ?? 'unassigned'}
-                </Box>
+          {!!workItem.description && (
+            <Box sx={{ mt: 2.5, minWidth: 0 }} data-testid="ado-detail-description">
+              <Typography variant="overline" color="text.secondary">
+                Description
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {formatRelativeTime(workItem.createdAt)}
-              </Typography>
+              <Box sx={{ mt: 0.5 }}>
+                <RichContent format={workItem.descriptionFormat}>
+                  {workItem.description}
+                </RichContent>
+              </Box>
             </Box>
-          </Stack>
+          )}
         </Paper>
         {!!workItem.comments?.length && (
           <Box sx={{ minWidth: 0 }} data-testid="ado-detail-comments">
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Comments
+              Latest comments
             </Typography>
             {workItem.comments.map((comment, index) => (
               <CommentCard
@@ -152,6 +179,7 @@ const AdoDetail = ({ details }: IAdoDetail) => {
                 author={comment.author}
                 body={comment.body}
                 createdAt={comment.createdAt}
+                format={comment.bodyFormat}
                 authorTestId="ado-detail-comment-author"
                 bodyTestId="ado-detail-comment-body"
               />

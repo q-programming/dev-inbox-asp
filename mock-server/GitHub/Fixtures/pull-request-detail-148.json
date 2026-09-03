@@ -1,0 +1,69 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn148",
+        "number": 148,
+        "title": "Fix memory leak in sync polling hook",
+        "url": "https://github.com/acme/dev-inbox/pull/148",
+        "state": "MERGED",
+        "isDraft": false,
+        "merged": true,
+        "createdAt": "2026-03-19T09:00:00Z",
+        "updatedAt": "2026-03-19T09:00:00Z",
+        "closedAt": "2026-03-21T14:00:00Z",
+        "mergedAt": "2026-03-21T14:00:00Z",
+        "additions": 64,
+        "deletions": 20,
+        "changedFiles": 1,
+        "reviewDecision": "APPROVED",
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "jkowalski",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+        },
+        "comments": {
+          "totalCount": 2
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": []
+        },
+        "reviews": {
+          "nodes": [
+            {
+              "state": "APPROVED",
+              "submittedAt": "2026-03-21T14:00:00Z",
+              "author": {
+                "login": "amaj",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+              }
+            }
+          ]
+        },
+        "body": "Auto-generated fixture PR #148 for pagination testing: fix memory leak in sync polling hook.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/148#issuecomment-1",
+              "createdAt": "2026-03-19T09:00:00Z",
+              "author": {
+                "login": "tnowak",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

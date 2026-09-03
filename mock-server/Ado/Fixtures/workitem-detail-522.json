@@ -1,0 +1,25 @@
+{
+  "id": 522,
+  "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/522",
+  "fields": {
+    "System.Title": "Saved view filters reset after page refresh",
+    "System.WorkItemType": "Bug",
+    "System.State": "New",
+    "System.TeamProject": "Alpha",
+    "System.AreaPath": "Alpha\\Frontend",
+    "System.Tags": "frontend; ado",
+    "System.AssignedTo": {
+      "displayName": "Jane Smith",
+      "uniqueName": "jane@contoso.com",
+      "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+    },
+    "System.CreatedBy": {
+      "displayName": "John Doe",
+      "uniqueName": "john@doe.com",
+      "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+    },
+    "System.CreatedDate": "2026-01-12T09:00:00.000Z",
+    "System.ChangedDate": "2026-01-15T12:00:00.000Z",
+    "System.Description": "Auto-generated fixture item #522 for pagination testing (saved view filters reset after page refresh)."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "value": [
+    {
+      "isDeleted": false,
+      "comments": [
+        {
+          "content": "Could this reuse the existing LinkedItem component from the GitHub PR view?",
+          "author": {
+            "displayName": "John Doe",
+            "uniqueName": "john@doe.com",
+            "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+          },
+          "publishedDate": "2026-01-15T12:00:00.000Z",
+          "commentType": "text"
+        }
+      ]
+    }
+  ]
+}
