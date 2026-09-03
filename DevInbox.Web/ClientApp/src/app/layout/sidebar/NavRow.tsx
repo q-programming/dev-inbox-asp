@@ -15,6 +15,8 @@ export interface NavRowProps {
   item: SidebarNavItem;
   activeId?: string;
   collapsed: boolean;
+  /** Called after navigating — used to close the temporary mobile drawer on tap. */
+  onNavigate?: () => void;
 }
 
 /**
@@ -25,7 +27,7 @@ export interface NavRowProps {
  * When collapsed, labels and counts are hidden and a Tooltip provides
  * discoverability.
  */
-const NavRow = memo(({ item, activeId, collapsed }: NavRowProps) => {
+const NavRow = memo(({ item, activeId, collapsed, onNavigate }: NavRowProps) => {
   const isActive = item.id === activeId;
   const icon =
     typeof item.icon === 'string' ? (
@@ -41,6 +43,7 @@ const NavRow = memo(({ item, activeId, collapsed }: NavRowProps) => {
       selected={isActive}
       component={item.route ? NavLink : 'div'}
       {...(to ? { to, end: true } : {})}
+      onClick={onNavigate}
       sx={{
         borderRadius: 1,
         marginY: 0.25,

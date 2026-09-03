@@ -1,0 +1,25 @@
+{
+  "id": 526,
+  "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/526",
+  "fields": {
+    "System.Title": "Show sync progress indicator during manual sync",
+    "System.WorkItemType": "User Story",
+    "System.State": "Active",
+    "System.TeamProject": "Alpha",
+    "System.AreaPath": "Alpha\\Frontend",
+    "System.Tags": "frontend; ado",
+    "System.AssignedTo": {
+      "displayName": "Jane Smith",
+      "uniqueName": "jane@contoso.com",
+      "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+    },
+    "System.CreatedBy": {
+      "displayName": "Jane Smith",
+      "uniqueName": "jane@contoso.com",
+      "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+    },
+    "System.CreatedDate": "2026-01-16T09:00:00.000Z",
+    "System.ChangedDate": "2026-01-19T12:00:00.000Z",
+    "System.Description": "Auto-generated fixture item #526 for pagination testing (show sync progress indicator during manual sync)."
+  }
+}

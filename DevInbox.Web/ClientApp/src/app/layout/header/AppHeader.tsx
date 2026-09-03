@@ -8,6 +8,7 @@ import HeaderLogo from './HeaderLogo.tsx';
 import GlobalSearch from './GlobalSearch.tsx';
 import HeaderActions from './HeaderActions.tsx';
 import MobileSearchBar from './MobileSearchBar.tsx';
+import InboxLoadingBar from './InboxLoadingBar.tsx';
 
 /**
  * Top application bar — logo, global search, sync status, actions and profile.
@@ -74,6 +75,8 @@ const AppHeader = memo(({ onMenuOpen }: { onMenuOpen?: () => void }) => {
           <MobileSearchBar onExpandChange={handleExpandChange} />
         </Box>
       </Toolbar>
+
+      <InboxLoadingBar />
     </AppBar>
   );
 });

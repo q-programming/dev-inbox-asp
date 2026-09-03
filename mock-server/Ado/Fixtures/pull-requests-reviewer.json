@@ -1,5 +1,5 @@
 {
-  "count": 2,
+  "count": 9,
   "value": [
     {
       "pullRequestId": 2087,
@@ -14,10 +14,17 @@
       },
       "repository": {
         "name": "alpha-service",
-        "project": { "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70", "name": "Alpha" }
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
       },
       "reviewers": [
-        { "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00", "displayName": "John Doe", "vote": 10 }
+        {
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+          "displayName": "John Doe",
+          "vote": 10
+        }
       ]
     },
     {
@@ -33,10 +40,199 @@
       },
       "repository": {
         "name": "alpha-service",
-        "project": { "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70", "name": "Alpha" }
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
       },
       "reviewers": [
-        { "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00", "displayName": "John Doe", "vote": 0 }
+        {
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+          "displayName": "John Doe",
+          "vote": 0
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2145,
+      "title": "Add area path breadcrumb to work item detail view",
+      "status": "active",
+      "creationDate": "2026-01-21T11:00:00.000Z",
+      "closedDate": null,
+      "createdBy": {
+        "displayName": "Jane Smith",
+        "uniqueName": "jane@contoso.com",
+        "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+          "displayName": "John Doe",
+          "vote": 0
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2150,
+      "title": "Fix pull request thread pagination cutoff",
+      "status": "completed",
+      "creationDate": "2026-01-06T09:00:00.000Z",
+      "closedDate": "2026-01-09T15:30:00.000Z",
+      "createdBy": {
+        "displayName": "Jane Smith",
+        "uniqueName": "jane@contoso.com",
+        "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+          "displayName": "John Doe",
+          "vote": 10
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2165,
+      "title": "Fix ADO webhook signature validation",
+      "status": "active",
+      "creationDate": "2026-02-02T09:00:00.000Z",
+      "closedDate": null,
+      "createdBy": {
+        "displayName": "Jane Smith",
+        "uniqueName": "jane@contoso.com",
+        "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+          "displayName": "John Doe",
+          "vote": 0
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2175,
+      "title": "Introduce SavedViews org filter chip",
+      "status": "active",
+      "creationDate": "2026-02-04T09:00:00.000Z",
+      "closedDate": null,
+      "createdBy": {
+        "displayName": "Jane Smith",
+        "uniqueName": "jane@contoso.com",
+        "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+          "displayName": "John Doe",
+          "vote": 0
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2185,
+      "title": "Refactor AdoService project resolution caching",
+      "status": "completed",
+      "creationDate": "2026-02-06T09:00:00.000Z",
+      "closedDate": "2026-02-08T14:00:00.000Z",
+      "createdBy": {
+        "displayName": "Jane Smith",
+        "uniqueName": "jane@contoso.com",
+        "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+          "displayName": "John Doe",
+          "vote": 10
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2195,
+      "title": "Improve error message for unreachable ADO org",
+      "status": "completed",
+      "creationDate": "2026-02-08T09:00:00.000Z",
+      "closedDate": "2026-02-10T14:00:00.000Z",
+      "createdBy": {
+        "displayName": "Jane Smith",
+        "uniqueName": "jane@contoso.com",
+        "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+          "displayName": "John Doe",
+          "vote": 10
+        }
+      ]
+    },
+    {
+      "pullRequestId": 2205,
+      "title": "Support @mentioned filter in WIQL builder",
+      "status": "active",
+      "creationDate": "2026-02-10T09:00:00.000Z",
+      "closedDate": null,
+      "createdBy": {
+        "displayName": "Jane Smith",
+        "uniqueName": "jane@contoso.com",
+        "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+      },
+      "repository": {
+        "name": "alpha-service",
+        "project": {
+          "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+          "name": "Alpha"
+        }
+      },
+      "reviewers": [
+        {
+          "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+          "displayName": "John Doe",
+          "vote": 0
+        }
       ]
     }
   ]

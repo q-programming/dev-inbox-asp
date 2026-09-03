@@ -28,7 +28,7 @@ Log.Information("GitHub GraphQL mocked at /github/graphql (fixtures: {FixturesDi
 
 var adoFixturesDir = Path.Combine(AppContext.BaseDirectory, "Ado", "Fixtures");
 AdoMappings.Register(server, adoFixturesDir);
-Log.Information("ADO profile mocked at /ado/_apis/profile/profiles/me (fixtures: {FixturesDir})", adoFixturesDir);
+Log.Information("ADO connect/sync mocked at /ado (fixtures: {FixturesDir})", adoFixturesDir);
 
 Log.Information("Press Ctrl+C to stop.");
 var exit = new ManualResetEventSlim(false);

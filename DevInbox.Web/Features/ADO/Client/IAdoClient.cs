@@ -5,20 +5,10 @@ namespace DevInbox.Web.Features.ADO.Client;
 public interface IAdoClient
 {
     /// <summary>
-    /// Resolves the profile of the PAT's owning user via <c>GET _apis/profile/profiles/me</c> —
-    /// only reliable for a PAT scoped to "all accessible organizations" (see
-    /// <see cref="GetConnectionDataAsync"/> for the organization-scoped alternative used at PAT
-    /// connect time). Kept for OAuth App parity with <c>GitHubClient</c>, though ADO has no OAuth
-    /// App flow wired up yet.
-    /// </summary>
-    Task<AdoUserProfileDTO> GetCurrentUserProfileAsync(string personalAccessToken, CancellationToken ct = default);
-
-    /// <summary>
     /// Validates a PAT and resolves the authenticated user's identity for one organization, via
     /// <c>GET {organization}/_apis/connectionData?api-version=7.0-preview</c>. Used at connect time
-    /// instead of <see cref="GetCurrentUserProfileAsync"/> because it's organization-scoped and
-    /// therefore works with a PAT restricted to a single organization — the norm going forward
-    /// since Microsoft is deprecating "all accessible organizations" PATs
+    /// — organization-scoped, so it works with a PAT restricted to a single organization — the norm
+    /// going forward since Microsoft is deprecating "all accessible organizations" PATs
     /// (https://aka.ms/GlobalPATDeprecation, effective Dec 1 2026). Each connected organization gets
     /// its own <see cref="Domain.AdoProfile"/>/PAT rather than one PAT covering many organizations.
     /// </summary>

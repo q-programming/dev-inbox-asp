@@ -1,0 +1,60 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn138",
+        "number": 138,
+        "title": "Add unit tests for reason inference helper",
+        "url": "https://github.com/acme/dev-inbox/pull/138",
+        "state": "OPEN",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-03-09T09:00:00Z",
+        "updatedAt": "2026-03-09T09:00:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 34,
+        "deletions": 10,
+        "changedFiles": 3,
+        "reviewDecision": null,
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "tnowak",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+        },
+        "comments": {
+          "totalCount": 0
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": []
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Auto-generated fixture PR #138 for pagination testing: add unit tests for reason inference helper.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/138#issuecomment-1",
+              "createdAt": "2026-03-09T09:00:00Z",
+              "author": {
+                "login": "amaj",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

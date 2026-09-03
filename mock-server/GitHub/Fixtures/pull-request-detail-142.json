@@ -1,0 +1,68 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn142",
+        "number": 142,
+        "title": "Fix timezone bug in inbox item timestamps",
+        "url": "https://github.com/acme/dev-inbox/pull/142",
+        "state": "OPEN",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-03-13T09:00:00Z",
+        "updatedAt": "2026-03-13T09:00:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 46,
+        "deletions": 14,
+        "changedFiles": 1,
+        "reviewDecision": "REVIEW_REQUIRED",
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "jkowalski",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+        },
+        "comments": {
+          "totalCount": 0
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": [
+            {
+              "requestedReviewer": {
+                "login": "amaj",
+                "name": "amaj",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+              }
+            }
+          ]
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Auto-generated fixture PR #142 for pagination testing: fix timezone bug in inbox item timestamps.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/142#issuecomment-1",
+              "createdAt": "2026-03-13T09:00:00Z",
+              "author": {
+                "login": "tnowak",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

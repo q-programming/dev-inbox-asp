@@ -1,0 +1,25 @@
+{
+  "id": 510,
+  "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/510",
+  "fields": {
+    "System.Title": "Add ADO work item type icon to inbox list",
+    "System.WorkItemType": "Task",
+    "System.State": "Resolved",
+    "System.TeamProject": "Alpha",
+    "System.AreaPath": "Alpha\\Frontend",
+    "System.Tags": "frontend; ux",
+    "System.AssignedTo": {
+      "displayName": "John Doe",
+      "uniqueName": "john@doe.com",
+      "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+    },
+    "System.CreatedBy": {
+      "displayName": "Jane Smith",
+      "uniqueName": "jane@contoso.com",
+      "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+    },
+    "System.CreatedDate": "2026-01-05T09:00:00.000Z",
+    "System.ChangedDate": "2026-01-10T11:00:00.000Z",
+    "System.Description": "Show a small icon reflecting the work item type (User Story/Bug/Task/Feature) next to the title in the inbox list, mirroring how PRs show a merge/open icon."
+  }
+}

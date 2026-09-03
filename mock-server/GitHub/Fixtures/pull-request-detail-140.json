@@ -1,0 +1,68 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn140",
+        "number": 140,
+        "title": "Support drag-to-reorder in SavedViews",
+        "url": "https://github.com/acme/dev-inbox/pull/140",
+        "state": "OPEN",
+        "isDraft": true,
+        "merged": false,
+        "createdAt": "2026-03-11T09:00:00Z",
+        "updatedAt": "2026-03-11T09:00:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 40,
+        "deletions": 12,
+        "changedFiles": 5,
+        "reviewDecision": "REVIEW_REQUIRED",
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "amaj",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+        },
+        "comments": {
+          "totalCount": 2
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": [
+            {
+              "requestedReviewer": {
+                "login": "tnowak",
+                "name": "tnowak",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+              }
+            }
+          ]
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Auto-generated fixture PR #140 for pagination testing: support drag-to-reorder in savedviews.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/140#issuecomment-1",
+              "createdAt": "2026-03-11T09:00:00Z",
+              "author": {
+                "login": "jkowalski",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -18,6 +18,7 @@ import { server } from '@test/setupBrowserTests';
 import type { InboxFilter } from '../utils/inboxFilter';
 import { heartbeatKeys } from './useInboxHeartBeat';
 import {
+  flattenInboxPages,
   inboxKeys,
   useInboxItemQuery,
   useInboxQuery,
@@ -96,11 +97,41 @@ describe('useInboxQuery hooks', () => {
       const { result } = renderHook(() => useInboxQuery(), { wrapper: Wrapper });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(result.current.data?.items).toHaveLength(2);
-      expect(result.current.data?.items?.map((item) => item.title)).toEqual([
-        'Review PR',
-        'Follow up issue',
-      ]);
+      const flattened = flattenInboxPages(result.current.data?.pages);
+      expect(flattened).toHaveLength(2);
+      expect(flattened.map((item) => item.title)).toEqual(['Review PR', 'Follow up issue']);
+    });
+
+    it('should fetch the next page and append its items when fetchNextPage is called', async () => {
+      const pageOneItems = Array.from({ length: 20 }, (_, i) =>
+        createInboxItem({ id: i + 1, title: `Item ${i + 1}` }),
+      );
+      const pageTwoItems = [createInboxItem({ id: 21, title: 'Item 21' })];
+
+      server.use(
+        http.get('/api/inbox', ({ request }) => {
+          const url = new URL(request.url);
+          const page = Number(url.searchParams.get('page') ?? '0');
+          return HttpResponse.json({
+            items: page === 0 ? pageOneItems : pageTwoItems,
+            totalElements: 21,
+            page,
+            size: 20,
+          });
+        }),
+      );
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useInboxQuery(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(flattenInboxPages(result.current.data?.pages)).toHaveLength(20);
+      expect(result.current.hasNextPage).toBe(true);
+
+      result.current.fetchNextPage();
+
+      await waitFor(() => expect(flattenInboxPages(result.current.data?.pages)).toHaveLength(21));
+      expect(result.current.hasNextPage).toBe(false);
     });
 
     it('should use filter values in the query key so cache entries stay distinct', async () => {

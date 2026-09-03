@@ -1,0 +1,60 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn132",
+        "number": 132,
+        "title": "Add organization badge to ADO-sourced items",
+        "url": "https://github.com/acme/dev-inbox/pull/132",
+        "state": "OPEN",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-03-03T09:00:00Z",
+        "updatedAt": "2026-03-03T09:00:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 16,
+        "deletions": 4,
+        "changedFiles": 3,
+        "reviewDecision": null,
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "tnowak",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+        },
+        "comments": {
+          "totalCount": 2
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": []
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Auto-generated fixture PR #132 for pagination testing: add organization badge to ado-sourced items.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/132#issuecomment-1",
+              "createdAt": "2026-03-03T09:00:00Z",
+              "author": {
+                "login": "amaj",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn137",
+        "number": 137,
+        "title": "Refactor useInboxItems hook for readability",
+        "url": "https://github.com/acme/dev-inbox/pull/137",
+        "state": "OPEN",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-03-08T09:00:00Z",
+        "updatedAt": "2026-03-08T09:00:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 31,
+        "deletions": 9,
+        "changedFiles": 2,
+        "reviewDecision": "REVIEW_REQUIRED",
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "amaj",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+        },
+        "comments": {
+          "totalCount": 3
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": [
+            {
+              "requestedReviewer": {
+                "login": "tnowak",
+                "name": "tnowak",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+              }
+            }
+          ]
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Auto-generated fixture PR #137 for pagination testing: refactor useinboxitems hook for readability.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/137#issuecomment-1",
+              "createdAt": "2026-03-08T09:00:00Z",
+              "author": {
+                "login": "jkowalski",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

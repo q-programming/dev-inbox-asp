@@ -32,7 +32,7 @@ export const SIDEBAR_COLLAPSED_WIDTH = 56;
  * Width transition is handled by the parent Layout so the main content margin
  * animates in sync with the sidebar.
  */
-const AppSidebar = memo(() => {
+const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
   const location = useLocation();
   const { pathname } = location;
   const collapsed = useSettingsStore((state) => state.sideBarCollapsed);
@@ -133,7 +133,7 @@ const AppSidebar = memo(() => {
       <SectionLabel label="Focus" collapsed={collapsed} />
       <List disablePadding dense>
         {focusItems.map((item) => (
-          <NavRow key={item.id} item={item} activeId={activeId} collapsed={collapsed} />
+          <NavRow key={item.id} item={item} activeId={activeId} collapsed={collapsed} onNavigate={onNavigate} />
         ))}
       </List>
 
@@ -142,7 +142,7 @@ const AppSidebar = memo(() => {
       <SectionLabel label="Filters" collapsed={collapsed} />
       <List disablePadding dense>
         {filterItems.map((item) => (
-          <NavRow key={item.id} item={item} activeId={activeId} collapsed={collapsed} />
+          <NavRow key={item.id} item={item} activeId={activeId} collapsed={collapsed} onNavigate={onNavigate} />
         ))}
       </List>
 

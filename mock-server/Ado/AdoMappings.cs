@@ -14,36 +14,35 @@ namespace GitHubMockServer.Ado;
 /// <see cref="DevInbox.Web.Features.ADO.AdoService"/>, and the single work item/pull request
 /// detail + comment fetches used by the inbox detail view
 /// (<see cref="DevInbox.Web.Features.ADO.AdoService.GetDetailsAsync"/>).
-/// Seeds a single organization ("contoso") with two projects ("Alpha", "Beta") — Alpha has four
-/// work items (501-504) and four pull requests (2087, 2101, 2110, 2124) seeded, each with its own
-/// detail + comments/threads fixture; Beta is empty (exercises the "no items in this project" path).
-/// Not mocked: OAuth/device flows (ADO has no OAuth App wired up yet).
+/// Seeds a single organization ("contoso") with two projects ("Alpha", "Beta") — Alpha has thirty
+/// work items (501-530) and eighteen pull requests (2087-2150 and 2160-2205) seeded, each with its
+/// own detail + comments/threads fixture; Beta is empty (exercises the "no items in this project"
+/// path).
+/// Not mocked: OAuth/device flows — Azure DevOps has no OAuth App wired up (PAT is the only
+/// supported connect method; see <see cref="DevInbox.Web.Features.ADO.AdoIntegrationService"/>).
 /// </summary>
 internal static class AdoMappings
 {
-    /// <summary>
-    /// REST endpoint for <c>AdoClient.GetCurrentUserProfileAsync</c> — kept for OAuth-parity only
-    /// (unreachable today, see <see cref="DevInbox.Web.Features.ADO.AdoIntegrationService.CreateOAuthProfile"/>);
-    /// the PAT connect flow uses <see cref="DevInbox.Web.Features.ADO.Client.IAdoClient.GetConnectionDataAsync"/> instead.
-    /// </summary>
-    private const string CurrentUserProfilePath = "/ado/_apis/profile/profiles/me";
-
     /// <summary>Seeded organization whose projects/work items/PRs are populated below.</summary>
     private const string Organization = "contoso";
 
+    /// <summary>Work item ids with seeded detail + comments fixtures (Alpha project).</summary>
+    private static readonly int[] SeededWorkItemIds =
+    [
+        501, 502, 503, 504, 505, 506, 507, 508, 509, 510,
+        511, 512, 513, 514, 515, 516, 517, 518, 519, 520,
+        521, 522, 523, 524, 525, 526, 527, 528, 529, 530,
+    ];
+
+    /// <summary>Pull request ids with seeded detail + threads fixtures (Alpha project).</summary>
+    private static readonly int[] SeededPullRequestIds =
+    [
+        2087, 2101, 2110, 2124, 2135, 2140, 2145, 2150,
+        2160, 2165, 2170, 2175, 2180, 2185, 2190, 2195, 2200, 2205,
+    ];
+
     public static void Register(WireMockServer server, string fixturesDir)
     {
-        // GET /_apis/profile/profiles/me — kept for OAuth parity only, see CurrentUserProfilePath.
-        server
-            .Given(Request.Create()
-                .WithPath(CurrentUserProfilePath)
-                .UsingGet())
-            .WithTitle("ADO: GET /_apis/profile/profiles/me")
-            .RespondWith(Response.Create()
-                .WithStatusCode(200)
-                .WithHeader("Content-Type", "application/json")
-                .WithBodyFromFile(System.IO.Path.Combine(fixturesDir, "current-user-profile.json")));
-
         // GET /{organization}/_apis/connectionData — org-scoped PAT validation + identity
         // resolution (AdoClient.GetConnectionDataAsync), the primary connect-flow call now that
         // Azure DevOps is deprecating "all accessible organizations" PATs. Matched against any
@@ -148,31 +147,31 @@ internal static class AdoMappings
         // single work item (AdoClient.GetWorkItemDetailAsync). Work items 501-504 are all seeded
         // with full detail fixtures (description + parent relation where applicable); 504 and 502
         // additionally exercise the "no parent" and "one comment" paths respectively.
-        RegisterWorkItemDetail(server, fixturesDir, 501);
-        RegisterWorkItemDetail(server, fixturesDir, 502);
-        RegisterWorkItemDetail(server, fixturesDir, 503);
-        RegisterWorkItemDetail(server, fixturesDir, 504);
+        foreach (var workItemId in SeededWorkItemIds)
+        {
+            RegisterWorkItemDetail(server, fixturesDir, workItemId);
+        }
 
         // GET /{organization}/Alpha/_apis/wit/workitems/{id}/comments — comment list per work item.
-        RegisterWorkItemComments(server, fixturesDir, 501);
-        RegisterWorkItemComments(server, fixturesDir, 502);
-        RegisterWorkItemComments(server, fixturesDir, 503);
-        RegisterWorkItemComments(server, fixturesDir, 504);
+        foreach (var workItemId in SeededWorkItemIds)
+        {
+            RegisterWorkItemComments(server, fixturesDir, workItemId);
+        }
 
         // GET /{organization}/Alpha/_apis/git/repositories/alpha-service/pullrequests/{id} — inbox
         // detail view fetch for a single pull request (AdoClient.GetPullRequestDetailAsync).
-        RegisterPullRequestDetail(server, fixturesDir, 2087);
-        RegisterPullRequestDetail(server, fixturesDir, 2101);
-        RegisterPullRequestDetail(server, fixturesDir, 2110);
-        RegisterPullRequestDetail(server, fixturesDir, 2124);
+        foreach (var pullRequestId in SeededPullRequestIds)
+        {
+            RegisterPullRequestDetail(server, fixturesDir, pullRequestId);
+        }
 
         // GET /{organization}/Alpha/_apis/git/repositories/alpha-service/pullRequests/{id}/threads —
         // comment threads per pull request; each includes one system-generated (vote) thread
         // comment to exercise AdoService's "text" vs "system" commentType filtering.
-        RegisterPullRequestThreads(server, fixturesDir, 2087);
-        RegisterPullRequestThreads(server, fixturesDir, 2101);
-        RegisterPullRequestThreads(server, fixturesDir, 2110);
-        RegisterPullRequestThreads(server, fixturesDir, 2124);
+        foreach (var pullRequestId in SeededPullRequestIds)
+        {
+            RegisterPullRequestThreads(server, fixturesDir, pullRequestId);
+        }
     }
 
     private static void RegisterWorkItemDetail(WireMockServer server, string fixturesDir, int workItemId)

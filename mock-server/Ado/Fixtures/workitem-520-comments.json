@@ -1,0 +1,14 @@
+{
+  "totalCount": 1,
+  "comments": [
+    {
+      "text": "Auto-generated comment for pagination test fixture.",
+      "createdBy": {
+        "displayName": "Jane Smith",
+        "uniqueName": "jane@contoso.com",
+        "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+      },
+      "createdDate": "2026-01-13T12:00:00.000Z"
+    }
+  ]
+}

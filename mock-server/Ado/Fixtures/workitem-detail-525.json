@@ -1,0 +1,25 @@
+{
+  "id": 525,
+  "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/525",
+  "fields": {
+    "System.Title": "Spike: evaluate Azure DevOps webhooks vs polling",
+    "System.WorkItemType": "Task",
+    "System.State": "Closed",
+    "System.TeamProject": "Alpha",
+    "System.AreaPath": "Alpha\\Backend",
+    "System.Tags": "backend; ado",
+    "System.AssignedTo": {
+      "displayName": "John Doe",
+      "uniqueName": "john@doe.com",
+      "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+    },
+    "System.CreatedBy": {
+      "displayName": "John Doe",
+      "uniqueName": "john@doe.com",
+      "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00"
+    },
+    "System.CreatedDate": "2026-01-15T09:00:00.000Z",
+    "System.ChangedDate": "2026-01-18T12:00:00.000Z",
+    "System.Description": "Auto-generated fixture item #525 for pagination testing (spike: evaluate azure devops webhooks vs polling)."
+  }
+}

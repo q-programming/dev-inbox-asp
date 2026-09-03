@@ -16,19 +16,6 @@ public class AdoOptions
     public string NormalizedBaseAddress => BaseUrl.EndsWith('/') ? BaseUrl : $"{BaseUrl}/";
 
     /// <summary>
-    /// Base address for Azure DevOps' account-management APIs (profile lookup, org discovery via
-    /// accounts-by-member). These are NOT organization-scoped and are served from a different host
-    /// than <see cref="BaseUrl"/> — real Azure DevOps returns a 404 if
-    /// "_apis/profile/profiles/me" or "_apis/accounts" are requested against "dev.azure.com".
-    /// See https://learn.microsoft.com/en-us/rest/api/azure/devops/profile/profiles/get and
-    /// https://learn.microsoft.com/en-us/rest/api/azure/devops/account/accounts/list.
-    /// </summary>
-    public string AccountsBaseUrl { get; set; } = "https://app.vssps.visualstudio.com";
-
-    /// <summary><see cref="AccountsBaseUrl"/> guaranteed to end with "/" so relative paths append correctly.</summary>
-    public string NormalizedAccountsBaseAddress => AccountsBaseUrl.EndsWith('/') ? AccountsBaseUrl : $"{AccountsBaseUrl}/";
-
-    /// <summary>
     /// How many days of history a first-ever ("initial") work item sync looks back — mirrors
     /// GitHub's "open PRs only" initial-sync bound, but work items have no universal "open" state
     /// across Azure DevOps process templates (Agile/Scrum/Basic/CMMI all name theirs differently),

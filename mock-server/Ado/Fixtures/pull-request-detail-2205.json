@@ -1,0 +1,27 @@
+{
+  "pullRequestId": 2205,
+  "title": "Support @mentioned filter in WIQL builder",
+  "status": "active",
+  "creationDate": "2026-02-10T09:00:00.000Z",
+  "closedDate": null,
+  "createdBy": {
+    "displayName": "Jane Smith",
+    "uniqueName": "jane@contoso.com",
+    "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+  },
+  "repository": {
+    "name": "alpha-service",
+    "project": {
+      "id": "8b6f0e3a-1e2d-4a3b-9c1f-2d3e4f5a6b70",
+      "name": "Alpha"
+    }
+  },
+  "reviewers": [
+    {
+      "id": "f6a4d2d1-9b5c-4f2a-8e1d-3c7b2a1e9f00",
+      "displayName": "John Doe",
+      "vote": 0
+    }
+  ],
+  "description": "Extends the WIQL query builder to also match work items where the current user is @mentioned in a comment."
+}

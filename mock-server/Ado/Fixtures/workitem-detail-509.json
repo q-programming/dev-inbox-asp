@@ -1,0 +1,25 @@
+{
+  "id": 509,
+  "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/509",
+  "fields": {
+    "System.Title": "Document ADO PAT scopes required for sync",
+    "System.WorkItemType": "Task",
+    "System.State": "New",
+    "System.TeamProject": "Alpha",
+    "System.AreaPath": "Alpha\\Sync",
+    "System.Tags": "docs",
+    "System.AssignedTo": {
+      "displayName": "Jane Smith",
+      "uniqueName": "jane@contoso.com",
+      "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+    },
+    "System.CreatedBy": {
+      "displayName": "Jane Smith",
+      "uniqueName": "jane@contoso.com",
+      "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+    },
+    "System.CreatedDate": "2026-01-19T09:00:00.000Z",
+    "System.ChangedDate": "2026-01-19T09:00:00.000Z",
+    "System.Description": "Add a short doc explaining exactly which PAT scopes (Work Items Read, Code Read) are required to connect an organization."
+  }
+}

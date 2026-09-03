@@ -5,16 +5,8 @@ using DevInbox.Web.Features.ADO.Client.DTO;
 
 namespace DevInbox.Web.Features.ADO.Client;
 
-public class AdoClient(HttpClient client, IHttpClientFactory httpClientFactory) : IAdoClient, IService
+public class AdoClient(HttpClient client) : IAdoClient, IService
 {
-    /// <summary>
-    /// Named <see cref="HttpClient"/> pointed at Azure DevOps' account-management host (see
-    /// <see cref="Config.AdoOptions.AccountsBaseUrl"/>) — used only by
-    /// <see cref="GetCurrentUserProfileAsync"/>, which is not organization-scoped and 404s against
-    /// the org-scoped <c>dev.azure.com</c> host.
-    /// </summary>
-    public const string AccountsHttpClientName = "ado-accounts";
-
     /// <summary>
     /// Work item batch endpoint hard cap — see
     /// https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/get-work-items-batch.
@@ -34,14 +26,6 @@ public class AdoClient(HttpClient client, IHttpClientFactory httpClientFactory) 
         "System.CreatedDate",
         "System.ChangedDate"
     ];
-
-    public async Task<AdoUserProfileDTO> GetCurrentUserProfileAsync(string personalAccessToken, CancellationToken ct = default)
-    {
-        using var response = await SendAccountsAsync(HttpMethod.Get, "_apis/profile/profiles/me?api-version=7.0", personalAccessToken, ct: ct);
-
-        return await response.Content.ReadFromJsonAsync<AdoUserProfileDTO>(cancellationToken: ct)
-            ?? throw new InvalidOperationException("Azure DevOps returned an empty user profile.");
-    }
 
     public async Task<AdoConnectionDataDTO> GetConnectionDataAsync(string personalAccessToken, string organization, CancellationToken ct = default)
     {
@@ -204,18 +188,6 @@ public class AdoClient(HttpClient client, IHttpClientFactory httpClientFactory) 
         string personalAccessToken,
         object? jsonBody = null,
         CancellationToken ct = default) => SendAsync(client, method, requestUri, personalAccessToken, jsonBody, ct);
-
-    /// <summary>
-    /// Same as <see cref="SendAsync(HttpMethod, string, string, object?, CancellationToken)"/> but
-    /// targets the account-management host (see <see cref="AccountsHttpClientName"/>) instead of
-    /// the organization-scoped <c>client</c> — see <see cref="GetCurrentUserProfileAsync"/>.
-    /// </summary>
-    private Task<HttpResponseMessage> SendAccountsAsync(
-        HttpMethod method,
-        string requestUri,
-        string personalAccessToken,
-        object? jsonBody = null,
-        CancellationToken ct = default) => SendAsync(httpClientFactory.CreateClient(AccountsHttpClientName), method, requestUri, personalAccessToken, jsonBody, ct);
 
     private static async Task<HttpResponseMessage> SendAsync(
         HttpClient httpClient,

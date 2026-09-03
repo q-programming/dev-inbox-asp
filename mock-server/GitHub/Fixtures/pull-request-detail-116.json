@@ -1,0 +1,71 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwABCD9",
+        "number": 116,
+        "title": "Deduplicate inbox items on upsert",
+        "url": "https://github.com/acme/dev-inbox/pull/116",
+        "state": "OPEN",
+        "isDraft": true,
+        "merged": false,
+        "createdAt": "2026-08-14T08:45:00Z",
+        "updatedAt": "2026-08-15T14:00:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 52,
+        "deletions": 9,
+        "changedFiles": 3,
+        "reviewDecision": null,
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "jkowalski",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+        },
+        "comments": {
+          "totalCount": 2
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "bug"
+            },
+            {
+              "name": "backend"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": [
+            {
+              "requestedReviewer": {
+                "login": "tnowak",
+                "name": "tnowak",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+              }
+            }
+          ]
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Adds an in-batch dedup guard plus a DB unique index so the same item can never be inserted twice within one sync run.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Thanks for the update, taking a look.",
+              "url": "https://github.com/acme/dev-inbox/pull/116#issuecomment-1",
+              "createdAt": "2026-08-15T14:00:00Z",
+              "author": {
+                "login": "tnowak",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

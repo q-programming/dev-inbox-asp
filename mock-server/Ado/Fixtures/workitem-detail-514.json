@@ -1,0 +1,25 @@
+{
+  "id": 514,
+  "url": "https://dev.azure.com/contoso/Alpha/_apis/wit/workItems/514",
+  "fields": {
+    "System.Title": "Write runbook for rotating an ADO PAT",
+    "System.WorkItemType": "Task",
+    "System.State": "New",
+    "System.TeamProject": "Alpha",
+    "System.AreaPath": "Alpha\\Docs",
+    "System.Tags": "docs; ado",
+    "System.AssignedTo": {
+      "displayName": "Jane Smith",
+      "uniqueName": "jane@contoso.com",
+      "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+    },
+    "System.CreatedBy": {
+      "displayName": "Jane Smith",
+      "uniqueName": "jane@contoso.com",
+      "id": "a1b2c3d4-e5f6-4a1b-8c9d-0e1f2a3b4c5d"
+    },
+    "System.CreatedDate": "2026-01-04T09:00:00.000Z",
+    "System.ChangedDate": "2026-01-07T12:00:00.000Z",
+    "System.Description": "Auto-generated fixture item #514 for pagination testing (write runbook for rotating an ado pat)."
+  }
+}

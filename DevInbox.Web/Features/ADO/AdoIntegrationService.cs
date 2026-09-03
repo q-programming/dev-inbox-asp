@@ -7,10 +7,12 @@ using DevInbox.Web.Infrastructure.OpenApi.Generated;
 namespace DevInbox.Web.Features.ADO;
 
 /// <summary>
-/// Owns the full lifecycle of a user's <see cref="AdoProfile"/> connections — currently only the
-/// Personal Access Token flow (Azure DevOps has no OAuth App equivalent wired up yet, unlike
-/// GitHub). One organization = one profile/PAT (see <see cref="AdoProfile"/>), so most operations
-/// here are scoped to a specific organization rather than "the" user's single ADO connection.
+/// Owns the full lifecycle of a user's <see cref="AdoProfile"/> connections via Personal Access
+/// Token — Azure DevOps' OAuth App flow requires organization-scoped consent per-org (unlike
+/// GitHub's single-app-wide OAuth), which doesn't fit well with a "add PATs as you go" multi-org
+/// model, so PAT is the only supported connect method. One organization = one profile/PAT (see
+/// <see cref="AdoProfile"/>), so most operations here are scoped to a specific organization rather
+/// than "the" user's single ADO connection.
 /// </summary>
 public class AdoIntegrationService(
     IAdoProfileRepository profileRepository,
@@ -66,44 +68,6 @@ public class AdoIntegrationService(
     public Task DisconnectAsync(long userId, string organization)
     {
         return profileRepository.DeleteByUserIdAndOrganizationAsync(userId, organization);
-    }
-
-    public AdoProfile CreateOAuthProfile(AdoUserProfileDTO profile, string accessToken)
-    {
-        // Azure DevOps has no OAuth App flow wired up yet — this exists only for parity with
-        // GitHubIntegrationService and is unreachable today. Organization is left empty since a
-        // future OAuth callback would need its own way to determine/collect it (OAuth tokens are
-        // typically broader-scoped than a single-organization PAT).
-        var adoProfile = new AdoProfile { Organization = string.Empty };
-        UpdateProfileFromProfileDto(adoProfile, profile, accessToken, Sync.Domain.IntegrationAuthMethod.OAuthApp, expiresAt: null);
-        return adoProfile;
-    }
-
-    public void ApplyOAuthRefresh(AdoProfile existingProfile, AdoUserProfileDTO profile, string accessToken)
-    {
-        UpdateProfileFromProfileDto(existingProfile, profile, accessToken, Sync.Domain.IntegrationAuthMethod.OAuthApp, expiresAt: null);
-    }
-
-    /// <summary>
-    /// Applies the fields common to every ADO profile create/update reachable via
-    /// <see cref="AdoUserProfileDTO"/> (currently only the unreachable OAuth branch — see
-    /// <see cref="CreateOAuthProfile"/>). The PAT connect path uses
-    /// <see cref="ApplyConnectionData"/> instead, since it validates via a different, org-scoped DTO.
-    /// </summary>
-    private static void UpdateProfileFromProfileDto(
-        AdoProfile adoProfile,
-        AdoUserProfileDTO profile,
-        string accessToken,
-        Sync.Domain.IntegrationAuthMethod authMethod,
-        DateTimeOffset? expiresAt)
-    {
-        adoProfile.AdoUserId = profile.Id;
-        adoProfile.AdoLogin = profile.DisplayName;
-        adoProfile.AvatarUrl = profile.Avatar?.Value;
-        adoProfile.AccessToken = accessToken;
-        adoProfile.AuthMethod = authMethod;
-        adoProfile.TokenExpiresAt = expiresAt;
-        adoProfile.Status = Sync.Domain.IntegrationStatus.Active;
     }
 
     /// <summary>Applies the fields from an org-scoped <see cref="AdoConnectionDataDTO"/> (the PAT connect path) — see <see cref="ConnectPatAsync"/>.</summary>

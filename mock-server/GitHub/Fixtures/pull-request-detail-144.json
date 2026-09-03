@@ -1,0 +1,60 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn144",
+        "number": 144,
+        "title": "Improve accessibility of inbox item cards",
+        "url": "https://github.com/acme/dev-inbox/pull/144",
+        "state": "OPEN",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-03-15T09:00:00Z",
+        "updatedAt": "2026-03-15T09:00:00Z",
+        "closedAt": null,
+        "mergedAt": null,
+        "additions": 52,
+        "deletions": 16,
+        "changedFiles": 3,
+        "reviewDecision": null,
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "tnowak",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+        },
+        "comments": {
+          "totalCount": 2
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": []
+        },
+        "reviews": {
+          "nodes": []
+        },
+        "body": "Auto-generated fixture PR #144 for pagination testing: improve accessibility of inbox item cards.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/144#issuecomment-1",
+              "createdAt": "2026-03-15T09:00:00Z",
+              "author": {
+                "login": "amaj",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

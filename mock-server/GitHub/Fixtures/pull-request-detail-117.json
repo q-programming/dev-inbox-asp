@@ -1,0 +1,69 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwABCD10",
+        "number": 117,
+        "title": "Add PAT scope validation on connect",
+        "url": "https://github.com/acme/dev-inbox/pull/117",
+        "state": "MERGED",
+        "isDraft": false,
+        "merged": true,
+        "createdAt": "2026-08-01T09:30:00Z",
+        "updatedAt": "2026-08-04T12:00:00Z",
+        "closedAt": "2026-08-04T12:00:00Z",
+        "mergedAt": "2026-08-04T12:00:00Z",
+        "additions": 88,
+        "deletions": 10,
+        "changedFiles": 4,
+        "reviewDecision": "APPROVED",
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "tnowak",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+        },
+        "comments": {
+          "totalCount": 3
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "ado"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": []
+        },
+        "reviews": {
+          "nodes": [
+            {
+              "state": "APPROVED",
+              "submittedAt": "2026-08-04T11:30:00Z",
+              "author": {
+                "login": "jkowalski",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+              }
+            }
+          ]
+        },
+        "body": "Validates the supplied PAT actually has the Work Items (Read) and Code (Read) scopes before saving the profile, surfacing a clear error otherwise.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Thanks for the update, taking a look.",
+              "url": "https://github.com/acme/dev-inbox/pull/117#issuecomment-1",
+              "createdAt": "2026-08-04T12:00:00Z",
+              "author": {
+                "login": "amaj",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

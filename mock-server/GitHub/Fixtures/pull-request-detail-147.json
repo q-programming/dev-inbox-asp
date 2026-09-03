@@ -1,0 +1,69 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwPagn147",
+        "number": 147,
+        "title": "Add export-to-CSV for inbox items",
+        "url": "https://github.com/acme/dev-inbox/pull/147",
+        "state": "CLOSED",
+        "isDraft": false,
+        "merged": false,
+        "createdAt": "2026-03-18T09:00:00Z",
+        "updatedAt": "2026-03-18T09:00:00Z",
+        "closedAt": "2026-03-20T14:00:00Z",
+        "mergedAt": null,
+        "additions": 61,
+        "deletions": 19,
+        "changedFiles": 6,
+        "reviewDecision": "CHANGES_REQUESTED",
+        "repository": {
+          "nameWithOwner": "acme/dev-inbox"
+        },
+        "author": {
+          "login": "tnowak",
+          "avatarUrl": "https://avatars.githubusercontent.com/u/1003"
+        },
+        "comments": {
+          "totalCount": 1
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "pagination-test"
+            }
+          ]
+        },
+        "reviewRequests": {
+          "nodes": []
+        },
+        "reviews": {
+          "nodes": [
+            {
+              "state": "CHANGES_REQUESTED",
+              "submittedAt": "2026-03-20T14:00:00Z",
+              "author": {
+                "login": "jkowalski",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1001"
+              }
+            }
+          ]
+        },
+        "body": "Auto-generated fixture PR #147 for pagination testing: add export-to-csv for inbox items.",
+        "latestComments": {
+          "nodes": [
+            {
+              "body": "Auto-generated comment for pagination test fixture.",
+              "url": "https://github.com/acme/dev-inbox/pull/147#issuecomment-1",
+              "createdAt": "2026-03-18T09:00:00Z",
+              "author": {
+                "login": "amaj",
+                "avatarUrl": "https://avatars.githubusercontent.com/u/1002"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

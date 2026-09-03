@@ -74,6 +74,37 @@ describe('InboxList', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 
+  it('should fetch and append the next page when the sentinel scrolls into view', async () => {
+    const pageOneItems = Array.from({ length: 20 }, (_, i) =>
+      createInboxItem({ id: i + 1, title: `Item ${i + 1}` }),
+    );
+    const pageTwoItems = [createInboxItem({ id: 21, title: 'Item 21' })];
+
+    server.use(
+      http.get('/api/inbox', ({ request }) => {
+        const url = new URL(request.url);
+        const page = Number(url.searchParams.get('page') ?? '0');
+        return HttpResponse.json({
+          items: page === 0 ? pageOneItems : pageTwoItems,
+          totalElements: 21,
+          page,
+          size: 20,
+        });
+      }),
+    );
+
+    renderWithProviders(<InboxList />, { initialEntries: ['/inbox'] });
+
+    expect(await screen.findByTestId('inbox-list')).toBeInTheDocument();
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.queryByText('Item 21')).not.toBeInTheDocument();
+
+    const sentinel = await screen.findByTestId('inbox-list-load-more-sentinel');
+    sentinel.scrollIntoView();
+
+    expect(await screen.findByText('Item 21')).toBeInTheDocument();
+  });
+
   it('should request inbox items using filters parsed from the URL', async () => {
     server.use(
       http.get('/api/inbox', ({ request }) => {
