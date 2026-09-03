@@ -1,15 +1,22 @@
+import { ContentFormat } from '@api';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
+import DOMPurify from 'dompurify';
+import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 /**
- * Content formats a comment/description body may arrive in from an integration.
- * GitHub always returns GitHub-flavoured markdown. Azure DevOps' rich-text fields can be
- * either markdown or HTML depending on the API/editor used to author them — once the real
- * ADO client is wired, each call site should pass whichever format that field actually is.
+ * Content formats a comment/description body may arrive in from an integration. The backend
+ * detects this once (see `ContentFormatDetector` in `AdoService`) and sends it alongside the
+ * body, so this component never needs its own format-sniffing logic:
+ * - GitHub content is always `markdown` (GitHub-flavoured).
+ * - Azure DevOps descriptions/comments can be `html` (rich-text editor) or `markdown` (Azure
+ *   DevOps' "switch to Markdown editor" toggle) per field/comment — there's no reliable
+ *   indicator from the API itself, which is exactly why the backend sniffs and tags it.
+ * - `plainText` covers empty/whitespace bodies (nothing to parse either way).
  */
-export type RichContentFormat = 'markdown' | 'html';
+export type RichContentFormat = ContentFormat;
 
 interface IRichContent {
   /** Raw content, e.g. a GitHub PR body/comment (markdown) or an ADO description/comment (markdown or html). */
@@ -22,6 +29,7 @@ const richContentSx = {
   wordBreak: 'break-word',
   fontSize: '0.875rem',
   lineHeight: 1.6,
+  whiteSpace: 'pre-wrap',
   '& p': { margin: 0, marginBottom: 1, '&:last-child': { marginBottom: 0 } },
   '& ul, & ol': { my: 1, pl: 3 },
   '& pre': {
@@ -66,17 +74,25 @@ const MarkdownContent = ({ children }: { children: string }) => (
   </ReactMarkdown>
 );
 
+/** Sanitizes raw HTML (e.g. an Azure DevOps rich-text field) before rendering it, stripping scripts/event handlers/etc. */
+const HtmlContent = ({ children }: { children: string }) => {
+  const sanitized = useMemo(() => DOMPurify.sanitize(children), [children]);
+  // eslint-disable-next-line react/no-danger -- content is sanitized via DOMPurify immediately above.
+  return <div dangerouslySetInnerHTML={{ __html: sanitized }} />;
+};
+
 /**
  * Renders a rich-text comment/description body read-only, shared by every integration's detail
- * panel (GitHub, ADO, ...). `format` picks the renderer:
+ * panel (GitHub, ADO, ...). `format` (from the backend-provided `ContentFormat`) picks the renderer:
  * - `markdown` (default): GitHub-flavoured markdown via react-markdown + remark-gfm.
- * - `html`: not wired yet — no integration currently returns real HTML content. Once ADO's
- *   real API is hooked up, add a sanitize-then-render branch here (e.g. dompurify +
- *   dangerouslySetInnerHTML) rather than in a per-feature component.
+ * - `html`: sanitized via DOMPurify, then rendered as real markup (Azure DevOps rich-text fields).
+ * - `plainText`: rendered verbatim in a plain div (whitespace preserved via `richContentSx`).
  */
-const RichContent = ({ children, format = 'markdown' }: IRichContent) => (
+const RichContent = ({ children, format = ContentFormat.Markdown }: IRichContent) => (
   <Box sx={richContentSx}>
-    {format === 'html' ? children : <MarkdownContent>{children}</MarkdownContent>}
+    {format === ContentFormat.Html && <HtmlContent>{children}</HtmlContent>}
+    {format === ContentFormat.PlainText && <div>{children}</div>}
+    {format === ContentFormat.Markdown && <MarkdownContent>{children}</MarkdownContent>}
   </Box>
 );
 

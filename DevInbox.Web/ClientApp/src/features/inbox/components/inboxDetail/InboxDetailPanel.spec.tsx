@@ -4,6 +4,7 @@ import { delay, http, HttpResponse } from 'msw';
 
 import { ItemSource, ItemType, type InboxItemDetail } from '@api';
 import { useInboxStore } from '@feature/inbox/store/inbox.store';
+import useAlertStore from '@shared/store/alert.store';
 import { renderWithProviders } from '@test/renderWithProviders';
 import { server } from '@test/setupBrowserTests';
 import InboxDetailPanel from './InboxDetailPanel';
@@ -31,6 +32,7 @@ describe('InboxDetailPanel', () => {
       status: undefined,
       selectedItemId: undefined,
     });
+    useAlertStore.setState({ alerts: [] });
   });
 
   it('should render nothing when no item is selected', () => {
@@ -120,5 +122,38 @@ describe('InboxDetailPanel', () => {
     expect(screen.queryByTestId('ado-detail')).not.toBeInTheDocument();
     expect(screen.queryByTestId('note-detail')).not.toBeInTheDocument();
     expect(screen.queryByTestId('github-detail')).not.toBeInTheDocument();
+  });
+
+  it('shows a "removed from inbox" message and closes the panel when the item 404s (deleted server-side)', async () => {
+    useInboxStore.setState({ selectedItemId: 555 });
+    server.use(http.get(ITEM_PATH, () => HttpResponse.json({ title: 'Not found' }, { status: 404 })));
+
+    renderWithProviders(<InboxDetailPanel />);
+
+    await waitFor(
+      () =>
+        expect(useAlertStore.getState().alerts).toEqual([
+          expect.objectContaining({
+            message: 'This item no longer exists and has been removed from your inbox.',
+          }),
+        ]),
+      { timeout: 3000 },
+    );
+    expect(useInboxStore.getState().selectedItemId).toBeUndefined();
+  });
+
+  it('shows a generic failure message without closing early on a non-404 error', async () => {
+    useInboxStore.setState({ selectedItemId: 556 });
+    server.use(http.get(ITEM_PATH, () => HttpResponse.json({ title: 'Server error' }, { status: 500 })));
+
+    renderWithProviders(<InboxDetailPanel />);
+
+    await waitFor(
+      () =>
+        expect(useAlertStore.getState().alerts).toEqual([
+          expect.objectContaining({ message: 'Failed to load inbox item details.' }),
+        ]),
+      { timeout: 3000 },
+    );
   });
 });

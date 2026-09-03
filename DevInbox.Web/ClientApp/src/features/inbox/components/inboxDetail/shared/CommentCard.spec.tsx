@@ -1,3 +1,4 @@
+import { ContentFormat } from '@api';
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@test/renderWithProviders';
@@ -54,7 +55,7 @@ describe('CommentCard', () => {
 
   it('renders the body via RichContent respecting the provided format', () => {
     renderWithProviders(
-      <CommentCard body={'**bold**'} format="markdown" bodyTestId="comment-card-body" />,
+      <CommentCard body={'**bold**'} format={ContentFormat.Markdown} bodyTestId="comment-card-body" />,
     );
 
     const body = screen.getByTestId('comment-card-body');

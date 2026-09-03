@@ -1,3 +1,4 @@
+using DevInbox.Web.Common.Utils;
 using System.Text.Json;
 using DevInbox.Web.Features.ADO.Client;
 using DevInbox.Web.Features.ADO.Client.DTO;
@@ -48,9 +49,21 @@ public class AdoService(
         var accessToken = profile.AccessToken
             ?? throw new InvalidOperationException($"No stored access token for ADO profile {profile.AdoLogin}.");
 
-        return item.Type == ItemType.PR
-            ? await GetPullRequestDetailsAsync(accessToken, item, ct)
-            : await GetWorkItemDetailsAsync(accessToken, item, ct);
+        try
+        {
+            return item.Type == ItemType.PR
+                ? await GetPullRequestDetailsAsync(accessToken, item, ct)
+                : await GetWorkItemDetailsAsync(accessToken, item, ct);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            // The work item/PR/project no longer exists on the ADO side (deleted, project removed,// permissions revoked, ...) 
+            logger.LogInformation(
+                "[ADO] Item {ItemId} (external id {ExternalId}) no longer exists on Azure DevOps — removing stale inbox item",
+                item.Id, item.ExternalId);
+            await inboxItemRepository.DeleteAsync(item);
+            throw new NotFoundException($"ADO item {item.ExternalId} no longer exists and has been removed from your inbox.");
+        }
     }
 
     private async Task<AdoWorkItemDetail> GetWorkItemDetailsAsync(string accessToken, InboxItem item, CancellationToken ct)
@@ -80,6 +93,7 @@ public class AdoService(
             WorkItemType = workItem.Fields.WorkItemType ?? string.Empty,
             State = workItem.Fields.State ?? string.Empty,
             Description = workItem.Fields.Description ?? string.Empty,
+            DescriptionFormat = ContentFormatDetector.Detect(workItem.Fields.Description),
             Area = workItem.Fields.AreaPath ?? string.Empty,
             AssignedTo = MapPerson(workItem.Fields.AssignedTo),
             CreatedAt = workItem.Fields.CreatedDate ?? DateTimeOffset.UtcNow,
@@ -93,6 +107,7 @@ public class AdoService(
                 {
                     Author = MapPerson(c.CreatedBy),
                     Body = c.Text ?? string.Empty,
+                    BodyFormat = ContentFormatDetector.Detect(c.Text),
                     CreatedAt = c.CreatedDate
                 })]
         };
@@ -126,6 +141,7 @@ public class AdoService(
             {
                 Author = MapPerson(c.Author),
                 Body = c.Content ?? string.Empty,
+                BodyFormat = ContentFormatDetector.Detect(c.Content),
                 CreatedAt = c.PublishedDate
             })
             .ToList();
@@ -138,6 +154,7 @@ public class AdoService(
             WorkItemType = "Pull Request",
             State = pr.Status,
             Description = pr.Description ?? string.Empty,
+            DescriptionFormat = ContentFormatDetector.Detect(pr.Description),
             Area = repositoryName,
             AssignedTo = MapPerson(pr.CreatedBy),
             CreatedAt = pr.CreationDate,

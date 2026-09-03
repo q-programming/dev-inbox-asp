@@ -881,6 +881,8 @@ components:
           type: string
         summary:
           type: string
+        summaryFormat:
+          $ref: "#/components/schemas/ContentFormat"
         state:
           $ref: "#/components/schemas/GitHubPullRequestState"
         url:
@@ -963,6 +965,8 @@ components:
           type: string
         description:
           type: string
+        descriptionFormat:
+          $ref: "#/components/schemas/ContentFormat"
         area:
           type: string
         assignedTo:
@@ -1025,11 +1029,26 @@ components:
           $ref: "#/components/schemas/PersonReference"
         body:
           type: string
+        bodyFormat:
+          $ref: "#/components/schemas/ContentFormat"
         createdAt:
           type: string
           format: date-time
         url:
           type: string
+
+    ContentFormat:
+      type: string
+      description: >
+        How a rich-text field (description/comment body) should be rendered. GitHub content is
+        always markdown; Azure DevOps work item/PR descriptions and comments can be either HTML
+        (rich-text editor) or Markdown (Azure DevOps' "Markdown editor" toggle) per field/comment,
+        with no reliable indicator from the API itself — the backend sniffs the raw content once
+        after fetching it and sets this flag, so the frontend never needs its own detection logic.
+      enum:
+        - markdown
+        - html
+        - plainText
 
     PersonReference:
       type: object

@@ -64,6 +64,7 @@ public partial class GitHubPullRequestMapper
         detail.State = MapState(node);
         detail.Reviewers = MapReviewers(node);
         detail.LatestComments = MapLatestComments(node.LatestComments);
+        detail.SummaryFormat = ContentFormat.Markdown;
         return detail;
     }
 
@@ -160,6 +161,7 @@ public partial class GitHubPullRequestMapper
             {
                 Author = MapAuthor(c.Author),
                 Body = c.Body,
+                BodyFormat = ContentFormat.Markdown,
                 CreatedAt = c.CreatedAt,
                 Url = c.Url
             })

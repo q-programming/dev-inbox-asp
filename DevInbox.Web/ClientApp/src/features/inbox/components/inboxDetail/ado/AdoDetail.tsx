@@ -14,6 +14,7 @@ import InboxDetailHeader from '../InboxDetailHeader';
 import InboxDetailFooter from '../InboxDetailFooter';
 import PersonAvatar from '../shared/PersonAvatar';
 import CommentCard from '../shared/CommentCard';
+import RichContent from '../shared/RichContent';
 
 interface IAdoDetail {
   details: InboxItemDetail;
@@ -159,9 +160,11 @@ const AdoDetail = ({ details }: IAdoDetail) => {
               <Typography variant="overline" color="text.secondary">
                 Description
               </Typography>
-              <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
-                {workItem.description}
-              </Typography>
+              <Box sx={{ mt: 0.5 }}>
+                <RichContent format={workItem.descriptionFormat}>
+                  {workItem.description}
+                </RichContent>
+              </Box>
             </Box>
           )}
         </Paper>
@@ -176,6 +179,7 @@ const AdoDetail = ({ details }: IAdoDetail) => {
                 author={comment.author}
                 body={comment.body}
                 createdAt={comment.createdAt}
+                format={comment.bodyFormat}
                 authorTestId="ado-detail-comment-author"
                 bodyTestId="ado-detail-comment-body"
               />

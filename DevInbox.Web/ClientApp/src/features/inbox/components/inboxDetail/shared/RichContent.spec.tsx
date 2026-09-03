@@ -1,3 +1,4 @@
+import { ContentFormat } from '@api';
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import RichContent from './RichContent';
@@ -27,21 +28,49 @@ describe('RichContent', () => {
     });
 
     it('renders markdown explicitly when format is set to markdown', () => {
-      render(<RichContent format="markdown">{'**explicit**'}</RichContent>);
+      render(<RichContent format={ContentFormat.Markdown}>{'**explicit**'}</RichContent>);
 
       expect(screen.getByText('explicit').tagName).toBe('STRONG');
     });
   });
 
   describe('html format', () => {
-    it('renders the raw string as-is without parsing markdown or html', () => {
+    it('renders sanitized html as real markup', () => {
       const { container } = render(
-        <RichContent format="html">{'<strong>bold</strong> and [a link](https://example.com)'}</RichContent>,
+        <RichContent format={ContentFormat.Html}>{'<strong>bold</strong> text'}</RichContent>,
+      );
+
+      expect(container.querySelector('strong')).not.toBeNull();
+      expect(container.querySelector('strong')?.textContent).toBe('bold');
+    });
+
+    it('strips scripts and dangerous attributes via DOMPurify', () => {
+      const { container } = render(
+        <RichContent format={ContentFormat.Html}>
+          {'<img src="x" onerror="alert(1)" /><script>alert(1)</script>safe'}
+        </RichContent>,
+      );
+
+      expect(container.querySelector('script')).toBeNull();
+      expect(container.innerHTML).not.toContain('onerror');
+      expect(container.textContent).toContain('safe');
+    });
+  });
+
+  describe('plainText format', () => {
+    it('renders raw text without parsing markdown or html', () => {
+      const { container } = render(
+        <RichContent format={ContentFormat.PlainText}>
+          {'<strong>bold</strong> and [a link](https://example.com)'}
+        </RichContent>,
       );
 
       expect(container.querySelector('strong')).toBeNull();
       expect(container.querySelector('a')).toBeNull();
-      expect(container.textContent).toContain('<strong>bold</strong> and [a link](https://example.com)');
+      expect(container.textContent).toContain(
+        '<strong>bold</strong> and [a link](https://example.com)',
+      );
     });
   });
 });
+

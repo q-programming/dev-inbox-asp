@@ -236,7 +236,7 @@ const GithubDetail = ({ details }: IGithubDetail) => {
                 Description
               </Typography>
               <Box sx={{ mt: 0.5 }}>
-                <RichContent format="markdown">{pr.summary}</RichContent>
+                <RichContent format={pr.summaryFormat}>{pr.summary}</RichContent>
               </Box>
             </Box>
           )}
@@ -252,7 +252,7 @@ const GithubDetail = ({ details }: IGithubDetail) => {
                 author={comment.author}
                 body={comment.body}
                 createdAt={comment.createdAt}
-                format="markdown"
+                format={comment.bodyFormat}
                 externalUrl={comment.url ?? pr.url}
                 externalUrlLabel="Open in GitHub"
                 authorTestId="github-detail-latest-comment-author"

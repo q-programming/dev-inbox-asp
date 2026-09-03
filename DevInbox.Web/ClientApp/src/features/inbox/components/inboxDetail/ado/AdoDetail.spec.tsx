@@ -35,7 +35,7 @@ describe('AdoDetail', () => {
 
   it('renders work item type and id when present', () => {
     const details = makeInboxItemDetail({
-      ado: { workItemType: 'Bug', workItemId: 789 },
+      ado: { workItemType: 'Bug', workItemId: '789' },
     });
 
     renderWithProviders(<AdoDetail details={details} />);
