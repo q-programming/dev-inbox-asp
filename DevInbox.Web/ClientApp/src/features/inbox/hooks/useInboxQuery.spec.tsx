@@ -8,6 +8,7 @@ import {
   ItemSource,
   ItemType,
   SyncStatus,
+  TriggerType,
   type InboxItemDetail,
   type InboxItemSummary,
   type InboxStatus,
@@ -235,7 +236,7 @@ describe('useInboxQuery hooks', () => {
   describe('useSyncMutation', () => {
     it('should invalidate inbox, summary and heartbeat queries after a successful sync', async () => {
       server.use(
-        http.post('/api/sync/trigger', () => new HttpResponse(null, { status: 202 })),
+        http.post('/api/sync/trigger', () => HttpResponse.json({ items: [] })),
         http.get('/api/inbox/status', () => HttpResponse.json(heartbeat)),
       );
 
@@ -243,7 +244,7 @@ describe('useInboxQuery hooks', () => {
       const invalidateQueriesSpy = vi.spyOn(client, 'invalidateQueries');
       const { result } = renderHook(() => useSyncMutation(), { wrapper: Wrapper });
 
-      result.current.mutate();
+      result.current.mutate(TriggerType.Manual);
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.all });

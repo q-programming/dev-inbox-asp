@@ -72,7 +72,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
 
     private async Task<InboxItem> AddItemAsync(long inboxId, ItemSource source, ItemType type, InboxReason reason,
         bool isDone = false, bool isSaved = false, Priority priority = Priority.None,
-        DateTimeOffset? activityAt = null, bool isClosed = false)
+        DateTimeOffset? activityAt = null, bool isClosed = false, DateTimeOffset? createdAt = null)
     {
         var item = new InboxItem
         {
@@ -83,7 +83,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
             ExternalId = Guid.NewGuid().ToString("N")[..8],
             Title = "Test item",
             ActivityAt = activityAt ?? DateTimeOffset.UtcNow,
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
             State = new InboxItemState
             {

@@ -49,7 +49,7 @@ public class InboxService(
                 item.Reason == InboxReason.Authored),
             AdoItems = group.LongCount(item =>
                 item.Source == ItemSource.Ado &&
-                !item.State.IsDone),
+                !item.State.IsDone)
         }) ?? new InboxSummary();
 
         // Notes counts standalone + attached notes alike — unlike the metrics above, which only reflect

@@ -45,6 +45,10 @@ export const handlers = [
   http.post('/api/auth/register', () => HttpResponse.json(mockUser, { status: 201 })),
   http.post('/api/auth/logout', () => new HttpResponse(null, { status: 204 })),
 
+  // AppSidebar's collapse toggle persists to the server — override per-test with server.use()
+  // when asserting on the request body; this default just avoids falling through to the proxy.
+  http.put('/api/settings/sidebarToggle', () => new HttpResponse(null, { status: 204 })),
+
   http.post('/api/integrations/github/pat', () =>
     HttpResponse.json({ id: 1, status: 'ACTIVE', type: 'GITHUB' }),
   ),

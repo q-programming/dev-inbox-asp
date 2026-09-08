@@ -218,7 +218,7 @@ public class StubContractTests(DevInboxWebApplicationFactory factory)
     {
         await RegisterAndLoginAsync();
 
-        var response = await _client.PostAsync("/api/sync/trigger", null);
+        var response = await _client.PostAsJsonAsync("/api/sync/trigger", TriggerType.Manual);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }

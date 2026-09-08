@@ -4,7 +4,7 @@ import Box from '@mui/material/Box';
 import { IntegrationType } from '@api';
 
 interface IIntegrationIcon {
-  integration: IntegrationType | string;
+  integration: IntegrationType | string | undefined;
   size: number;
 }
 

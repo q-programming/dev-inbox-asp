@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@test/renderWithProviders';
+import { ItemSource, SyncChangeKind } from '@api';
 import useAlertStore, { AlertType } from '@shared/store/alert.store';
 import AlertBridge from './AlertBridge';
 
@@ -72,6 +73,94 @@ describe('AlertBridge', () => {
       await waitFor(() => {
         expect(screen.queryByText('Click to dismiss')).toBeFalsy();
       });
+    });
+  });
+
+  describe('inbox item alerts', () => {
+    it('should render an inbox item alert via the custom InboxItemSnackbar', async () => {
+      renderBridge();
+
+      act(() => {
+        useAlertStore.getState().addAlert({
+          type: AlertType.SUCCESS,
+          message: 'New: Fix flaky integration test (GitHub)',
+          inboxItem: {
+            integration: ItemSource.Github,
+            title: 'Fix flaky integration test',
+            changeKind: SyncChangeKind.New,
+            externalId: '42',
+          },
+        });
+      });
+
+      expect(await screen.findByText('New:')).toBeTruthy();
+      expect(screen.getByText('#42 Fix flaky integration test')).toBeTruthy();
+      expect(screen.getByAltText(ItemSource.Github)).toBeTruthy();
+    });
+
+    it('should render an updated inbox item alert distinctly from a new one', async () => {
+      renderBridge();
+
+      act(() => {
+        useAlertStore.getState().addAlert({
+          type: AlertType.INFO,
+          message: 'Updated: Update sprint board columns (Azure DevOps)',
+          inboxItem: {
+            integration: ItemSource.Ado,
+            title: 'Update sprint board columns',
+            changeKind: SyncChangeKind.Updated,
+            externalId: '7',
+          },
+        });
+      });
+
+      expect(await screen.findByText('Updated:')).toBeTruthy();
+      expect(screen.getByText('#7 Update sprint board columns')).toBeTruthy();
+    });
+
+    it('should still render a dismiss button and remove the alert on click for inbox item alerts', async () => {
+      const user = userEvent.setup();
+      renderBridge();
+
+      act(() => {
+        useAlertStore.getState().addAlert({
+          type: AlertType.SUCCESS,
+          message: 'New: Fix flaky integration test (GitHub)',
+          inboxItem: {
+            integration: ItemSource.Github,
+            title: 'Fix flaky integration test',
+            changeKind: SyncChangeKind.New,
+            externalId: '42',
+          },
+        });
+      });
+
+      await screen.findByText('New:');
+      await user.click(screen.getByLabelText('Dismiss notification'));
+
+      await waitFor(() => {
+        expect(screen.queryByText('New:')).toBeFalsy();
+      });
+    });
+
+    it('should not display duplicate inbox item snackbars for the same alert id', async () => {
+      renderBridge();
+
+      act(() => {
+        useAlertStore.getState().addAlert({
+          type: AlertType.SUCCESS,
+          message: 'New: Fix flaky integration test (GitHub)',
+          inboxItem: {
+            integration: ItemSource.Github,
+            title: 'Fix flaky integration test',
+            changeKind: SyncChangeKind.New,
+            externalId: '42',
+          },
+        });
+      });
+
+      await screen.findByText('New:');
+      expect(screen.getAllByText('New:')).toHaveLength(1);
     });
   });
 

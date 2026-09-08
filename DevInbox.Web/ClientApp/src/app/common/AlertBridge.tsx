@@ -31,6 +31,35 @@ const AlertBridge = () => {
       }
 
       shownIds.current.add(alert.id);
+      const dismissAction = (snackbarId: number | string) => (
+        <IconButton
+          size="small"
+          aria-label="Dismiss notification"
+          data-testid={`dismiss-notification-${snackbarId}`}
+          color="inherit"
+          onClick={() => closeSnackbar(snackbarId)}
+        >
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      );
+
+      if (alert.inboxItem) {
+        enqueueSnackbar(alert.message, {
+          variant: 'inboxItem',
+          integration: alert.inboxItem.integration,
+          externalId : alert.inboxItem.externalId,
+          title: alert.inboxItem.title,
+          changeKind: alert.inboxItem.changeKind,
+          autoHideDuration: ALERT_TIMEOUT_MS[alert.type],
+          onClose: () => {
+            removeAlert(alert.id);
+            shownIds.current.delete(alert.id!);
+          },
+          action: dismissAction,
+        });
+        return;
+      }
+
       enqueueSnackbar(alert.message, {
         variant: alert.type,
         autoHideDuration: ALERT_TIMEOUT_MS[alert.type],
@@ -38,17 +67,7 @@ const AlertBridge = () => {
           removeAlert(alert.id);
           shownIds.current.delete(alert.id!);
         },
-        action: (snackbarId) => (
-          <IconButton
-            size="small"
-            aria-label="Dismiss notification"
-            data-testid={`dismiss-notification-${snackbarId}`}
-            color="inherit"
-            onClick={() => closeSnackbar(snackbarId)}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        ),
+        action: dismissAction,
       });
     });
   }, [alerts, removeAlert, enqueueSnackbar, closeSnackbar]);

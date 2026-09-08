@@ -2,6 +2,7 @@ using DevInbox.Web.Features.GitHub.Client;
 using DevInbox.Web.Features.GitHub.Client.DTO;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Inbox.Domain;
+using DevInbox.Web.Features.Sync.Domain;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using GraphQL.Client.Http;
 using InboxReason = DevInbox.Web.Features.Inbox.Domain.InboxReason;
@@ -49,7 +50,7 @@ public class GitHubService(
         return await gitHubClient.GetPullRequestDetailAsync(accessToken, repoParts[0], repoParts[1], pullRequestNumber, ct: ct);
     }
 
-    public async Task SyncUserPRAsync(
+    public async Task<IReadOnlyList<InboxItemChange>> SyncUserPRAsync(
         long userId,
         DateTimeOffset? updatedSince = null,
         CancellationToken ct = default)
@@ -58,12 +59,12 @@ public class GitHubService(
         if (profile == null)
         {
             logger.LogWarning("No GitHub profile found for user {UserId}", userId);
-            return;
+            return [];
         }
         if (profile.Status != Sync.Domain.IntegrationStatus.Active)
         {
             logger.LogWarning("GitHub profile for user {UserId} is not active (status: {Status})", userId, profile.Status);
-            return;
+            return [];
         }
 
         var accessToken = profile.AccessToken
@@ -92,18 +93,18 @@ public class GitHubService(
             logger.LogWarning(ex, "[GitHub] Token rejected for {GitHubLogin} — marking integration invalid", profile.GitHubLogin);
             profile.Status = Sync.Domain.IntegrationStatus.Invalid;
             await repository.UpdateAsync(profile);
-            return;
+            return [];
         }
 
         logger.LogInformation(
             "[GitHub] Fetched {Count} pull request(s) involving {GitHubLogin}",
             pullRequests.Count, profile.GitHubLogin);
 
-        await UpsertInboxItemsAsync(profile, pullRequests);
-
         logger.LogInformation(
             "[GitHub] Synchronization completed for {GitHubLogin}",
             profile.GitHubLogin);
+        return await UpsertInboxItemsAsync(profile, pullRequests);
+
     }
 
     /// <summary>
@@ -113,11 +114,11 @@ public class GitHubService(
     /// Existing items are matched by (Repository, ExternalId) — a PR number is only unique within its
     /// repository, so both are required; loaded in a single query rather than one lookup per PR.
     /// </summary>
-    private async Task UpsertInboxItemsAsync(GitHubProfile profile, IReadOnlyList<GitHubPullRequestDTO> pullRequests)
+    private async Task<IReadOnlyList<InboxItemChange>> UpsertInboxItemsAsync(GitHubProfile profile, IReadOnlyList<GitHubPullRequestDTO> pullRequests)
     {
         if (pullRequests.Count == 0)
         {
-            return;
+            return [];
         }
 
         var repositories = pullRequests.Select(pr => pr.RepositoryFullName).Distinct().ToList();
@@ -129,7 +130,7 @@ public class GitHubService(
         var existingByKey = existingItems.ToDictionary(i => BuildKey(i.Repository!, i.ExternalId!));
 
         var newItems = new List<InboxItem>();
-        var updatedCount = 0;
+        var updatedItems = new List<InboxItem>();
 
         foreach (var pr in pullRequests)
         {
@@ -137,7 +138,7 @@ public class GitHubService(
             {
                 if (UpdateExistingItem(existing, pr))
                 {
-                    updatedCount++;
+                    updatedItems.Add(existing);
                 }
             }
             else
@@ -151,14 +152,18 @@ public class GitHubService(
             await inboxItemRepository.AddRangeAsync(newItems);
         }
 
-        if (newItems.Count > 0 || updatedCount > 0)
+        if (newItems.Count > 0 || updatedItems.Count > 0)
         {
             await inboxItemRepository.SaveChangesAsync();
         }
 
         logger.LogInformation(
             "[GitHub] Upserted inbox items for {GitHubLogin}: {NewCount} new, {UpdatedCount} updated, {UnchangedCount} unchanged",
-            profile.GitHubLogin, newItems.Count, updatedCount, pullRequests.Count - newItems.Count - updatedCount);
+            profile.GitHubLogin, newItems.Count, updatedItems.Count, pullRequests.Count - newItems.Count - updatedItems.Count);
+        return [
+            .. newItems.Select(item => new InboxItemChange(item, ItemChangeKind.Created)),
+            .. updatedItems.Select(item => new InboxItemChange(item, ItemChangeKind.Updated))
+        ];
     }
 
     /// <summary>

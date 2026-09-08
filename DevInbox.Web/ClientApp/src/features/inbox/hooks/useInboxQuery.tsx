@@ -1,4 +1,4 @@
-import { InboxClient, InboxReason, ItemSource, ItemStatus, ItemType, SyncClient, TriggerType, type InboxPage } from '@api';
+import { InboxClient, InboxReason, ItemSource, ItemStatus, ItemType, SyncClient, TriggerType, type InboxPage, type SyncTriggerResultDto } from '@api';
 import { ApiError, apiFetch, BASE_URL } from '@shared/api/httpClient';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { heartbeatKeys } from './useInboxHeartBeat';
@@ -66,7 +66,7 @@ export const useInboxItemQuery = (itemId?: number) =>
 export const useSyncMutation = () =>
   {
     const queryClient = useQueryClient();
-    return useMutation<void, ApiError, TriggerType>({
+    return useMutation<SyncTriggerResultDto | null, ApiError, TriggerType>({
       mutationFn: (trigger) => syncApi.triggerSync(trigger),
       onSuccess: () => {
         // Invalidate the inbox query to refetch the latest items after a successful sync.

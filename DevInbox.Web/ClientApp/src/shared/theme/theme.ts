@@ -28,6 +28,8 @@ const SECONDARY = '#0EA5E9';
 const ERROR = '#ba1a1a';
 const WARNING = '#f59e0b';
 const WARNING_DARK = '#b45309';
+export const TOAST_SUCCESS_BG = '#43a047';
+export const TOAST_INFO_BG = '#2196f3';
 
 // ── Background tokens ─────────────────────────────────────────────────────────
 const BG_DEFAULT_LIGHT = '#e2e2e8';

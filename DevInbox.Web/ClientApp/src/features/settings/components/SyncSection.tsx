@@ -29,6 +29,15 @@ const SyncSection = memo(() => {
     [changeSyncIntervalMinutes],
   );
 
+  const handleToggleSendNotifications = useCallback(() => {
+    // Ask for permission the moment the user opts in — a service worker can't request it itself,
+    // and asking later (e.g. from a background tick) wouldn't work without an active user gesture.
+    if (!sendNotifications && 'Notification' in window && Notification.permission === 'default') {
+      void Notification.requestPermission();
+    }
+    toggleSendNotifications();
+  }, [sendNotifications, toggleSendNotifications]);
+
   return (
     <Box id="sync" sx={{ display: 'flex', flexDirection: 'column', gap: 2, scrollMarginTop: '72px' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -85,7 +94,7 @@ const SyncSection = memo(() => {
           control={
             <Checkbox
               checked={sendNotifications}
-              onChange={() => toggleSendNotifications()}
+              onChange={handleToggleSendNotifications}
               data-testid="send-notifications-checkbox"
             />
           }

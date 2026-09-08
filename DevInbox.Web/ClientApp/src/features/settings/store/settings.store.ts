@@ -79,7 +79,7 @@ const useSettingsStore = create<SettingsState>()(
           density: settingsDto.density ?? state.density,
           fontSize: settingsDto.fontSize ?? state.fontSize,
           sideBarCollapsed: settingsDto.sideBarCollapsed ?? state.sideBarCollapsed,
-          syncIntervalMinutes: settingsDto.syncIntervalMinutes ?? DEFAULT_SYNC_INTERVAL_MINUTES,
+          syncIntervalMinutes: settingsDto.syncIntervalMinutes ?? state.syncIntervalMinutes,
           sendNotifications: settingsDto.sendNotifications ?? state.sendNotifications,
         })),
     }),

@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, afterEach } from 'vitest';
+import { beforeAll, beforeEach, afterAll, afterEach, vi } from 'vitest';
 import { setupWorker } from 'msw/browser';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -26,8 +26,23 @@ console.warn = (...args: Parameters<typeof console.warn>) => {
 // dumps) and the "Mocking enabled" banner — pure noise in a test run, since assertions don't
 // depend on any of it.
 beforeAll(() => server.start({ onUnhandledRequest: 'warn', quiet: true }));
+
+// The dev/test server doesn't serve `/sw.js` with a JS MIME type, so `useBackgroundSync`'s real
+// `navigator.serviceWorker.register()` call rejects with a SecurityError in every test that
+// renders `Layout` (it's caught internally, but still logs a console.error per test — pure
+// noise). Stub it with a harmless fake registration by default; individual specs (e.g.
+// `useBackgroundSync.spec.tsx`) can still override this per-test with their own `vi.spyOn`.
+beforeEach(() => {
+  if ('serviceWorker' in navigator) {
+    vi.spyOn(navigator.serviceWorker, 'register').mockResolvedValue({
+      update: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ServiceWorkerRegistration);
+  }
+});
+
 afterEach(() => {
   server.resetHandlers();
   cleanup();
+  vi.restoreAllMocks();
 });
 afterAll(() => server.stop());
