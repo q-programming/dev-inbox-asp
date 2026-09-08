@@ -12,6 +12,7 @@ import NoteFormModal from '@feature/notes/components/NoteFormModal';
 import { useGlobalShortcuts } from '@shared/hooks/useGlobalShortcuts.ts';
 import { useLeaderKey } from '@shared/hooks/useLeaderKey.ts';
 import { useInboxHeartbeat } from '@feature/inbox/hooks/useInboxHeartBeat.ts';
+import { useBackgroundSync } from '@feature/inbox/hooks/useBackgroundSync.ts';
 import { AppRoute } from '@app/routes.ts';
 
 const TRANSITION = 'width 200ms ease, margin-left 200ms ease';
@@ -26,6 +27,7 @@ const AppLayout = () => {
   useGlobalShortcuts();
   useLeaderKey();
   useInboxHeartbeat()
+  useBackgroundSync();
   const sideBarCollapsed = useSettingsStore((state) => state.sideBarCollapsed);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const sidebarWidth = sideBarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;

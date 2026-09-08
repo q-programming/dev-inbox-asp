@@ -1,6 +1,7 @@
-import { SyncStatus } from '@api';
+import { SyncStatus, TriggerType } from '@api';
 import { useSyncMutation } from '@feature/inbox/hooks/useInboxQuery';
 import { useInboxStore } from '@feature/inbox/store/inbox.store';
+import { useEffect, useState } from 'react';
 
 import SyncIcon from '@mui/icons-material/Sync';
 import { Box, IconButton, Typography } from '@mui/material';
@@ -16,14 +17,16 @@ const spin = keyframes`
   }
 `;
 
+/** How often the displayed "Synced N ago" text re-renders to reflect elapsed time. */
+const SYNC_TIME_REFRESH_MS = 60_000;
+
 const formatSyncTime = (
   completedAt?: Date,
+  now: number = Date.now(),
 ): string => {
   if (!completedAt) {
     return 'Never synced';
   }
-
-  const now = Date.now();
 
   const diffMs =
     now -
@@ -62,6 +65,16 @@ export const InboxSyncStatus = () => {
   const isSyncRunning = useInboxStore(
     (state) => state.status?.syncStatus === SyncStatus.Running
   );
+
+  // The store only updates on an actual heartbeat/sync event, so without this the "Synced N min
+  // ago" text would freeze at whatever it read on the last store update (e.g. stuck forever on
+  // "Synced just now") even though real time keeps passing between those updates. Re-render every
+  // minute purely to recompute the relative text against the current time.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(Date.now()), SYNC_TIME_REFRESH_MS);
+    return () => window.clearInterval(intervalId);
+  }, []);
     
 
   return (
@@ -87,8 +100,7 @@ export const InboxSyncStatus = () => {
             message:
               'Triggering manual sync...',
           });
-
-          syncMutation.mutate();
+          syncMutation.mutate(TriggerType.Manual);
         }}
       >
         <SyncIcon
@@ -114,6 +126,7 @@ export const InboxSyncStatus = () => {
           ? 'Sync ongoing'
           : formatSyncTime(
               status?.lastSyncCompletedAt,
+              now,
             )}
       </Typography>
     </Box>

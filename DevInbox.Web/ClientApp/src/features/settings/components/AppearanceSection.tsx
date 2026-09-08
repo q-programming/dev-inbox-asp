@@ -15,8 +15,6 @@ import { DENSITY_LABELS } from '@feature/settings/types/settings.types';
 import useSettingsStore from '@feature/settings/store/settings.store';
 import { FONT_SIZE_MAX, FONT_SIZE_MIN } from '@shared/theme/theme';
 import { Density, Theme } from '@api';
-import AppearanceSettingsActions from './AppearanceSettingsActions';
-
 const ALL_DENSITIES = [Density.Relaxed, Density.Tight, Density.SuperTight] as const;
 
 /**
@@ -165,7 +163,6 @@ const AppearanceSection = memo(() => {
           <Divider orientation="vertical" flexItem />
         </Box>
       </Paper>
-      <AppearanceSettingsActions />
     </Box>
   );
 });

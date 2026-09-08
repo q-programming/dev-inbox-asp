@@ -74,7 +74,7 @@ public class UserService(
 
         }
         await publisher.PublishAsync(new UserAuthenticatedEvent(user.Id, user.Email));
-        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email));
+        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email, TriggerType.Login));
         return user;
     }
 
@@ -139,7 +139,7 @@ public class UserService(
             logger.LogDebug("Created new user for GitHub for {Email}", email);
         }
         await publisher.PublishAsync(new UserAuthenticatedEvent(user.Id, user.Email));
-        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email));
+        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email, TriggerType.Login));
         return user;
     }
 }

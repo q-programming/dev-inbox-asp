@@ -262,7 +262,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserSettingsDto"
-
+  /settings/sidebarToggle:
+    put:
+      operationId: sidebarToggle
+      tags: [settings]
+      summary: Saves if sidebar is toggled
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: boolean
+      responses:
+        "204":
+          description: Sidebar preferences saved
   # ── Inbox ─────────────────────────────────────────────────────
   /inbox:
     get:
@@ -333,18 +346,6 @@ paths:
                 $ref: "#/components/schemas/InboxSummary"
         "404":
           description: Not found
-  /inbox/seed:
-    put:
-      operationId: putInboxSeed
-      tags: [inbox]
-      deprecated: true
-      summary: Seeds inbox with random elements for testing
-      responses:
-        "204":
-          description: Inbox items created
-        "404":
-          description: Not found
-
   /inbox/item/{id}:
     get:
       operationId: getInboxItem
@@ -534,10 +535,22 @@ paths:
     post:
       operationId: triggerSync
       tags: [sync]
-      summary: Manually trigger a full sync
+      summary: Trigger a sync. Manual/Login triggers fire-and-forget (no body — the eventual result is
+        picked up through the usual inbox refetch). A Background trigger (Service Worker) awaits the
+        sync and returns a result describing what changed, so the caller can build a notification.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TriggerType"
       responses:
-        "202":
-          description: Sync accepted
+        "200":
+          description: Sync result — populated only for a Background trigger, null/empty otherwise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncTriggerResultDto"
 
   # ── Health ────────────────────────────────────────────────────
   /healthz:
@@ -693,14 +706,16 @@ components:
           type: integer
         sideBarCollapsed:
           type: boolean
+        sendNotifications:
+          type: boolean          
         githubRepos:
           type: array
           items:
             type: string
-        adoOrganization:
-          type: string
-        adoProject:
-          type: string
+        adoProjects:
+          type: array
+          items:
+            type: string
         syncIntervalMinutes:
           type: integer
 
@@ -780,6 +795,9 @@ components:
             type: integer
             format: int64
             description: Number of inbox items that are ADO items
+          newItemsSinceLastSync:
+            type: integer
+            description: Number of new items since last sync            
           notes:
             type: integer
             format: int64
@@ -1150,6 +1168,44 @@ components:
           format: int64
           nullable: true
 
+    # ── Sync ─────────────────────────────────────────────────
+    TriggerType:
+      type: string
+      enum:
+        - Manual
+        - Login
+        - Background
+
+    SyncChangeKind:
+      type: string
+      enum:
+        - New
+        - Updated
+
+    SyncNotificationItemDto:
+      type: object
+      additionalProperties: false
+      description: Lightweight summary of a single new/updated item from a Background sync — just
+        enough to build a notification (which integration, what item, was it new or updated).
+      properties:
+        externalId:
+          type: string
+        integration:
+          $ref: "#/components/schemas/ItemSource"
+        title:
+          type: string
+        changeKind:
+          $ref: "#/components/schemas/SyncChangeKind"
+
+    SyncTriggerResultDto:
+      type: object
+      additionalProperties: false
+      nullable: true
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncNotificationItemDto"
 
     # ── Health ─────────────────────────────────────────────────
     HealthStatus:

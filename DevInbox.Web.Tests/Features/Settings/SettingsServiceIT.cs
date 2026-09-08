@@ -74,6 +74,8 @@ public class SettingsServiceIT : DatabaseIntegrationTest
         Assert.Equal(_user.Id, result.UserId);
         Assert.Equal(Web.Features.Settings.Domain.Theme.Light, result.Theme);
         Assert.Equal(Web.Features.Settings.Domain.Density.Relaxed, result.Density);
+        Assert.Equal(15, result.SyncIntervalMinutes);
+        Assert.False(result.SendNotifications);
     });
 
     [Fact(DisplayName = "GetSettings integration should return the previously persisted settings without duplicating rows")]
@@ -138,5 +140,37 @@ public class SettingsServiceIT : DatabaseIntegrationTest
         Assert.Equal(_user.Id, result.UserId);
         Assert.Equal(Web.Features.Settings.Domain.Theme.Light, result.Theme);
         Assert.Equal(Web.Features.Settings.Domain.Density.Relaxed, result.Density);
+    });
+
+    [Fact(DisplayName = "SaveSettings integration should persist syncIntervalMinutes and sendNotifications to the database")]
+    public Task SaveSettingsShouldPersistSyncAndNotificationFieldsAsync() => Task.Run(async () =>
+    {
+        await DataBase.UserSettings.AddAsync(new UserSettings
+        {
+            UserId = _user.Id,
+            User = _user,
+            Theme = Web.Features.Settings.Domain.Theme.Dark,
+            Density = Web.Features.Settings.Domain.Density.Tight,
+            SyncIntervalMinutes = 15,
+            SendNotifications = false,
+        });
+        await DataBase.SaveChangesAsync();
+        // Act
+        var result = await _service.SaveSettingsAsync(new UserSettingsDto
+        {
+            Theme = Web.Infrastructure.OpenApi.Generated.Theme.Dark,
+            Density = Web.Infrastructure.OpenApi.Generated.Density.Tight,
+            SyncIntervalMinutes = 45,
+            SendNotifications = true,
+        });
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(45, result.SyncIntervalMinutes);
+        Assert.True(result.SendNotifications);
+
+        // Re-fetch to confirm it was actually persisted, not just held on the tracked instance.
+        var reloaded = await _service.GetSettingsAsync();
+        Assert.Equal(45, reloaded.SyncIntervalMinutes);
+        Assert.True(reloaded.SendNotifications);
     });
 }

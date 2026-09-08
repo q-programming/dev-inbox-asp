@@ -5,6 +5,7 @@ using DevInbox.Web.Features.ADO.Client.DTO;
 using DevInbox.Web.Features.ADO.Config;
 using DevInbox.Web.Features.ADO.Domain;
 using DevInbox.Web.Features.Inbox.Domain;
+using DevInbox.Web.Features.Sync.Domain;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using Microsoft.Extensions.Options;
 using InboxReason = DevInbox.Web.Features.Inbox.Domain.InboxReason;
@@ -184,7 +185,7 @@ public class AdoService(
         return new LinkedItem { Id = id, Title = $"Work item {id}", Type = "WorkItem", Url = relation.Url };
     }
 
-    public async Task SyncWorkItemsAsync(
+    public async Task<IReadOnlyList<InboxItemChange>> SyncWorkItemsAsync(
         long userId,
         DateTimeOffset? updatedSince = null,
         bool forceFullSync = false,
@@ -197,16 +198,18 @@ public class AdoService(
         if (profiles.Count == 0)
         {
             logger.LogWarning("No ADO profile found for user {UserId}", userId);
-            return;
+            return [];
         }
 
+        var changedItems = new List<InboxItemChange>();
         foreach (var profile in profiles)
         {
-            await SyncProfileAsync(profile, updatedSince, forceFullSync, ct);
+            changedItems.AddRange(await SyncProfileAsync(profile, updatedSince, forceFullSync, ct));
         }
+        return changedItems;
     }
 
-    private async Task SyncProfileAsync(
+    private async Task<IReadOnlyList<InboxItemChange>> SyncProfileAsync(
         AdoProfile profile,
         DateTimeOffset? updatedSince,
         bool forceFullSync,
@@ -215,7 +218,7 @@ public class AdoService(
         if (profile.Status != Sync.Domain.IntegrationStatus.Active)
         {
             logger.LogWarning("ADO profile for user {UserId}/organization {Organization} is not active (status: {Status})", profile.UserId, profile.Organization, profile.Status);
-            return;
+            return [];
         }
 
         var accessToken = profile.AccessToken
@@ -237,15 +240,16 @@ public class AdoService(
         catch (Exception ex) when (IsUnauthorized(ex))
         {
             await MarkInvalidAsync(profile, ex);
-            return;
+            return [];
         }
 
         if (projects.Count == 0)
         {
             logger.LogInformation("[ADO] No accessible projects for {AdoLogin} (organization {Organization}) — nothing to sync", profile.AdoLogin, profile.Organization);
-            return;
+            return [];
         }
 
+        var changedItems = new List<InboxItemChange>();
         try
         {
             var results = await Task.WhenAll(projects.Select(project => SyncProjectAsync(profile, accessToken, project, updatedSince, isInitialSync, ct)));
@@ -259,8 +263,8 @@ public class AdoService(
                 workItems.Count, pullRequests.Count, projects.Count, profile.AdoLogin, profile.Organization,
                 staleProjectCount > 0 ? $" ({staleProjectCount} stale project(s) skipped, cache invalidated)" : string.Empty);
 
-            await UpsertWorkItemsAsync(profile, workItems);
-            await UpsertPullRequestsAsync(profile, pullRequests);
+            changedItems.AddRange(await UpsertWorkItemsAsync(profile, workItems));
+            changedItems.AddRange(await UpsertPullRequestsAsync(profile, pullRequests));
 
             // At least one cached project 404'd (renamed/deleted/access revoked since it was last
             // discovered) — drop the cache so the *next* sync re-runs discovery instead of hitting
@@ -275,10 +279,11 @@ public class AdoService(
         catch (Exception ex) when (IsUnauthorized(ex))
         {
             await MarkInvalidAsync(profile, ex);
-            return;
+            return [];
         }
 
         logger.LogInformation("[ADO] Synchronization completed for {AdoLogin} (organization {Organization})", profile.AdoLogin, profile.Organization);
+        return changedItems;
     }
 
     /// <summary>
@@ -345,31 +350,48 @@ public class AdoService(
             // pull request search criteria only accepts one identity filter per call — the search also
             // doubles as reason-inference: whichever call a PR came from tells us Authored vs
             // ReviewRequested without needing extra client-side comparisons. A first-ever sync only
-            // asks for currently-active PRs (mirrors GitHub's "is:open" initial-sync bound); an
-            // incremental sync widens to "all" statuses so a close/abandon that happened since the last
-            // sync still surfaces (see IsClosedPullRequest/CreatePullRequest for how that's handled).
-            var searchStatus = isInitialSync ? AdoPullRequestSearchStatus.Active : AdoPullRequestSearchStatus.All;
-            var authored = await adoClient.GetPullRequestsAsync(
-                accessToken, profile.Organization, project.Name, searchStatus, creatorId: profile.AdoUserId, ct: ct);
-            var reviewRequested = await adoClient.GetPullRequestsAsync(
-                accessToken, profile.Organization, project.Name, searchStatus, reviewerId: profile.AdoUserId, ct: ct);
-
+            // asks for currently-active PRs (mirrors GitHub's "is:open" initial-sync bound). An
+            // incremental sync needs to catch closes/abandons too, but Azure DevOps' PR search has no
+            // "modified since" filter for status=All — only "closed since" (searchCriteria.minTime +
+            // queryTimeRangeType=Closed), which excludes still-open PRs entirely. So an incremental
+            // sync issues two bounded calls per identity instead: one unbounded Active (small, catches
+            // anything currently open) plus one closedSince-bounded All (catches anything closed since
+            // the last sync) — never an unbounded full-history "all" call, which would otherwise
+            // re-fetch every PR ever closed in the project on every single incremental tick.
             var seenIds = new HashSet<int>();
             var pullRequests = new List<(AdoPullRequestDTO, InboxReason)>();
-            foreach (var pr in authored)
+
+            async Task FetchAsync(string? creatorId, string? reviewerId, InboxReason reason)
             {
-                if (seenIds.Add(pr.PullRequestId))
+                IReadOnlyList<AdoPullRequestDTO> results;
+                if (isInitialSync)
                 {
-                    pullRequests.Add((pr, InboxReason.Authored));
+                    results = await adoClient.GetPullRequestsAsync(
+                        accessToken, profile.Organization, project.Name, AdoPullRequestSearchStatus.Active,
+                        reviewerId: reviewerId, creatorId: creatorId, ct: ct);
+                }
+                else
+                {
+                    var active = await adoClient.GetPullRequestsAsync(
+                        accessToken, profile.Organization, project.Name, AdoPullRequestSearchStatus.Active,
+                        reviewerId: reviewerId, creatorId: creatorId, ct: ct);
+                    var recentlyClosed = await adoClient.GetPullRequestsAsync(
+                        accessToken, profile.Organization, project.Name, AdoPullRequestSearchStatus.All,
+                        reviewerId: reviewerId, creatorId: creatorId, closedSince: updatedSince, ct: ct);
+                    results = [.. active, .. recentlyClosed];
+                }
+
+                foreach (var pr in results)
+                {
+                    if (seenIds.Add(pr.PullRequestId))
+                    {
+                        pullRequests.Add((pr, reason));
+                    }
                 }
             }
-            foreach (var pr in reviewRequested)
-            {
-                if (seenIds.Add(pr.PullRequestId))
-                {
-                    pullRequests.Add((pr, InboxReason.ReviewRequested));
-                }
-            }
+
+            await FetchAsync(creatorId: profile.AdoUserId, reviewerId: null, InboxReason.Authored);
+            await FetchAsync(creatorId: null, reviewerId: profile.AdoUserId, InboxReason.ReviewRequested);
 
             return (workItems, pullRequests, false);
         }
@@ -405,11 +427,11 @@ public class AdoService(
         return $"SELECT [System.Id] FROM WorkItems WHERE {where} ORDER BY [System.ChangedDate] DESC";
     }
 
-    private async Task UpsertWorkItemsAsync(AdoProfile profile, List<AdoWorkItemDTO> workItems)
+    private async Task<IReadOnlyList<InboxItemChange>> UpsertWorkItemsAsync(AdoProfile profile, List<AdoWorkItemDTO> workItems)
     {
         if (workItems.Count == 0)
         {
-            return;
+            return [];
         }
 
         var repositories = workItems.Select(w => BuildWorkItemRepository(profile.Organization, w)).Distinct().ToList();
@@ -421,16 +443,16 @@ public class AdoService(
 
         var newItems = new List<InboxItem>();
         var newItemKeys = new HashSet<(string Repository, string ExternalId)>();
-        var updatedCount = 0;
+        var updatedItems = new List<InboxItem>();
 
         foreach (var workItem in workItems)
         {
             var key = (BuildWorkItemRepository(profile.Organization, workItem), workItem.Id.ToString());
             if (existingByKey.TryGetValue(key, out var existing))
             {
-                if (UpdateExistingWorkItem(existing, workItem))
+                if (UpdateExistingWorkItem(existing, workItem, profile))
                 {
-                    updatedCount++;
+                    updatedItems.Add(existing);
                 }
             }
             else if (newItemKeys.Add(key))
@@ -448,21 +470,25 @@ public class AdoService(
             await inboxItemRepository.AddRangeAsync(newItems);
         }
 
-        if (newItems.Count > 0 || updatedCount > 0)
+        if (newItems.Count > 0 || updatedItems.Count > 0)
         {
             await inboxItemRepository.SaveChangesAsync();
         }
 
         logger.LogInformation(
             "[ADO] Upserted work items for {AdoLogin}: {NewCount} new, {UpdatedCount} updated",
-            profile.AdoLogin, newItems.Count, updatedCount);
+            profile.AdoLogin, newItems.Count, updatedItems.Count);
+        return [
+            .. newItems.Select(item => new InboxItemChange(item, ItemChangeKind.Created)),
+            .. updatedItems.Select(item => new InboxItemChange(item, ItemChangeKind.Updated))
+        ];
     }
 
-    private async Task UpsertPullRequestsAsync(AdoProfile profile, List<(AdoPullRequestDTO PullRequest, InboxReason Reason)> pullRequests)
+    private async Task<IReadOnlyList<InboxItemChange>> UpsertPullRequestsAsync(AdoProfile profile, List<(AdoPullRequestDTO PullRequest, InboxReason Reason)> pullRequests)
     {
         if (pullRequests.Count == 0)
         {
-            return;
+            return [];
         }
 
         var repositories = pullRequests.Select(p => BuildPrRepository(profile.Organization, p.PullRequest)).Distinct().ToList();
@@ -474,7 +500,7 @@ public class AdoService(
 
         var newItems = new List<InboxItem>();
         var newItemKeys = new HashSet<(string Repository, string ExternalId)>();
-        var updatedCount = 0;
+        var updatedItems = new List<InboxItem>();
 
         foreach (var (pr, reason) in pullRequests)
         {
@@ -483,7 +509,7 @@ public class AdoService(
             {
                 if (UpdateExistingPullRequest(existing, pr))
                 {
-                    updatedCount++;
+                    updatedItems.Add(existing);
                 }
             }
             else if (newItemKeys.Add(key))
@@ -499,14 +525,18 @@ public class AdoService(
             await inboxItemRepository.AddRangeAsync(newItems);
         }
 
-        if (newItems.Count > 0 || updatedCount > 0)
+        if (newItems.Count > 0 || updatedItems.Count > 0)
         {
             await inboxItemRepository.SaveChangesAsync();
         }
 
         logger.LogInformation(
             "[ADO] Upserted pull requests for {AdoLogin}: {NewCount} new, {UpdatedCount} updated",
-            profile.AdoLogin, newItems.Count, updatedCount);
+            profile.AdoLogin, newItems.Count, updatedItems.Count);
+        return [
+            .. newItems.Select(item => new InboxItemChange(item, ItemChangeKind.Created)),
+            .. updatedItems.Select(item => new InboxItemChange(item, ItemChangeKind.Updated))
+        ];
     }
 
     /// <summary>"{organization}/{project}/{repo}" — disambiguates repos with the same name across different ADO projects and organizations.</summary>
@@ -515,14 +545,20 @@ public class AdoService(
     /// <summary>"{organization}/{project}" — disambiguates projects with the same name across different ADO organizations.</summary>
     private static string BuildWorkItemRepository(string organization, AdoWorkItemDTO workItem) => $"{organization}/{workItem.Fields.TeamProject}";
 
-    private static bool UpdateExistingWorkItem(InboxItem existing, AdoWorkItemDTO workItem)
+    private static bool UpdateExistingWorkItem(InboxItem existing, AdoWorkItemDTO workItem, AdoProfile profile)
     {
         var isClosed = IsClosedWorkItem(workItem);
         var wasClosed = existing.State.IsClosed;
         var hasActivityChange = existing.ActivityAt != workItem.Fields.ChangedDate;
         var closedStateChanged = isClosed != wasClosed;
+        // Re-evaluated on every sync rather than only at creation — e.g. an item the user
+        // authored can later be assigned to them (or vice versa), and "assigned to me" should
+        // always win over a stale "authored by me" reason from before that change (see
+        // InferWorkItemReason's doc comment for the full priority rationale).
+        var newReason = InferWorkItemReason(workItem, profile);
+        var reasonChanged = existing.Reason != newReason;
 
-        if (!hasActivityChange && !closedStateChanged)
+        if (!hasActivityChange && !closedStateChanged && !reasonChanged)
         {
             return false;
         }
@@ -531,6 +567,7 @@ public class AdoService(
         existing.ActivityAt = workItem.Fields.ChangedDate ?? existing.ActivityAt;
         existing.UpdatedAt = DateTimeOffset.UtcNow;
         existing.State.IsClosed = isClosed;
+        existing.Reason = newReason;
         if (closedStateChanged && isClosed)
         {
             existing.State.IsDone = true;

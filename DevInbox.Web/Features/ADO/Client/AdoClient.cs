@@ -110,6 +110,7 @@ public class AdoClient(HttpClient client) : IAdoClient, IService
         AdoPullRequestSearchStatus status = AdoPullRequestSearchStatus.All,
         string? reviewerId = null,
         string? creatorId = null,
+        DateTimeOffset? closedSince = null,
         CancellationToken ct = default)
     {
         var query = new StringBuilder(
@@ -121,6 +122,11 @@ public class AdoClient(HttpClient client) : IAdoClient, IService
         if (!string.IsNullOrEmpty(creatorId))
         {
             query.Append("&searchCriteria.creatorId=").Append(Uri.EscapeDataString(creatorId));
+        }
+        if (closedSince is not null)
+        {
+            query.Append("&searchCriteria.queryTimeRangeType=Closed&searchCriteria.minTime=")
+                .Append(Uri.EscapeDataString(closedSince.Value.ToString("O")));
         }
 
         using var response = await SendAsync(HttpMethod.Get, query.ToString(), personalAccessToken, ct: ct);

@@ -1,7 +1,9 @@
-import { InboxClient, InboxReason, ItemSource, ItemStatus, ItemType, SyncClient, type InboxPage } from '@api';
+import { InboxClient, InboxReason, ItemSource, ItemStatus, ItemType, SyncClient, TriggerType, type InboxPage, type SyncTriggerResultDto } from '@api';
 import { ApiError, apiFetch, BASE_URL } from '@shared/api/httpClient';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import useAlertStore from '@shared/store/alert.store';
 import { heartbeatKeys } from './useInboxHeartBeat';
+import { buildSyncItemAlerts } from '../utils/syncAlerts';
 import type { InboxFilter } from '../utils/inboxFilter';
 
 export const syncApi = new SyncClient(BASE_URL, { fetch: apiFetch });
@@ -66,25 +68,21 @@ export const useInboxItemQuery = (itemId?: number) =>
 export const useSyncMutation = () =>
   {
     const queryClient = useQueryClient();
-    return useMutation<void, ApiError, void>({
-      mutationFn: () => syncApi.triggerSync(),
-      onSuccess: () => {
+    const { addAlert } = useAlertStore();
+    return useMutation<SyncTriggerResultDto | null, ApiError, TriggerType>({
+      mutationFn: (trigger) => syncApi.triggerSync(trigger),
+      onSuccess: (result) => {
         // Invalidate the inbox query to refetch the latest items after a successful sync.
         queryClient.invalidateQueries({ queryKey: inboxKeys.all });
         queryClient.invalidateQueries({ queryKey: heartbeatKeys.status });
-      },
-    });
-  };
 
-  /**
-   * Seeds inbox with random items, useful for testing and development.
-   * Do not invalidate queries after seeding, as the server will automatically trigger a sync and update the inbox.
-   * @deprecated
-   */
-  export const useSeedMutation = () =>
-  {
-    return useMutation<void, ApiError, void>({
-      mutationFn: () => inboxApi.putInboxSeed()
+        // Same Outlook-style per-item alerts a background sync tick shows, so a manual sync
+        // surfaces what actually changed instead of a generic "updating inbox" message.
+        const items = result?.items ?? [];
+        if (items.length > 0) {
+          buildSyncItemAlerts(items).forEach((alert) => addAlert(alert));
+        }
+      },
     });
   };
 

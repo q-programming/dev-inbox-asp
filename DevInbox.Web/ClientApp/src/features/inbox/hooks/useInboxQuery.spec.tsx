@@ -7,7 +7,9 @@ import {
   InboxReason,
   ItemSource,
   ItemType,
+  SyncChangeKind,
   SyncStatus,
+  TriggerType,
   type InboxItemDetail,
   type InboxItemSummary,
   type InboxStatus,
@@ -15,6 +17,7 @@ import {
 } from '@api';
 import { createQueryClient } from '@shared/api/queryClient';
 import { server } from '@test/setupBrowserTests';
+import useAlertStore from '@shared/store/alert.store';
 import type { InboxFilter } from '../utils/inboxFilter';
 import { heartbeatKeys } from './useInboxHeartBeat';
 import {
@@ -235,7 +238,7 @@ describe('useInboxQuery hooks', () => {
   describe('useSyncMutation', () => {
     it('should invalidate inbox, summary and heartbeat queries after a successful sync', async () => {
       server.use(
-        http.post('/api/sync/trigger', () => new HttpResponse(null, { status: 202 })),
+        http.post('/api/sync/trigger', () => HttpResponse.json({ items: [] })),
         http.get('/api/inbox/status', () => HttpResponse.json(heartbeat)),
       );
 
@@ -243,11 +246,59 @@ describe('useInboxQuery hooks', () => {
       const invalidateQueriesSpy = vi.spyOn(client, 'invalidateQueries');
       const { result } = renderHook(() => useSyncMutation(), { wrapper: Wrapper });
 
-      result.current.mutate();
+      result.current.mutate(TriggerType.Manual);
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.all });
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: heartbeatKeys.status });
+    });
+
+    it('should dispatch a per-item alert for each item returned by a successful sync', async () => {
+      const items = [
+        {
+          title: 'New PR',
+          integration: ItemSource.Github,
+          changeKind: SyncChangeKind.New,
+        },
+        {
+          title: 'Updated work item',
+          integration: ItemSource.Ado,
+          changeKind: SyncChangeKind.Updated,
+        },
+      ];
+      server.use(
+        http.post('/api/sync/trigger', () => HttpResponse.json({ items })),
+        http.get('/api/inbox/status', () => HttpResponse.json(heartbeat)),
+      );
+
+      useAlertStore.setState({ alerts: [] });
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useSyncMutation(), { wrapper: Wrapper });
+
+      result.current.mutate(TriggerType.Manual);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      await waitFor(() => expect(useAlertStore.getState().alerts).toHaveLength(2));
+      expect(useAlertStore.getState().alerts.map((alert) => alert.message)).toEqual([
+        'New: New PR (GitHub)',
+        'Updated: Updated work item (Azure DevOps)',
+      ]);
+    });
+
+    it('should not dispatch any alert when a successful sync returns no items', async () => {
+      server.use(
+        http.post('/api/sync/trigger', () => HttpResponse.json({ items: [] })),
+        http.get('/api/inbox/status', () => HttpResponse.json(heartbeat)),
+      );
+
+      useAlertStore.setState({ alerts: [] });
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useSyncMutation(), { wrapper: Wrapper });
+
+      result.current.mutate(TriggerType.Manual);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(useAlertStore.getState().alerts).toHaveLength(0);
     });
   });
 

@@ -28,6 +28,14 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfig
 // it never gets a chance to run. A JsonTypeInfo modifier runs after attribute resolution and can forcibly
 // replace the converter for every enum property, which is the only way to make EnumMember.Value (e.g. "light",
 // "super-tight") win over the attribute's default member-name serialization ("Light", "SuperTight").
+//
+// That modifier only walks `typeInfo.Properties`, though, so it never applies when an enum is itself the
+// *root* type being (de)serialized — e.g. a `[FromBody] TriggerType body` action parameter, which has no
+// containing object/property for the modifier to rewrite. Without a converter, STJ's default enum handling
+// expects a numeric JSON value; a JSON string body like `"Background"` then silently fails to bind and the
+// parameter is left at its default (`Manual`, value 0) instead of erroring — so also register the converter
+// globally to cover root-level enum parameters; it still won't override the per-property attribute cases
+// above since attribute converters take priority regardless of what's in this list.
 builder.Services.AddControllers(opt => opt.Filters.Add<ApiExceptionFilter>())
     .AddJsonOptions(opt =>
     {
@@ -44,6 +52,7 @@ builder.Services.AddControllers(opt => opt.Filters.Add<ApiExceptionFilter>())
             }
         });
         opt.JsonSerializerOptions.TypeInfoResolver = resolver;
+        opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumMemberConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

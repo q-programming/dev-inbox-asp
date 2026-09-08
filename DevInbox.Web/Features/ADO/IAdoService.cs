@@ -1,4 +1,5 @@
 using DevInbox.Web.Features.Inbox.Domain;
+using DevInbox.Web.Features.Sync.Domain;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
 namespace DevInbox.Web.Features.ADO;
@@ -19,7 +20,7 @@ public interface IAdoService
     /// When true, also refreshes the cached project list (see <see cref="Domain.AdoProfile.ProjectsJson"/>)
     /// instead of reusing it, and widens the PR search to include completed/abandoned PRs.
     /// </param>
-    Task SyncWorkItemsAsync(
+    Task<IReadOnlyList<InboxItemChange>> SyncWorkItemsAsync(
         long userId,
         DateTimeOffset? updatedSince = null,
         bool forceFullSync = false,

@@ -29,13 +29,20 @@ public class SettingsControllerTests
         _controller = new SettingsController(_settingsService);
     }
 
-    private static UserSettings BuildUserSettings(DomainTheme theme = DomainTheme.Dark, DomainDensity density = DomainDensity.Tight, int fontSize = 16) => new()
-    {
-        Theme = theme,
-        Density = density,
-        FontSize = fontSize,
-        User = new User { Email = TestEmail }
-    };
+    private static UserSettings BuildUserSettings(
+        DomainTheme theme = DomainTheme.Dark,
+        DomainDensity density = DomainDensity.Tight,
+        int fontSize = 16,
+        int syncIntervalMinutes = 15,
+        bool sendNotifications = false) => new()
+        {
+            Theme = theme,
+            Density = density,
+            FontSize = fontSize,
+            SyncIntervalMinutes = syncIntervalMinutes,
+            SendNotifications = sendNotifications,
+            User = new User { Email = TestEmail }
+        };
 
     [Fact(DisplayName = "GetSettingsAsync should return a dto mapped from the service result")]
     public async Task GetSettingsAsyncShouldReturnMappedDtoAsync()
@@ -47,6 +54,17 @@ public class SettingsControllerTests
         Assert.Equal(DtoTheme.Dark, result.Theme);
         Assert.Equal(DtoDensity.Tight, result.Density);
         Assert.Equal(16, result.FontSize);
+    }
+
+    [Fact(DisplayName = "GetSettingsAsync should include syncIntervalMinutes and sendNotifications in the mapped dto")]
+    public async Task GetSettingsAsyncShouldMapSyncAndNotificationFieldsAsync()
+    {
+        _settingsService.GetSettingsAsync().Returns(BuildUserSettings(syncIntervalMinutes: 30, sendNotifications: true));
+
+        var result = await _controller.GetSettingsAsync();
+
+        Assert.Equal(30, result.SyncIntervalMinutes);
+        Assert.True(result.SendNotifications);
     }
 
     [Fact(DisplayName = "GetSettingsAsync should propagate exceptions raised by the service")]
@@ -89,5 +107,13 @@ public class SettingsControllerTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => _controller.UpdateSettingsAsync(new UserSettingsDto { Theme = DtoTheme.Light, Density = DtoDensity.Relaxed, FontSize = 18 }));
+    }
+
+    [Fact(DisplayName = "SidebarToggleAsync should forward the request body to Toggle")]
+    public async Task UpdateSettingsAsyncShouldForwardBodyToToggleSideBarAsync()
+    {
+        _settingsService.SaveSettingsAsync(Arg.Any<UserSettingsDto>()).Returns(BuildUserSettings());
+        await _controller.SidebarToggleAsync(false);
+        await _settingsService.Received(1).ToggleSideBar(false);
     }
 }

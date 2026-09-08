@@ -12,14 +12,37 @@ import EditNoteIcon from '@mui/icons-material/EditNote';
 import InboxItemBadges from '../inboxItemBadge/InboxItemBadge';
 import InboxItemIcon from '../inboxItemIcon/InboxItemIcon';
 import { useInboxStore } from '@feature/inbox/store/inbox.store';
+import useSettingsStore from '@feature/settings/store/settings.store';
+import { Density } from '@api';
 
 interface IInboxItem {
   item: InboxItemSummary;
 }
 
+/**
+ * Row vertical spacing per density level — mirrors the ratios shown in the Settings preview cards.
+ * `stackOnMobile: false` (Super Tight only) keeps the title/timestamp and repo/badges rows on a
+ * single line even on narrow viewports, so density has a visible effect on mobile too instead of
+ * being neutralised by the column-stacking that Relaxed/Tight rely on for readability.
+ */
+const DENSITY_ROW_STYLES: Record<
+  Density,
+  { py: number; minHeight: number; gap: number; rowMarginTop: number; stackOnMobile: boolean }
+> = {
+  [Density.Relaxed]: { py: 1.25, minHeight: 68, gap: 1.5, rowMarginTop: 0.5, stackOnMobile: true },
+  [Density.Tight]: { py: 0.75, minHeight: 52, gap: 1, rowMarginTop: 0.25, stackOnMobile: true },
+  [Density.SuperTight]: { py: 0.375, minHeight: 40, gap: 0.75, rowMarginTop: 0.125, stackOnMobile: false },
+};
+
+/** Fixed gap between the unread dot and source icon — kept constant across densities so the two
+ * never visually collide, unlike the gap to the content column which shrinks with density. */
+const LEADING_GAP = 0.75;
+
 const InboxItem = ({ item }: IInboxItem) => {
   const { openItem, selectedItemId } = useInboxStore();
+  const density = useSettingsStore((state) => state.density);
   const isSelected = selectedItemId === item.id;
+  const { py, minHeight, gap, rowMarginTop, stackOnMobile } = DENSITY_ROW_STYLES[density];
 
   return (
     <ListItemButton
@@ -30,9 +53,9 @@ const InboxItem = ({ item }: IInboxItem) => {
       sx={{
         alignItems: 'stretch',
         px: 2,
-        py: 1.25,
-        gap: 1.5,
-        minHeight: 68,
+        py,
+        gap,
+        minHeight,
         borderLeft: '3px solid',
         borderLeftColor: isSelected ? 'primary.main' : 'transparent',
         bgcolor: isSelected ? 'action.selected' : 'background.paper',
@@ -44,36 +67,45 @@ const InboxItem = ({ item }: IInboxItem) => {
     >
       <Box
         sx={{
-          width: 8,
-          minWidth: 8,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          gap: LEADING_GAP,
+          flexShrink: 0,
         }}
       >
-        {!item.isDone && (
-          <Box
-            data-testid="inbox-item-unread-dot"
-            sx={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              bgcolor: 'primary.main',
-            }}
-          />
-        )}
-      </Box>
+        <Box
+          sx={{
+            width: 8,
+            minWidth: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {!item.isDone && (
+            <Box
+              data-testid="inbox-item-unread-dot"
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                bgcolor: 'primary.main',
+              }}
+            />
+          )}
+        </Box>
 
-      <Box
-        sx={{
-          width: 24,
-          minWidth: 24,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <InboxItemIcon item={item} />
+        <Box
+          sx={{
+            width: 24,
+            minWidth: 24,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <InboxItemIcon item={item} />
+        </Box>
       </Box>
 
       <Box
@@ -88,16 +120,16 @@ const InboxItem = ({ item }: IInboxItem) => {
         <Box
           sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: { xs: 'flex-start', sm: 'center' },
-            gap: { xs: 0, sm: 1 },
+            flexDirection: { xs: stackOnMobile ? 'column' : 'row', sm: 'row' },
+            alignItems: { xs: stackOnMobile ? 'flex-start' : 'center', sm: 'center' },
+            gap: { xs: stackOnMobile ? 0 : 1, sm: 1 },
           }}
         >
           <Typography
             variant="body2"
             sx={{
-              flex: { sm: 1 },
-              width: { xs: '100%', sm: 'auto' },
+              flex: { xs: stackOnMobile ? undefined : 1, sm: 1 },
+              width: { xs: stackOnMobile ? '100%' : 'auto', sm: 'auto' },
               minWidth: 0,
               fontWeight: !item.isDone ? 600 : 400,
               overflow: 'hidden',
@@ -114,7 +146,7 @@ const InboxItem = ({ item }: IInboxItem) => {
               color: 'text.secondary',
               fontSize: '0.75rem',
               flexShrink: 0,
-              mt: { xs: 0.25, sm: 0 },
+              mt: { xs: stackOnMobile ? 0.25 : 0, sm: 0 },
             }}
           >
             {formatRelativeTime(item.activityAt)}
@@ -124,14 +156,15 @@ const InboxItem = ({ item }: IInboxItem) => {
         {/* Repository + badges row — wraps freely, since repo name/badges are short and fine
             to wrap inline. Comment/note indicators live in their own row below on mobile
             (flexDirection: column) so they never compete with badges for width; on desktop
-            they're pinned to the end of this same row instead. */}
+            they're pinned to the end of this same row instead. Super Tight keeps this row inline
+            on mobile too, matching the density's compact desktop behaviour. */}
         <Box
           sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: { xs: 'flex-start', sm: 'center' },
-            gap: { xs: 0.5, sm: 1 },
-            mt: 0.5,
+            flexDirection: { xs: stackOnMobile ? 'column' : 'row', sm: 'row' },
+            alignItems: { xs: stackOnMobile ? 'flex-start' : 'center', sm: 'center' },
+            gap: { xs: stackOnMobile ? 0.5 : 1, sm: 1 },
+            mt: rowMarginTop,
             minWidth: 0,
           }}
         >
@@ -142,7 +175,7 @@ const InboxItem = ({ item }: IInboxItem) => {
               gap: 1,
               minWidth: 0,
               flexWrap: 'wrap',
-              flex: { sm: 1 },
+              flex: { xs: stackOnMobile ? undefined : 1, sm: 1 },
             }}
           >
             {!!item.repository && (

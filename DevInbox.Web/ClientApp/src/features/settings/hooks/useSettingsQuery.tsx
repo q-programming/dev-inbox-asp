@@ -8,6 +8,7 @@ export const settingsApi = new SettingsClient(BASE_URL, { fetch: apiFetch });
 export const settingsKeys = {
   all: ['settings'] as const,
   get: ['settings', 'get'] as const,
+  toggle: ['settings', 'toggle'] as const,
 } as const;
 
 export const useSettingsQuery = (enabled: boolean = true) =>
@@ -34,4 +35,9 @@ export const useSettingsMutation = () =>
   useMutation<UserSettingsDto, ApiError, UserSettingsDto>({
     mutationFn: (data) => settingsApi.updateSettings(data),
     onSuccess: (data) => queryClient.setQueryData(settingsKeys.get, data),
+  });
+
+export const useToggleMutation = () =>
+  useMutation<void, ApiError, boolean>({
+    mutationFn: (data) => settingsApi.sidebarToggle(data),
   });

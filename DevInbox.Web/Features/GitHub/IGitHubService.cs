@@ -1,4 +1,5 @@
 using DevInbox.Web.Features.Inbox.Domain;
+using DevInbox.Web.Features.Sync.Domain;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
 namespace DevInbox.Web.Features.GitHub;
@@ -13,7 +14,7 @@ public interface IGitHubService
     /// Checkpoint to sync from — pass the inbox's last successful sync time. Null means this is the
     /// first sync for this profile: fetches only currently-open PRs instead of any closed/merged history.
     /// </param>
-    Task SyncUserPRAsync(
+    Task<IReadOnlyList<InboxItemChange>> SyncUserPRAsync(
         long userId,
         DateTimeOffset? updatedSince = null,
         CancellationToken ct = default);

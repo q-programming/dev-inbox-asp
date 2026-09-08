@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SyncStatus } from '@api';
 import { renderWithProviders } from '@test/renderWithProviders';
@@ -132,5 +132,28 @@ describe('InboxSyncStatus', () => {
       message: 'Triggering manual sync...',
     });
     expect(syncMutationMock).toHaveBeenCalled();
+  });
+
+  it('should update the displayed sync time every minute even without a store change', () => {
+    inboxStoreState.status = {
+      syncStatus: SyncStatus.Idle,
+      lastSyncCompletedAt: new Date(NOW.getTime() - 30_000),
+    };
+
+    renderWithProviders(<InboxSyncStatus />);
+
+    expect(screen.getByText('Synced just now')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(screen.getByText('Synced 1 min ago')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(screen.getByText('Synced 2 min ago')).toBeInTheDocument();
   });
 });

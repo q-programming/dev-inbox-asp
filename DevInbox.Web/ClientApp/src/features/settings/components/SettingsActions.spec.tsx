@@ -7,13 +7,15 @@ import { renderWithProviders } from '@test/renderWithProviders';
 import useAlertStore, { AlertType } from '@shared/store/alert.store';
 import useSettingsStore from '@feature/settings/store/settings.store';
 import { Density, Theme } from '@api';
-import AppearanceSettingsActions from './AppearanceSettingsActions';
+import SettingsActions from './SettingsActions';
 
 const INITIAL_SETTINGS = {
   theme: Theme.Light,
   density: Density.Relaxed,
   fontSize: 14,
   sideBarCollapsed: false,
+  syncIntervalMinutes: 15,
+  sendNotifications: false,
 };
 
 const UPDATED_SETTINGS_RESPONSE = {
@@ -21,6 +23,8 @@ const UPDATED_SETTINGS_RESPONSE = {
   density: Density.Tight,
   fontSize: 16,
   sideBarCollapsed: true,
+  syncIntervalMinutes: 30,
+  sendNotifications: true,
 };
 
 beforeEach(() => {
@@ -28,9 +32,9 @@ beforeEach(() => {
   useAlertStore.setState({ alerts: [] });
 });
 
-describe('AppearanceSettingsActions', () => {
+describe('SettingsActions', () => {
   it('renders both the Cancel and Save Changes buttons', () => {
-    renderWithProviders(<AppearanceSettingsActions />);
+    renderWithProviders(<SettingsActions />);
 
     expect(screen.getByTestId('settings-cancel-btn')).toBeInTheDocument();
     expect(screen.getByTestId('settings-save-btn')).toBeInTheDocument();
@@ -48,7 +52,7 @@ describe('AppearanceSettingsActions', () => {
       const user = userEvent.setup();
       useSettingsStore.setState({ theme: Theme.Dark, density: Density.Tight, fontSize: 16 });
 
-      renderWithProviders(<AppearanceSettingsActions />);
+      renderWithProviders(<SettingsActions />);
       await user.click(screen.getByTestId('settings-save-btn'));
 
       await waitFor(() => {
@@ -65,11 +69,34 @@ describe('AppearanceSettingsActions', () => {
       });
     });
 
+    it('includes syncIntervalMinutes and sendNotifications in the saved payload', async () => {
+      let requestBody: unknown;
+      server.use(
+        http.put('/api/settings', async ({ request }) => {
+          requestBody = await request.json();
+          return HttpResponse.json(UPDATED_SETTINGS_RESPONSE);
+        }),
+      );
+      const user = userEvent.setup();
+      useSettingsStore.setState({ syncIntervalMinutes: 30, sendNotifications: true });
+
+      renderWithProviders(<SettingsActions />);
+      await user.click(screen.getByTestId('settings-save-btn'));
+
+      await waitFor(() => {
+        expect(useAlertStore.getState().alerts).toHaveLength(1);
+      });
+      expect(requestBody).toMatchObject({
+        syncIntervalMinutes: 30,
+        sendNotifications: true,
+      });
+    });
+
     it('does not show a success alert when the save request fails', async () => {
       server.use(http.put('/api/settings', () => HttpResponse.json({}, { status: 500 })));
       const user = userEvent.setup();
 
-      renderWithProviders(<AppearanceSettingsActions />);
+      renderWithProviders(<SettingsActions />);
       await user.click(screen.getByTestId('settings-save-btn'));
 
       await waitFor(() => {
@@ -84,7 +111,7 @@ describe('AppearanceSettingsActions', () => {
     it('reverts the store back to the last-saved settings when clicked', async () => {
       const user = userEvent.setup();
 
-      renderWithProviders(<AppearanceSettingsActions />);
+      renderWithProviders(<SettingsActions />);
       // Simulate the user changing something locally without saving yet.
       act(() => {
         useSettingsStore.setState({ theme: Theme.Dark, density: Density.Tight, fontSize: 18 });
@@ -102,7 +129,7 @@ describe('AppearanceSettingsActions', () => {
       const user = userEvent.setup();
       useSettingsStore.setState({ theme: Theme.Dark, density: Density.Tight, fontSize: 16 });
 
-      renderWithProviders(<AppearanceSettingsActions />);
+      renderWithProviders(<SettingsActions />);
       await user.click(screen.getByTestId('settings-save-btn'));
       await waitFor(() => expect(useAlertStore.getState().alerts).toHaveLength(1));
 

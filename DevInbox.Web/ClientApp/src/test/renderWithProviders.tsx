@@ -5,6 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { SnackbarProvider } from 'notistack';
 import { createQueryClient } from '@shared/api/queryClient';
 import { AppThemeProvider } from '@shared/theme/AppThemeProvider';
+import InboxItemSnackbar from '@app/common/InboxItemSnackbar';
 
 interface RenderOptions {
   /** Initial route entries passed to MemoryRouter. Defaults to ['/'].  */
@@ -34,7 +35,7 @@ export function renderWithProviders(
   return render(ui, {
     wrapper: ({ children }) => (
       <AppThemeProvider>
-        <SnackbarProvider maxSnack={5}>
+        <SnackbarProvider maxSnack={5} Components={{ inboxItem: InboxItemSnackbar }}>
           <QueryClientProvider client={client}>
             <MemoryRouter initialEntries={initialEntries}>
               <Routes>

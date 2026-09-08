@@ -32,11 +32,6 @@ public class InboxController(IInboxService inboxService) : IInboxBaseController,
         return inboxService.GetInboxSummaryAsync();
     }
 
-    public Task PutInboxSeedAsync()
-    {
-        return inboxService.PutInboxSeedAsync();
-    }
-
     public async Task MarkInboxItemDoneAsync(long id, bool isDone)
     {
         await inboxService.MarkInboxItemDoneAsync(id, isDone);

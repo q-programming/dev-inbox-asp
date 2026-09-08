@@ -1,9 +1,12 @@
+import type { SyncNotificationItemDto } from '@api';
 import { create } from 'zustand';
 
+/** Extra payload carried by an inbox-item alert, rendered via the `inboxItem` notistack variant. */
 export interface AlertMessage {
   id?: number;
   type: AlertType;
   message: string;
+  inboxItem?: SyncNotificationItemDto;
 }
 
 export enum AlertType {

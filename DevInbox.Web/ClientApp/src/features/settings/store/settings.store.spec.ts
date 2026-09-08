@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import useSettingsStore, { SETTINGS_STORAGE_KEY } from './settings.store';
+import useSettingsStore, {
+  DEFAULT_SYNC_INTERVAL_MINUTES,
+  SETTINGS_STORAGE_KEY,
+  SYNC_INTERVAL_MIN_MINUTES,
+} from './settings.store';
 import { Density, Theme } from '@api';
 import { DEFAULT_FONT_SIZE } from '@shared/theme/theme';
 
@@ -10,6 +14,8 @@ beforeEach(() => {
     density: Density.Relaxed,
     fontSize: DEFAULT_FONT_SIZE,
     sideBarCollapsed: false,
+    syncIntervalMinutes: DEFAULT_SYNC_INTERVAL_MINUTES,
+    sendNotifications: false,
   });
 });
 
@@ -59,6 +65,61 @@ describe('useSettingsStore', () => {
     });
   });
 
+  describe('changeSyncIntervalMinutes', () => {
+    it('updates syncIntervalMinutes to the given value', () => {
+      useSettingsStore.getState().changeSyncIntervalMinutes(30);
+      expect(useSettingsStore.getState().syncIntervalMinutes).toBe(30);
+    });
+  });
+
+  describe('toggleSendNotifications', () => {
+    it('enables notifications when disabled', () => {
+      useSettingsStore.getState().toggleSendNotifications();
+      expect(useSettingsStore.getState().sendNotifications).toBe(true);
+    });
+
+    it('disables notifications when enabled', () => {
+      useSettingsStore.setState({ sendNotifications: true });
+      useSettingsStore.getState().toggleSendNotifications();
+      expect(useSettingsStore.getState().sendNotifications).toBe(false);
+    });
+  });
+
+  describe('applyServerProfile', () => {
+    it('applies theme, density, fontSize, sideBarCollapsed, syncIntervalMinutes and sendNotifications from the server', () => {
+      useSettingsStore.getState().applyServerProfile({
+        theme: Theme.Dark,
+        density: Density.Tight,
+        fontSize: 18,
+        sideBarCollapsed: true,
+        syncIntervalMinutes: 45,
+        sendNotifications: true,
+      });
+
+      expect(useSettingsStore.getState()).toMatchObject({
+        theme: Theme.Dark,
+        density: Density.Tight,
+        fontSize: 18,
+        sideBarCollapsed: true,
+        syncIntervalMinutes: 45,
+        sendNotifications: true,
+      });
+    });
+
+    it('preserves the existing value for fields the server does not provide', () => {
+      useSettingsStore.setState({ syncIntervalMinutes: 25, sendNotifications: true });
+      useSettingsStore.getState().applyServerProfile({});
+
+      expect(useSettingsStore.getState().syncIntervalMinutes).toBe(25);
+      expect(useSettingsStore.getState().sendNotifications).toBe(true);
+    });
+
+    it('accepts a syncIntervalMinutes value', () => {
+      useSettingsStore.getState().applyServerProfile({ syncIntervalMinutes: SYNC_INTERVAL_MIN_MINUTES });
+      expect(useSettingsStore.getState().syncIntervalMinutes).toBe(SYNC_INTERVAL_MIN_MINUTES);
+    });
+  });
+
   describe('localStorage persistence', () => {
     it('persists theme, density, fontSize, sideBarCollapsed to localStorage', () => {
       useSettingsStore.getState().toggleTheme();
@@ -73,6 +134,17 @@ describe('useSettingsStore', () => {
       expect(parsed.state.density).toBe(Density.Tight);
       expect(parsed.state.fontSize).toBe(16);
       expect(parsed.state.sideBarCollapsed).toBe(true);
+    });
+
+    it('persists syncIntervalMinutes and sendNotifications to localStorage', () => {
+      useSettingsStore.getState().changeSyncIntervalMinutes(40);
+      useSettingsStore.getState().toggleSendNotifications();
+
+      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      expect(raw).not.toBeNull();
+      const parsed = JSON.parse(raw!);
+      expect(parsed.state.syncIntervalMinutes).toBe(40);
+      expect(parsed.state.sendNotifications).toBe(true);
     });
 
     it('settings survive independent of auth (no identity in storage)', () => {
