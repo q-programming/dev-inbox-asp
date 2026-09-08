@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useInboxStore } from '../store/inbox.store';
 import { inboxApi, inboxKeys } from './useInboxQuery';
 import { ApiError } from '@shared/api/httpClient';
-import useAlertStore, { AlertType } from '@shared/store/alert.store';
 
 export const heartbeatKeys = {
   all: ['heartbeat'] as const,
@@ -15,7 +14,6 @@ export const useInboxHeartbeat = () => {
   const queryClient = useQueryClient();
   const setStatus = useInboxStore((state) => state.setStatus);
   const status = useInboxStore((state) => state.status);
-  const { addAlert } = useAlertStore();
 
   const query = useQuery<InboxStatus, ApiError>({
     queryKey: heartbeatKeys.status,
@@ -47,10 +45,6 @@ export const useInboxHeartbeat = () => {
       });
       queryClient.invalidateQueries({
         queryKey: inboxKeys.summary,
-      });
-      addAlert({
-        message: 'Updating inbox',
-        type: AlertType.INFO,
       });
     }
   }, [query.data, queryClient, setStatus]);

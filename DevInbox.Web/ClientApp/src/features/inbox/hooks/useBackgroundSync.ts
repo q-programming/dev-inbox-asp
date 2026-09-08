@@ -1,12 +1,22 @@
-import { SyncChangeKind, type SyncNotificationItemDto } from '@api';
-import { useQueryClient } from '@tanstack/react-query';
+import { SyncStatus, type InboxStatus, type SyncNotificationItemDto } from '@api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import useAlertStore, { AlertType } from '@shared/store/alert.store';
+import useAlertStore from '@shared/store/alert.store';
 import useSettingsStore from '@feature/settings/store/settings.store';
+import { buildSyncItemAlerts } from '../utils/syncAlerts';
 import { heartbeatKeys } from './useInboxHeartBeat';
-import { inboxKeys } from './useInboxQuery';
+import { inboxApi, inboxKeys } from './useInboxQuery';
 
 const SERVICE_WORKER_URL = '/sw.js';
+
+/**
+ * Hard floor for the scheduling interval, independent of the settings UI's own min/max slider
+ * bounds. A stale/corrupt `syncIntervalMinutes` (e.g. `0` from an old DB row or bad localStorage
+ * value predating validation) must never reach `setInterval` as-is — at `0` (or any near-zero
+ * value) it fires on every event loop tick, hammering the sync endpoint with thousands of
+ * requests until the tab is closed.
+ */
+const MIN_SYNC_INTERVAL_MINUTES = 1;
 
 /** Posts a sync tick to the active service worker, asking it to run a sync check. */
 const postSyncTick = (sendNotifications: boolean) => {
@@ -21,23 +31,6 @@ const postSyncTick = (sendNotifications: boolean) => {
     .catch(() => {
       // Service worker isn't ready/available (e.g. registration failed) — skip this tick.
     });
-};
-
-/** Human-readable labels for the generated `ItemSource` enum values, used in notification/alert text. */
-const INTEGRATION_LABELS: Record<string, string> = {
-  Github: 'GitHub',
-  Ado: 'Azure DevOps',
-  Note: 'Note',
-};
-
-/** Max number of individual item alerts shown per sync — the rest are folded into a "+N more" summary. */
-const MAX_ITEM_ALERTS = 4;
-
-/** Formats a single changed item the way Outlook-style notifications read: "New: Title (GitHub)". */
-const formatItem = (item: SyncNotificationItemDto): string => {
-  const kind = item.changeKind === SyncChangeKind.New ? 'New' : 'Updated';
-  const integration = INTEGRATION_LABELS[item.integration ?? ''] ?? item.integration;
-  return `${kind}: ${item.title} (${integration})`;
 };
 
 /**
@@ -59,6 +52,17 @@ export const useBackgroundSync = () => {
   const sendNotificationsRef = useRef(sendNotifications);
   sendNotificationsRef.current = sendNotifications;
 
+  // Observes the same cached inbox status the heartbeat hook already fetches/polls — this hook
+  // never fetches on its own (`enabled: false`), it just needs `lastSyncCompletedAt`/`syncStatus`
+  // to align scheduling with. `queryFn` is only present to satisfy the type signature.
+  const { data: inboxStatus } = useQuery<InboxStatus>({
+    queryKey: heartbeatKeys.status,
+    queryFn: () => inboxApi.getInboxStatus(),
+    enabled: false,
+  });
+  const lastSyncCompletedAt = inboxStatus?.lastSyncCompletedAt;
+  const inboxSyncStatus = inboxStatus?.syncStatus;
+
   useEffect(() => {
     if (!('serviceWorker' in navigator)) {
       return;
@@ -79,19 +83,7 @@ export const useBackgroundSync = () => {
       queryClient.invalidateQueries({ queryKey: inboxKeys.all });
       queryClient.invalidateQueries({ queryKey: heartbeatKeys.status });
 
-      // One alert per item (Outlook-style), capped so a big batch doesn't flood the screen.
-      items.slice(0, MAX_ITEM_ALERTS).forEach((item) => {
-        addAlert({
-          type: item.changeKind === SyncChangeKind.New ? AlertType.SUCCESS : AlertType.INFO,
-          message: formatItem(item),
-          inboxItem: item,
-        });
-      });
-
-      const remaining = items.length - MAX_ITEM_ALERTS;
-      if (remaining > 0) {
-        addAlert({ type: AlertType.INFO, message: `+${remaining} more inbox update${remaining > 1 ? 's' : ''}` });
-      }
+      buildSyncItemAlerts(items).forEach((alert) => addAlert(alert));
     };
 
     navigator.serviceWorker.addEventListener('message', handleMessage);
@@ -119,8 +111,35 @@ export const useBackgroundSync = () => {
     }
 
     const tick = () => postSyncTick(sendNotificationsRef.current);
-    const intervalId = window.setInterval(tick, syncIntervalMinutes * 60_000);
+    const safeIntervalMinutes = Number.isFinite(syncIntervalMinutes)
+      ? Math.max(syncIntervalMinutes, MIN_SYNC_INTERVAL_MINUTES)
+      : MIN_SYNC_INTERVAL_MINUTES;
+    const intervalMs = safeIntervalMinutes * 60_000;
 
-    return () => window.clearInterval(intervalId);
-  }, [syncIntervalMinutes]);
+    // Align the first tick with the inbox's actual last completed sync instead of always waiting
+    // a full interval from mount/login — otherwise a user who logs in (which already fires its
+    // own fire-and-forget Login sync) shortly before a scheduled background check would wait up
+    // to 2x the interval before the next one. If we don't yet know when the last sync finished
+    // (heartbeat hasn't loaded, or a sync — e.g. the login one — is still `Running`), fall back
+    // to the full interval; this also guards against firing a duplicate tick that races the
+    // still-in-flight login sync.
+    let initialDelayMs = intervalMs;
+    if (inboxSyncStatus !== SyncStatus.Running && lastSyncCompletedAt) {
+      const elapsedMs = Date.now() - new Date(lastSyncCompletedAt).getTime();
+      initialDelayMs = Math.min(Math.max(intervalMs - elapsedMs, 0), intervalMs);
+    }
+
+    let intervalId: number | undefined;
+    const timeoutId = window.setTimeout(() => {
+      tick();
+      intervalId = window.setInterval(tick, intervalMs);
+    }, initialDelayMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, [syncIntervalMinutes, lastSyncCompletedAt, inboxSyncStatus]);
 };

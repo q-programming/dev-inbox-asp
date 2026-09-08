@@ -41,6 +41,14 @@ public interface IAdoClient
     /// filter Azure DevOps offers (no true org-wide PR search), but still covers every repo in the
     /// project in one call rather than one call per repository.
     /// </summary>
+    /// <param name="closedSince">
+    /// When set, bounds the search to pull requests closed at/after this instant (Azure DevOps'
+    /// <c>searchCriteria.minTime</c> combined with <c>searchCriteria.queryTimeRangeType=Closed</c>).
+    /// Used to keep an incremental sync's "all statuses" search from re-fetching a project's entire
+    /// completed/abandoned PR history on every tick — only PRs closed since the last sync are pulled;
+    /// still-open PRs have no closed date and are unaffected by this filter, so pair this with a
+    /// separate unbounded <see cref="AdoPullRequestSearchStatus.Active"/> call to also catch those.
+    /// </param>
     Task<IReadOnlyList<AdoPullRequestDTO>> GetPullRequestsAsync(
         string personalAccessToken,
         string organization,
@@ -48,6 +56,7 @@ public interface IAdoClient
         AdoPullRequestSearchStatus status = AdoPullRequestSearchStatus.All,
         string? reviewerId = null,
         string? creatorId = null,
+        DateTimeOffset? closedSince = null,
         CancellationToken ct = default);
 
     /// <summary>

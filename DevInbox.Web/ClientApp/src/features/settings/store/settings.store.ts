@@ -14,6 +14,19 @@ function getSystemTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? Theme.Dark : Theme.Light;
 }
 
+/**
+ * Clamps a sync interval to the enforced [MIN, MAX] range. Applied both when the user drags the
+ * slider and when a value arrives from the server — a stale/pre-validation DB row or corrupted
+ * localStorage value (e.g. `0`) must never reach the background sync scheduler unclamped, since
+ * that produces a near-zero `setInterval` delay that hammers the sync endpoint continuously.
+ */
+function clampSyncInterval(minutes: number): number {
+  if (!Number.isFinite(minutes)) {
+    return DEFAULT_SYNC_INTERVAL_MINUTES;
+  }
+  return Math.min(Math.max(minutes, SYNC_INTERVAL_MIN_MINUTES), SYNC_INTERVAL_MAX_MINUTES);
+}
+
 export interface SettingsState {
   theme: Theme;
   density: Density;
@@ -68,7 +81,8 @@ const useSettingsStore = create<SettingsState>()(
 
       toggleSideBar: () => set((state) => ({ sideBarCollapsed: !state.sideBarCollapsed })),
 
-      changeSyncIntervalMinutes: (syncIntervalMinutes: number) => set({ syncIntervalMinutes }),
+      changeSyncIntervalMinutes: (syncIntervalMinutes: number) =>
+        set({ syncIntervalMinutes: clampSyncInterval(syncIntervalMinutes) }),
 
       toggleSendNotifications: () =>
         set((state) => ({ sendNotifications: !state.sendNotifications })),
@@ -79,7 +93,10 @@ const useSettingsStore = create<SettingsState>()(
           density: settingsDto.density ?? state.density,
           fontSize: settingsDto.fontSize ?? state.fontSize,
           sideBarCollapsed: settingsDto.sideBarCollapsed ?? state.sideBarCollapsed,
-          syncIntervalMinutes: settingsDto.syncIntervalMinutes ?? state.syncIntervalMinutes,
+          syncIntervalMinutes:
+            settingsDto.syncIntervalMinutes !== undefined && settingsDto.syncIntervalMinutes !== null
+              ? clampSyncInterval(settingsDto.syncIntervalMinutes)
+              : state.syncIntervalMinutes,
           sendNotifications: settingsDto.sendNotifications ?? state.sendNotifications,
         })),
     }),

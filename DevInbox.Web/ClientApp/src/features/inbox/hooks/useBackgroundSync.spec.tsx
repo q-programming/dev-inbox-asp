@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
-import { ItemSource, SyncChangeKind } from '@api';
+import { ItemSource, SyncChangeKind, SyncStatus } from '@api';
 import { createQueryClient } from '@shared/api/queryClient';
 import useSettingsStore from '@feature/settings/store/settings.store';
 import useAlertStore, { AlertType } from '@shared/store/alert.store';
@@ -209,5 +209,121 @@ describe('useBackgroundSync', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe('scheduling aligned with the inbox\'s last completed sync', () => {
+    it('should fire the first tick sooner when a sync already completed partway through the interval', async () => {
+      vi.useFakeTimers();
+      try {
+        const { client, Wrapper } = makeWrapper();
+        // A sync completed 3 minutes ago; with a 5 minute interval the next tick should be due
+        // in ~2 minutes, not a full 5 — otherwise a login-triggered sync effectively resets the
+        // clock and the user waits up to 2x the configured interval for the first check.
+        client.setQueryData(heartbeatKeys.status, {
+          syncStatus: SyncStatus.Idle,
+          lastSyncCompletedAt: new Date(Date.now() - 3 * 60_000).toISOString(),
+        });
+
+        renderHook(() => useBackgroundSync(), { wrapper: Wrapper });
+
+        await act(async () => {
+          await Promise.resolve();
+        });
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(2 * 60_000);
+        });
+
+        expect(postMessageMock).toHaveBeenCalledWith({ type: 'SYNC_TICK', sendNotifications: true });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('should fire almost immediately when the interval has already fully elapsed since the last sync', async () => {
+      vi.useFakeTimers();
+      try {
+        const { client, Wrapper } = makeWrapper();
+        client.setQueryData(heartbeatKeys.status, {
+          syncStatus: SyncStatus.Idle,
+          lastSyncCompletedAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+        });
+
+        renderHook(() => useBackgroundSync(), { wrapper: Wrapper });
+
+        await act(async () => {
+          await Promise.resolve();
+        });
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+
+        expect(postMessageMock).toHaveBeenCalledWith({ type: 'SYNC_TICK', sendNotifications: true });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('should wait the full interval (not fire immediately) while a sync is still running, even with a stale completed timestamp', async () => {
+      vi.useFakeTimers();
+      try {
+        const { client, Wrapper } = makeWrapper();
+        // e.g. right after login: the fire-and-forget Login sync is still in flight — must not
+        // race it with an immediate background tick just because the *previous* sync's completed
+        // timestamp looks overdue.
+        client.setQueryData(heartbeatKeys.status, {
+          syncStatus: SyncStatus.Running,
+          lastSyncCompletedAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+        });
+
+        renderHook(() => useBackgroundSync(), { wrapper: Wrapper });
+
+        await act(async () => {
+          await Promise.resolve();
+        });
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(4 * 60_000 + 59_000);
+        });
+
+        expect(postMessageMock).not.toHaveBeenCalled();
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1_000);
+        });
+
+        expect(postMessageMock).toHaveBeenCalledWith({ type: 'SYNC_TICK', sendNotifications: true });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('should wait the full interval when no cached inbox status is available yet', async () => {
+      vi.useFakeTimers();
+      try {
+        const { Wrapper } = makeWrapper();
+
+        renderHook(() => useBackgroundSync(), { wrapper: Wrapper });
+
+        await act(async () => {
+          await Promise.resolve();
+        });
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(4 * 60_000 + 59_000);
+        });
+
+        expect(postMessageMock).not.toHaveBeenCalled();
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1_000);
+        });
+
+        expect(postMessageMock).toHaveBeenCalledWith({ type: 'SYNC_TICK', sendNotifications: true });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

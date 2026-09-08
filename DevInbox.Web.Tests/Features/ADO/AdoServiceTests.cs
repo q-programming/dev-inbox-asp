@@ -154,4 +154,176 @@ public class AdoServiceTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetDetailsAsync(item, CancellationToken.None));
     }
+
+    // -------------------------------------------------------------------------
+    // SyncWorkItemsAsync — Reason re-evaluation on already-synced work items
+    // -------------------------------------------------------------------------
+
+    [Fact(DisplayName = "SyncWorkItemsAsync should update an existing work item's Reason from Authored to Assigned once the current user becomes the assignee")]
+    public async Task SyncWorkItemsAsyncShouldUpdateReasonWhenUserBecomesAssigneeAsync()
+    {
+        const long userId = 7;
+        var profile = new AdoProfile
+        {
+            UserId = userId,
+            Organization = "contoso",
+            AdoUserId = "ado-user-1",
+            AdoEmail = "jane@contoso.com",
+            AdoLogin = "Jane Doe",
+            AccessToken = Pat,
+            Status = DomainIntegrationStatus.Active
+        };
+        _profileRepository.GetAllByUserIdAsync(userId).Returns(new List<AdoProfile> { profile });
+
+        _adoClient.GetProjectsAsync(Pat, "contoso", Arg.Any<CancellationToken>())
+            .Returns([new AdoProjectDTO { Id = "proj-1", Name = "Alpha" }]);
+        _adoClient.QueryWorkItemIdsAsync(Pat, "contoso", "Alpha", Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns([501]);
+
+        // The work item is now assigned to the same user (Jane) who originally only authored it —
+        // AssignedTo should take priority over CreatedBy (see InferWorkItemReason).
+        var workItem = new AdoWorkItemDTO
+        {
+            Id = 501,
+            Fields = new AdoWorkItemFieldsDTO
+            {
+                Title = "Implement inbox sync retry policy",
+                State = "Active",
+                TeamProject = "Alpha",
+                AssignedTo = new AdoIdentityRefDTO { DisplayName = "Jane Doe", UniqueName = "jane@contoso.com" },
+                CreatedBy = new AdoIdentityRefDTO { DisplayName = "Jane Doe", UniqueName = "jane@contoso.com" },
+                ChangedDate = new DateTimeOffset(2026, 1, 20, 9, 0, 0, TimeSpan.Zero)
+            }
+        };
+        _adoClient.GetWorkItemsBatchAsync(Pat, "contoso", "Alpha", Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns([workItem]);
+        _adoClient.GetPullRequestsAsync(Pat, "contoso", "Alpha", Arg.Any<AdoPullRequestSearchStatus>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<DateTimeOffset?>(), Arg.Any<CancellationToken>())
+            .Returns(new List<AdoPullRequestDTO>());
+
+        // Simulate a previously-synced row that was created back when the user only authored the
+        // item (no assignment yet) — Reason is stale "Authored" and must flip to "Assigned".
+        var existing = new InboxItem
+        {
+            InboxId = userId,
+            Source = ItemSource.Ado,
+            Type = ItemType.WorkItem,
+            Repository = "contoso/Alpha",
+            ExternalId = "501",
+            Title = "Implement inbox sync retry policy",
+            Reason = InboxReason.Authored,
+            ActivityAt = new DateTimeOffset(2026, 1, 10, 9, 0, 0, TimeSpan.Zero),
+            State = new InboxItemState { IsDone = false, IsClosed = false }
+        };
+        _inboxItemRepository.GetExistingItemsAsync(userId, ItemSource.Ado, ItemType.WorkItem, Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(new List<InboxItem> { existing });
+
+        await _service.SyncWorkItemsAsync(userId);
+
+        Assert.Equal(InboxReason.Assigned, existing.Reason);
+        await _inboxItemRepository.Received(1).SaveChangesAsync();
+        await _inboxItemRepository.DidNotReceive().AddRangeAsync(Arg.Any<IEnumerable<InboxItem>>());
+    }
+
+    [Fact(DisplayName = "SyncWorkItemsAsync should leave Reason unchanged when it hasn't actually changed since the last sync")]
+    public async Task SyncWorkItemsAsyncShouldNotUpdateWhenReasonUnchangedAndNoOtherActivityAsync()
+    {
+        const long userId = 8;
+        var profile = new AdoProfile
+        {
+            UserId = userId,
+            Organization = "contoso",
+            AdoUserId = "ado-user-1",
+            AdoEmail = "jane@contoso.com",
+            AdoLogin = "Jane Doe",
+            AccessToken = Pat,
+            Status = DomainIntegrationStatus.Active
+        };
+        _profileRepository.GetAllByUserIdAsync(userId).Returns(new List<AdoProfile> { profile });
+
+        _adoClient.GetProjectsAsync(Pat, "contoso", Arg.Any<CancellationToken>())
+            .Returns([new AdoProjectDTO { Id = "proj-1", Name = "Alpha" }]);
+        _adoClient.QueryWorkItemIdsAsync(Pat, "contoso", "Alpha", Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns([501]);
+
+        var unchangedDate = new DateTimeOffset(2026, 1, 10, 9, 0, 0, TimeSpan.Zero);
+        var workItem = new AdoWorkItemDTO
+        {
+            Id = 501,
+            Fields = new AdoWorkItemFieldsDTO
+            {
+                Title = "Implement inbox sync retry policy",
+                State = "Active",
+                TeamProject = "Alpha",
+                AssignedTo = new AdoIdentityRefDTO { DisplayName = "Jane Doe", UniqueName = "jane@contoso.com" },
+                ChangedDate = unchangedDate
+            }
+        };
+        _adoClient.GetWorkItemsBatchAsync(Pat, "contoso", "Alpha", Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns([workItem]);
+        _adoClient.GetPullRequestsAsync(Pat, "contoso", "Alpha", Arg.Any<AdoPullRequestSearchStatus>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<DateTimeOffset?>(), Arg.Any<CancellationToken>())
+            .Returns(new List<AdoPullRequestDTO>());
+
+        var existing = new InboxItem
+        {
+            InboxId = userId,
+            Source = ItemSource.Ado,
+            Type = ItemType.WorkItem,
+            Repository = "contoso/Alpha",
+            ExternalId = "501",
+            Title = "Implement inbox sync retry policy",
+            Reason = InboxReason.Assigned,
+            ActivityAt = unchangedDate,
+            State = new InboxItemState { IsDone = false, IsClosed = false }
+        };
+        _inboxItemRepository.GetExistingItemsAsync(userId, ItemSource.Ado, ItemType.WorkItem, Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(new List<InboxItem> { existing });
+
+        await _service.SyncWorkItemsAsync(userId);
+
+        Assert.Equal(InboxReason.Assigned, existing.Reason);
+        await _inboxItemRepository.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact(DisplayName = "SyncWorkItemsAsync should bound an incremental sync's pull request search to Active + recently-closed, never an unbounded full-history search")]
+    public async Task SyncWorkItemsAsyncShouldBoundIncrementalPullRequestSearchAsync()
+    {
+        const long userId = 9;
+        var lastSync = new DateTimeOffset(2026, 1, 15, 9, 0, 0, TimeSpan.Zero);
+        var profile = new AdoProfile
+        {
+            UserId = userId,
+            Organization = "contoso",
+            AdoUserId = "ado-user-1",
+            AdoEmail = "jane@contoso.com",
+            AdoLogin = "Jane Doe",
+            AccessToken = Pat,
+            Status = DomainIntegrationStatus.Active
+        };
+        _profileRepository.GetAllByUserIdAsync(userId).Returns(new List<AdoProfile> { profile });
+
+        _adoClient.GetProjectsAsync(Pat, "contoso", Arg.Any<CancellationToken>())
+            .Returns([new AdoProjectDTO { Id = "proj-1", Name = "Alpha" }]);
+        _adoClient.QueryWorkItemIdsAsync(Pat, "contoso", "Alpha", Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _adoClient.GetWorkItemsBatchAsync(Pat, "contoso", "Alpha", Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _adoClient.GetPullRequestsAsync(Pat, "contoso", "Alpha", Arg.Any<AdoPullRequestSearchStatus>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<DateTimeOffset?>(), Arg.Any<CancellationToken>())
+            .Returns(new List<AdoPullRequestDTO>());
+        _inboxItemRepository.GetExistingItemsAsync(userId, ItemSource.Ado, ItemType.PR, Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(new List<InboxItem>());
+
+        // updatedSince set → incremental (non-initial) sync.
+        await _service.SyncWorkItemsAsync(userId, updatedSince: lastSync);
+
+        // Active is always searched unbounded (no closedSince).
+        await _adoClient.Received().GetPullRequestsAsync(
+            Pat, "contoso", "Alpha", AdoPullRequestSearchStatus.Active, Arg.Any<string?>(), Arg.Any<string?>(), closedSince: null, Arg.Any<CancellationToken>());
+
+        // The "all statuses" search must be bounded to closed-since-last-sync — never an unbounded
+        // full-history call — so an incremental sync doesn't re-fetch every PR ever closed.
+        await _adoClient.Received().GetPullRequestsAsync(
+            Pat, "contoso", "Alpha", AdoPullRequestSearchStatus.All, Arg.Any<string?>(), Arg.Any<string?>(), closedSince: lastSync, Arg.Any<CancellationToken>());
+        await _adoClient.DidNotReceive().GetPullRequestsAsync(
+            Pat, "contoso", "Alpha", AdoPullRequestSearchStatus.All, Arg.Any<string?>(), Arg.Any<string?>(), closedSince: null, Arg.Any<CancellationToken>());
+    }
 }
