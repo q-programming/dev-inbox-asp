@@ -13,6 +13,11 @@ public class SettingsController(ISettingsService settingsService) : ISettingsBas
         return _mapper.ToDto(userSettings);
     }
 
+    public Task SidebarToggleAsync(bool toggled)
+    {
+        return settingsService.ToggleSideBar(toggled);
+    }
+
     public async Task<UserSettingsDto> UpdateSettingsAsync(UserSettingsDto body)
     {
         var updated = await settingsService.SaveSettingsAsync(body);

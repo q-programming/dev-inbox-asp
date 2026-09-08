@@ -8,4 +8,6 @@ public interface ISettingsService
 {
     Task<UserSettings> GetSettingsAsync();
     Task<UserSettings> SaveSettingsAsync(UserSettingsDto settings);
+
+    Task ToggleSideBar(bool toggled);
 }

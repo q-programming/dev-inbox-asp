@@ -1,4 +1,5 @@
 using DevInbox.Web.Infrastructure.Events;
+using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
 namespace DevInbox.Web.Features.Sync.Events;
 
@@ -8,6 +9,6 @@ namespace DevInbox.Web.Features.Sync.Events;
 /// checkpoint and re-fetch from scratch — used when an integration was just (re)connected, since the
 /// existing checkpoint predates any data for it.
 /// </summary>
-public record SyncRequestedEvent(long UserId, string Email, bool ForceFullSync = false) : IEvent
+public record SyncRequestedEvent(long UserId, string Email, TriggerType trigger, bool ForceFullSync = false) : IEvent
 {
 }

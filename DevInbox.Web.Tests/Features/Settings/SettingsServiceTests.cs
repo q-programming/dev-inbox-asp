@@ -62,6 +62,8 @@ public class SettingsServiceTests
         Assert.Equal(existingUser.Id, result.UserId);
         Assert.Equal(Web.Features.Settings.Domain.Theme.Light, result.Theme);
         Assert.Equal(Web.Features.Settings.Domain.Density.Relaxed, result.Density);
+        Assert.Equal(15, result.SyncIntervalMinutes);
+        Assert.False(result.SendNotifications);
     });
 
     [Fact(DisplayName = "SaveSettings should update the tracked entity when settings already exist")]
@@ -107,5 +109,65 @@ public class SettingsServiceTests
         Assert.Equal(existingUser, result.User);
         Assert.Equal(Web.Features.Settings.Domain.Theme.Light, result.Theme);
         Assert.Equal(Web.Features.Settings.Domain.Density.Tight, result.Density);
+    });
+
+    [Fact(DisplayName = "SaveSettings should persist syncIntervalMinutes and sendNotifications from the DTO")]
+    public Task SaveSettingsShouldPersistSyncAndNotificationFieldsAsync() => Task.Run(async () =>
+    {
+        // Arrange
+        var existingUser = new User { Id = 1, Email = TestEmail };
+        var existingSettings = new UserSettings
+        {
+            Id = 1,
+            UserId = 1,
+            Theme = Web.Features.Settings.Domain.Theme.Light,
+            Density = Web.Features.Settings.Domain.Density.Relaxed,
+            SyncIntervalMinutes = 15,
+            SendNotifications = false,
+            User = existingUser,
+        };
+        _userService.GetCurrentUserAsync().Returns(existingUser);
+        _settingsRepository.GetByUserId(1).Returns(existingSettings);
+        _settingsRepository.UpdateAsync(existingSettings).Returns(Task.FromResult(existingSettings));
+
+        // Act
+        var result = await _service.SaveSettingsAsync(new UserSettingsDto
+        {
+            Theme = Web.Infrastructure.OpenApi.Generated.Theme.Light,
+            Density = Web.Infrastructure.OpenApi.Generated.Density.Relaxed,
+            SyncIntervalMinutes = 30,
+            SendNotifications = true,
+        });
+
+        // Assert
+        Assert.Equal(30, result.SyncIntervalMinutes);
+        Assert.True(result.SendNotifications);
+    });
+
+    [Fact(DisplayName = "SaveSettings should persist syncIntervalMinutes and sendNotifications from the DTO")]
+    public Task ToggleSideBarShouldPersistChangesAsync() => Task.Run(async () =>
+    {
+        // Arrange
+        var existingUser = new User { Id = 1, Email = TestEmail };
+        var existingSettings = new UserSettings
+        {
+            Id = 1,
+            UserId = 1,
+            Theme = Web.Features.Settings.Domain.Theme.Light,
+            Density = Web.Features.Settings.Domain.Density.Relaxed,
+            SyncIntervalMinutes = 15,
+            SendNotifications = false,
+            User = existingUser,
+        };
+        _userService.GetCurrentUserAsync().Returns(existingUser);
+        _settingsRepository.GetByUserId(1).Returns(existingSettings);
+        _settingsRepository.UpdateAsync(Arg.Any<UserSettings>())
+        .Returns(callInfo => Task.FromResult(callInfo.Arg<UserSettings>()));
+
+        // Act
+        await _service.ToggleSideBar(true);
+
+        // Assert
+        await _settingsRepository.Received(1).UpdateAsync(existingSettings);
     });
 }

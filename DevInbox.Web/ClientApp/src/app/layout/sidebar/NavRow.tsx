@@ -10,6 +10,8 @@ import { NavLink } from 'react-router-dom';
 import { type SidebarNavItem } from '../navConfig.tsx';
 import IntegrationIcon from '@shared/components/integrationIcon/IntegrationIcon.tsx';
 import { buildInboxSearch } from '@feature/inbox/utils/inboxFilter';
+import useSettingsStore from '@feature/settings/store/settings.store';
+import { Density } from '@api';
 
 export interface NavRowProps {
   item: SidebarNavItem;
@@ -18,6 +20,13 @@ export interface NavRowProps {
   /** Called after navigating — used to close the temporary mobile drawer on tap. */
   onNavigate?: () => void;
 }
+
+/** Row sizing per density level — mirrors the scaling applied to inbox list rows. */
+const DENSITY_NAV_ROW_STYLES: Record<Density, { minHeight: number; marginY: number }> = {
+  [Density.Relaxed]: { minHeight: 36, marginY: 0.25 },
+  [Density.Tight]: { minHeight: 32, marginY: 0.125 },
+  [Density.SuperTight]: { minHeight: 28, marginY: 0 },
+};
 
 /**
  * A single navigation row in the sidebar.
@@ -29,6 +38,8 @@ export interface NavRowProps {
  */
 const NavRow = memo(({ item, activeId, collapsed, onNavigate }: NavRowProps) => {
   const isActive = item.id === activeId;
+  const density = useSettingsStore((state) => state.density);
+  const { minHeight, marginY } = DENSITY_NAV_ROW_STYLES[density];
   const icon =
     typeof item.icon === 'string' ? (
       <IntegrationIcon integration={item.icon} size={20} />
@@ -46,9 +57,9 @@ const NavRow = memo(({ item, activeId, collapsed, onNavigate }: NavRowProps) => 
       onClick={onNavigate}
       sx={{
         borderRadius: 1,
-        marginY: 0.25,
+        marginY,
         justifyContent: collapsed ? 'center' : 'flex-start',
-        minHeight: 36,
+        minHeight,
         '&.Mui-selected': {
           bgcolor: 'primary.main',
           color: 'primary.contrastText',

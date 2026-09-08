@@ -7,9 +7,9 @@ namespace DevInbox.Web.Features.Sync;
 
 public class SyncController(IPublisher publisher, IUserService userService) : ISyncBaseController, IComponent
 {
-    public async Task TriggerSyncAsync()
+    public async Task TriggerSyncAsync(TriggerType trigger)
     {
         var user = await userService.GetCurrentUserAsync();
-        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email));
+        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email, trigger));
     }
 }

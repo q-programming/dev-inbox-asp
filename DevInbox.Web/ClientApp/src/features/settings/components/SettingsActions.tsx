@@ -6,9 +6,17 @@ import { useSettingsMutation } from '../hooks/useSettingsQuery';
 import useSettingsStore from '../store/settings.store';
 import { UserSettingsDto } from '@api';
 
-const AppearanceSettingsActions = memo(() => {
+const SettingsActions = memo(() => {
   const settingsMutation = useSettingsMutation();
-  const { applyServerProfile, theme, density, fontSize, sideBarCollapsed } = useSettingsStore();
+  const {
+    applyServerProfile,
+    theme,
+    density,
+    fontSize,
+    sideBarCollapsed,
+    syncIntervalMinutes,
+    sendNotifications,
+  } = useSettingsStore();
   const { addAlert } = useAlertStore();
 
   const [currentSettings, setCurrentSettings] = useState<UserSettingsDto>({
@@ -16,6 +24,8 @@ const AppearanceSettingsActions = memo(() => {
     theme,
     fontSize,
     sideBarCollapsed,
+    syncIntervalMinutes,
+    sendNotifications,
   });
 
   const saveChanges = () => {
@@ -25,6 +35,8 @@ const AppearanceSettingsActions = memo(() => {
         theme,
         fontSize,
         sideBarCollapsed,
+        syncIntervalMinutes,
+        sendNotifications,
       },
       {
         onSuccess: (data) => {
@@ -51,5 +63,5 @@ const AppearanceSettingsActions = memo(() => {
   );
 });
 
-AppearanceSettingsActions.displayName = 'SettingsActions';
-export default AppearanceSettingsActions;
+SettingsActions.displayName = 'SettingsActions';
+export default SettingsActions;

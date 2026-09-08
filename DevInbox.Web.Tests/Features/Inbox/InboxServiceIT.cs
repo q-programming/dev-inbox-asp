@@ -4,7 +4,6 @@ using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Inbox;
 using DevInbox.Web.Features.Inbox.Details;
 using DevInbox.Web.Features.Inbox.Domain;
-using DevInbox.Web.Features.Notes;
 using DevInbox.Web.Features.Notes.Domain;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
@@ -28,7 +27,6 @@ public class InboxServiceIT : DatabaseIntegrationTest
     private User _otherUser = default!;
     private InboxService _service = default!;
     private readonly IInboxDetailService _detailService = Substitute.For<IInboxDetailService>();
-    private readonly INotesService _notesService = Substitute.For<INotesService>();
 
     public override async Task InitializeAsync()
     {
@@ -51,7 +49,6 @@ public class InboxServiceIT : DatabaseIntegrationTest
             new InboxRepository(DataBase),
             new InboxItemRepository(DataBase),
             _detailService,
-            _notesService,
             accessor);
     }
 
@@ -171,17 +168,6 @@ public class InboxServiceIT : DatabaseIntegrationTest
 
         _ = await Assert.ThrowsAsync<NotFoundException>(() => _service.GetInboxItemByIdAsync(item.Id));
         await _detailService.DidNotReceive().PopulateAsync(Arg.Any<InboxItem>(), Arg.Any<GeneratedInboxItemDetail>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact(DisplayName = "PutInboxSeedAsync should persist between 1 and 5 items linked to the current user's inbox")]
-    public async Task PutInboxSeedAsyncShouldPersistItemsForCurrentUserAsync()
-    {
-        await _service.PutInboxSeedAsync();
-
-        var persisted = await DataBase.InboxItems.AsNoTracking().Where(i => i.InboxId == _user.Id).ToListAsync();
-
-        Assert.InRange(persisted.Count, 1, 5);
-        Assert.All(persisted, i => Assert.Equal(_user.Id, i.InboxId));
     }
 
     [Fact(DisplayName = "UpdateAsync should persist changes made to the inbox")]

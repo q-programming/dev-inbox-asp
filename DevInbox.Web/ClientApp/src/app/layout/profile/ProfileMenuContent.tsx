@@ -9,7 +9,7 @@ import Divider from '@mui/material/Divider';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import HubIcon from '@mui/icons-material/Hub';
-import SecurityIcon from '@mui/icons-material/Security';
+import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
 import PaletteIcon from '@mui/icons-material/Palette';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { Link as RouterLink } from 'react-router-dom';
@@ -103,25 +103,11 @@ const ProfileMenuContent = ({
 
       <Divider />
 
-      <MenuItem component={RouterLink} to={AppRoute.PROFILE} dense>
+      <MenuItem component={RouterLink} to={AppRoute.SETTINGS} dense>
         <ListItemIcon>
           <ManageAccountsIcon fontSize="small" />
         </ListItemIcon>
         Profile Settings
-      </MenuItem>
-
-      <MenuItem component={RouterLink} to={`${AppRoute.SETTINGS}#integrations`} dense>
-        <ListItemIcon>
-          <HubIcon fontSize="small" />
-        </ListItemIcon>
-        Integration Status
-      </MenuItem>
-
-      <MenuItem dense disabled>
-        <ListItemIcon>
-          <SecurityIcon fontSize="small" />
-        </ListItemIcon>
-        Security
       </MenuItem>
 
       <MenuItem component={RouterLink} to={`${AppRoute.SETTINGS}#appearance`} dense>
@@ -130,9 +116,19 @@ const ProfileMenuContent = ({
         </ListItemIcon>
         Appearance
       </MenuItem>
-
+      <MenuItem component={RouterLink} dense to={`${AppRoute.SETTINGS}#sync`}>
+        <ListItemIcon>
+          <SyncOutlinedIcon fontSize="small" />
+        </ListItemIcon>
+        Sync & Notifications
+      </MenuItem>
+      <MenuItem component={RouterLink} to={`${AppRoute.SETTINGS}#integrations`} dense>
+        <ListItemIcon>
+          <HubIcon fontSize="small" />
+        </ListItemIcon>
+        Integration Status
+      </MenuItem>
       <Divider />
-
       <MenuItem
         dense
         onClick={handleLogout}

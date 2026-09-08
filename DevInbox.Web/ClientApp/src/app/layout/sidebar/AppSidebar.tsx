@@ -19,6 +19,7 @@ import { useLocation } from 'react-router-dom';
 import { useInboxSummaryQuery } from '@feature/inbox/hooks/useInboxQuery.tsx';
 import { buildInboxSearch } from '@feature/inbox/utils/inboxFilter';
 import type { InboxSummary } from '@api';
+import { useToggleMutation } from '@feature/settings/hooks/useSettingsQuery.tsx';
 
 export const SIDEBAR_WIDTH = 220;
 export const SIDEBAR_COLLAPSED_WIDTH = 56;
@@ -37,6 +38,12 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
   const { pathname } = location;
   const collapsed = useSettingsStore((state) => state.sideBarCollapsed);
   const { toggleSideBar } = useSettingsStore();
+  const persistToggled = useToggleMutation();
+
+  const handleToggle = () => {
+    persistToggled.mutate(!collapsed);
+    toggleSideBar();
+  };
 
   const activeId = useMemo(() => {
     // Several nav items share the same /inbox route and are only
@@ -55,12 +62,7 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
   }, [pathname, location.search]);
   const { data: summary } = useInboxSummaryQuery();
 
-    
-
-  const getCountForItem = (
-    id: string,
-    summary?: InboxSummary,
-  ): number | undefined => {
+  const getCountForItem = (id: string, summary?: InboxSummary): number | undefined => {
     if (!summary) {
       return undefined;
     }
@@ -92,24 +94,20 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
 
   const focusItems = useMemo(
     () =>
-      [
-        ...CORE_FOCUS_ITEMS,
-        ...INTEGRATION_FOCUS_ITEMS,
-        ...BOTTOM_FOCUS_ITEMS,
-      ].map(item => ({
+      [...CORE_FOCUS_ITEMS, ...INTEGRATION_FOCUS_ITEMS, ...BOTTOM_FOCUS_ITEMS].map((item) => ({
         ...item,
         count: getCountForItem(item.id, summary),
       })),
     [summary],
   );
   const filterItems = useMemo(
-  () =>
-    FILTER_ITEMS.map(item => ({
-      ...item,
-      count: getCountForItem(item.id, summary),
-    })),
-  [summary],
-);
+    () =>
+      FILTER_ITEMS.map((item) => ({
+        ...item,
+        count: getCountForItem(item.id, summary),
+      })),
+    [summary],
+  );
 
   return (
     <Box
@@ -133,7 +131,13 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
       <SectionLabel label="Focus" collapsed={collapsed} />
       <List disablePadding dense>
         {focusItems.map((item) => (
-          <NavRow key={item.id} item={item} activeId={activeId} collapsed={collapsed} onNavigate={onNavigate} />
+          <NavRow
+            key={item.id}
+            item={item}
+            activeId={activeId}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
         ))}
       </List>
 
@@ -142,7 +146,13 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
       <SectionLabel label="Filters" collapsed={collapsed} />
       <List disablePadding dense>
         {filterItems.map((item) => (
-          <NavRow key={item.id} item={item} activeId={activeId} collapsed={collapsed} onNavigate={onNavigate} />
+          <NavRow
+            key={item.id}
+            item={item}
+            activeId={activeId}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
         ))}
       </List>
 
@@ -151,7 +161,7 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
       {/* Collapse toggle */}
       <Tooltip title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} placement="right">
         <IconButton
-          onClick={toggleSideBar}
+          onClick={handleToggle}
           size="small"
           aria-label={collapsed ? 'expand sidebar' : 'collapse sidebar'}
           sx={{

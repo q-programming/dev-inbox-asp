@@ -23,6 +23,15 @@ public class SettingsService(ISettingsRepository repository, IUserService userSe
         return userSettings;
     }
 
+
+    public async Task ToggleSideBar(bool toggled)
+    {
+        var user = await userService.GetCurrentUserAsync();
+        var userSettings = await repository.GetByUserId(user.Id) ?? CreateDefaultSettings(user);
+        userSettings.SideBarCollapsed = toggled;
+        await repository.UpdateAsync(userSettings);
+    }
+
     public async Task<UserSettings> SaveSettingsAsync(UserSettingsDto settingsDto)
     {
         var user = await userService.GetCurrentUserAsync();
@@ -47,7 +56,10 @@ public class SettingsService(ISettingsRepository repository, IUserService userSe
             Theme = Domain.Theme.Light,
             Density = Domain.Density.Relaxed,
             FontSize = 14,
+            SyncIntervalMinutes = 15,
+            SendNotifications = false,
             User = user,
         };
     }
+
 }

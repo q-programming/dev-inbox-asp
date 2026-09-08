@@ -30,7 +30,7 @@ public class IntegrationsController(
         // organization, so force a full sync rather than an incremental one that would find
         // nothing new. This also performs the first project discovery for this organization, since
         // none is cached yet.
-        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email, ForceFullSync: true));
+        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email, TriggerType.Manual, ForceFullSync: true));
         return integration;
     }
 
@@ -40,7 +40,7 @@ public class IntegrationsController(
         var integration = await gitHubIntegrationService.ConnectPatAsync(user.Id, body.Token, body.ExpiresAt);
         // Freshly connected — the inbox's last sync checkpoint predates any GitHub data, so force a
         // full (open-PRs) sync rather than an incremental one that would find nothing new.
-        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email, ForceFullSync: true));
+        await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email, TriggerType.Manual, ForceFullSync: true));
         return integration;
     }
 

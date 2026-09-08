@@ -28,7 +28,6 @@ public class InboxServiceTests
     private readonly IInboxRepository _inboxRepository;
     private readonly IInboxItemRepository _inboxItemRepository;
     private readonly IInboxDetailService _inboxDetailService;
-    private readonly INotesService _notesService;
     private readonly Web.Features.Inbox.InboxService _service;
 
     public InboxServiceTests()
@@ -36,12 +35,10 @@ public class InboxServiceTests
         _inboxRepository = Substitute.For<IInboxRepository>();
         _inboxItemRepository = Substitute.For<IInboxItemRepository>();
         _inboxDetailService = Substitute.For<IInboxDetailService>();
-        _notesService = Substitute.For<INotesService>();
         _service = new Web.Features.Inbox.InboxService(
             _inboxRepository,
             _inboxItemRepository,
             _inboxDetailService,
-            _notesService,
             CreateAccessorWithClaim(UserId));
     }
 
@@ -113,9 +110,7 @@ public class InboxServiceTests
             _inboxRepository,
             _inboxItemRepository,
             _inboxDetailService,
-            _notesService,
             CreateAccessorWithClaim(null));
-
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetUserInboxAsync());
     }
 
@@ -338,24 +333,5 @@ public class InboxServiceTests
         _ = await Assert.ThrowsAsync<NotFoundException>(() => _service.SaveInboxItemAsync(5, true));
 
         await _inboxItemRepository.DidNotReceive().UpdateAsync(Arg.Any<InboxItem>());
-    }
-
-    // ── PutInboxSeedAsync ─────────────────────────────────────────────────────
-
-    [Fact(DisplayName = "PutInboxSeedAsync should add between 1 and 5 items linked to the current user's inbox")]
-    public async Task PutInboxSeedAsyncShouldAddItemsLinkedToInboxAsync()
-    {
-        var inbox = BuildInbox(UserId);
-        _ = _inboxRepository.GetByIdAsync(UserId).Returns(inbox);
-
-        await _service.PutInboxSeedAsync();
-
-        var addedItems = _inboxItemRepository.ReceivedCalls()
-            .Where(call => call.GetMethodInfo().Name == nameof(IInboxItemRepository.AddAsync))
-            .Select(call => (InboxItem)call.GetArguments()[0]!)
-            .ToList();
-
-        Assert.InRange(addedItems.Count, 1, 5);
-        Assert.All(addedItems, item => Assert.Equal(inbox.UserId, item.InboxId));
     }
 }

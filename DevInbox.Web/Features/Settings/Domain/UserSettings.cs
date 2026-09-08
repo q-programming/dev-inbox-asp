@@ -17,6 +17,10 @@ public class UserSettings
 
     public bool SideBarCollapsed { get; set; }
 
+    public int SyncIntervalMinutes { get; set; }
+
+    public bool SendNotifications { get; set; }
+
     [Required]
     public long UserId { get; set; }
 

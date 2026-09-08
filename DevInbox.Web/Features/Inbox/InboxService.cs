@@ -15,7 +15,6 @@ public class InboxService(
     IInboxRepository inboxRepository,
     IInboxItemRepository inboxItemRepository,
     IInboxDetailService inboxDetailService,
-    Notes.INotesService notesService,
     IHttpContextAccessor httpContextAccessor) : IInboxService, IService
 {
     InboxMapper _inboxMapper = new();
@@ -77,89 +76,6 @@ public class InboxService(
     }
 
 
-    public async Task PutInboxSeedAsync()
-    {
-        var inbox = await inboxRepository.GetByIdAsync(GetCurrentUserId());
-        var random = Random.Shared;
-        var count = random.Next(1, 6);
-        for (var i = 0; i < count; i++)
-        {
-            var source = RandomEnum(ItemSource.Other, ItemSource.Note);
-            var number = Random.Shared.Next(1000, 9999);
-
-            // Notes are domain objects in their own right (they own their InboxItem envelope), so they
-            // can't be seeded as a bare InboxItem like GitHub/Ado/Other — route them through NotesService.
-            if (source == ItemSource.Note)
-            {
-                var tags = new[] { PickRandomTag(), PickRandomTag() };
-                var followUpAt = random.Next(100) < 40
-                    ? DateTimeOffset.UtcNow.AddDays(random.Next(-7, 14))
-                    : (DateTimeOffset?)null;
-
-                await notesService.CreateNoteAsync(
-                    $"Seed note #{number}",
-                    $"Seed note body {Guid.NewGuid():N}"[..24],
-                    tags,
-                    followUpAt);
-                continue;
-            }
-
-            var type = RandomEnum<ItemType>();
-            var reason = RandomEnum<InboxReason>();
-            var item = new InboxItem
-            {
-                InboxId = inbox.UserId,
-                Source = source,
-                ExternalId = number.ToString(),
-                Type = type,
-                Reason = reason,
-                Title = $"{source} {type} #{number}",
-                ActivityAt = DateTimeOffset.UtcNow.AddDays(-random.Next(0, 30)),
-                CreatedAt = DateTimeOffset.UtcNow.AddDays(-random.Next(30, 90)),
-                UpdatedAt = DateTimeOffset.UtcNow,
-                State = new InboxItemState
-                {
-                    IsDone = random.Next(100) < 50,
-                    IsSaved = random.Next(100) < 25,
-                    IsPinned = random.Next(100) < 15,
-                    IsClosed = random.Next(100) < 15,
-                    Priority = RandomEnum<Priority>(),
-
-                    Tags =
-                    [
-                        PickRandomTag(),
-                    PickRandomTag()
-                    ],
-
-                    FollowUpAt = random.Next(100) < 40
-                        ? DateTimeOffset.UtcNow.AddDays(random.Next(-7, 14))
-                        : null,
-
-                    UpdatedAt = DateTimeOffset.UtcNow
-                }
-            };
-            if (item.Source == ItemSource.GitHub)
-            {
-                item.Repository = $"company/repo-{random.Next(1, 100)}";
-                item.CommentCount = 2;
-            }
-
-            await inboxItemRepository.AddAsync(item);
-
-            // Occasionally attach a note to demonstrate the "note attached to another item" flow —
-            // still routed through NotesService so it gets its own InboxItem envelope + FK.
-            if (random.Next(100) < 30)
-            {
-                await notesService.CreateNoteAsync(
-                    $"Note on {item.Title}",
-                    $"Seed attached note {Guid.NewGuid():N}"[..24],
-                    [PickRandomTag()],
-                    null,
-                    item.Id);
-            }
-        }
-    }
-
     public async Task<InboxPage> ListInboxItemsAsync(int page, int size, Infrastructure.OpenApi.Generated.ItemSource? source, Infrastructure.OpenApi.Generated.ItemType? itemType, ItemStatus? status, Infrastructure.OpenApi.Generated.InboxReason? reason)
     {
         var userId = GetCurrentUserId();
@@ -217,31 +133,5 @@ public class InboxService(
             : long.Parse(userIdClaim);
     }
 
-    private static T RandomEnum<T>(params T[] excluded) where T : struct, Enum
-    {
-        var values = Enum.GetValues<T>()
-        .Where(value => !excluded.Contains(value))
-        .ToArray();
-        return values[Random.Shared.Next(values.Length)];
-    }
-
-    private static string PickRandomTag()
-    {
-        string[] tags =
-        [
-            "backend",
-            "frontend",
-            "bug",
-            "feature",
-            "urgent",
-            "github",
-            "ado",
-            "review",
-            "refactor",
-            "technical-debt"
-        ];
-
-        return tags[Random.Shared.Next(tags.Length)];
-    }
 
 }

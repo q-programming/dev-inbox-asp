@@ -1,4 +1,4 @@
-import { SyncStatus } from '@api';
+import { SyncStatus, TriggerType } from '@api';
 import { useSyncMutation } from '@feature/inbox/hooks/useInboxQuery';
 import { useInboxStore } from '@feature/inbox/store/inbox.store';
 
@@ -87,8 +87,7 @@ export const InboxSyncStatus = () => {
             message:
               'Triggering manual sync...',
           });
-
-          syncMutation.mutate();
+          syncMutation.mutate(TriggerType.Manual);
         }}
       >
         <SyncIcon

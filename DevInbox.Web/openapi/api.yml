@@ -262,7 +262,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserSettingsDto"
-
+  /settings/sidebarToggle:
+    put:
+      operationId: sidebarToggle
+      tags: [settings]
+      summary: Saves if sidebar is toggled
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: boolean
+      responses:
+        "204":
+          description: Sidebar preferences saved
   # ── Inbox ─────────────────────────────────────────────────────
   /inbox:
     get:
@@ -333,18 +346,6 @@ paths:
                 $ref: "#/components/schemas/InboxSummary"
         "404":
           description: Not found
-  /inbox/seed:
-    put:
-      operationId: putInboxSeed
-      tags: [inbox]
-      deprecated: true
-      summary: Seeds inbox with random elements for testing
-      responses:
-        "204":
-          description: Inbox items created
-        "404":
-          description: Not found
-
   /inbox/item/{id}:
     get:
       operationId: getInboxItem
@@ -534,7 +535,13 @@ paths:
     post:
       operationId: triggerSync
       tags: [sync]
-      summary: Manually trigger a full sync
+      summary: Trigger a full sync
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TriggerType"
       responses:
         "202":
           description: Sync accepted
@@ -693,14 +700,16 @@ components:
           type: integer
         sideBarCollapsed:
           type: boolean
+        sendNotifications:
+          type: boolean          
         githubRepos:
           type: array
           items:
             type: string
-        adoOrganization:
-          type: string
-        adoProject:
-          type: string
+        adoProjects:
+          type: array
+          items:
+            type: string
         syncIntervalMinutes:
           type: integer
 
@@ -1150,6 +1159,13 @@ components:
           format: int64
           nullable: true
 
+    # ── Sync ─────────────────────────────────────────────────
+    TriggerType:
+      type: string
+      enum:
+        - Manual
+        - Login
+        - Background
 
     # ── Health ─────────────────────────────────────────────────
     HealthStatus:

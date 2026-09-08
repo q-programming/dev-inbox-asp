@@ -5,6 +5,11 @@ import { Density, Theme, UserSettingsDto } from '@api';
 
 export const SETTINGS_STORAGE_KEY = 'devInbox.settings';
 
+/** Sync interval bounds, in minutes, enforced by both the slider UI and the API contract. */
+export const SYNC_INTERVAL_MIN_MINUTES = 5;
+export const SYNC_INTERVAL_MAX_MINUTES = 60;
+export const DEFAULT_SYNC_INTERVAL_MINUTES = 15;
+
 function getSystemTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? Theme.Dark : Theme.Light;
 }
@@ -14,17 +19,26 @@ export interface SettingsState {
   density: Density;
   fontSize: number;
   sideBarCollapsed: boolean;
+  syncIntervalMinutes: number;
+  sendNotifications: boolean;
   toggleTheme: () => void;
   switchDensity: (density: Density) => void;
   changeFontSize: (fontSize: number) => void;
   toggleSideBar: () => void;
+  changeSyncIntervalMinutes: (syncIntervalMinutes: number) => void;
+  toggleSendNotifications: () => void;
   /**
    * Merges profile preferences received from the server (e.g. from /me response).
    * Only overrides fields that are explicitly provided — undefined values are ignored
    * so existing localStorage values are preserved when the server doesn't send them yet.
    */
   applyServerProfile: (
-    partial: Partial<Pick<SettingsState, 'theme' | 'density' | 'fontSize'>>,
+    partial: Partial<
+      Pick<
+        SettingsState,
+        'theme' | 'density' | 'fontSize' | 'sideBarCollapsed' | 'syncIntervalMinutes' | 'sendNotifications'
+      >
+    >,
   ) => void;
 }
 
@@ -40,6 +54,8 @@ const useSettingsStore = create<SettingsState>()(
       density: Density.Relaxed,
       fontSize: DEFAULT_FONT_SIZE,
       sideBarCollapsed: false,
+      syncIntervalMinutes: DEFAULT_SYNC_INTERVAL_MINUTES,
+      sendNotifications: false,
 
       toggleTheme: () =>
         set((state) => ({
@@ -52,12 +68,19 @@ const useSettingsStore = create<SettingsState>()(
 
       toggleSideBar: () => set((state) => ({ sideBarCollapsed: !state.sideBarCollapsed })),
 
+      changeSyncIntervalMinutes: (syncIntervalMinutes: number) => set({ syncIntervalMinutes }),
+
+      toggleSendNotifications: () =>
+        set((state) => ({ sendNotifications: !state.sendNotifications })),
+
       applyServerProfile: (settingsDto: UserSettingsDto) =>
         set((state) => ({
           theme: settingsDto.theme ?? state.theme,
           density: settingsDto.density ?? state.density,
           fontSize: settingsDto.fontSize ?? state.fontSize,
           sideBarCollapsed: settingsDto.sideBarCollapsed ?? state.sideBarCollapsed,
+          syncIntervalMinutes: settingsDto.syncIntervalMinutes ?? DEFAULT_SYNC_INTERVAL_MINUTES,
+          sendNotifications: settingsDto.sendNotifications ?? state.sendNotifications,
         })),
     }),
     {
@@ -68,6 +91,8 @@ const useSettingsStore = create<SettingsState>()(
         density: state.density,
         fontSize: state.fontSize,
         sideBarCollapsed: state.sideBarCollapsed,
+        syncIntervalMinutes: state.syncIntervalMinutes,
+        sendNotifications: state.sendNotifications,
       }),
     },
   ),
