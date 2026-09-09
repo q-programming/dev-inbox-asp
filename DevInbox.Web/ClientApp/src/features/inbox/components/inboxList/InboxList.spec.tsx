@@ -57,7 +57,7 @@ describe('InboxList', () => {
     expect(screen.getByText('Review PR')).toBeInTheDocument();
     expect(screen.getByText('Investigate alert')).toBeInTheDocument();
     expect(screen.getByText('Plan next steps')).toBeInTheDocument();
-    expect(screen.getAllByRole('button')).toHaveLength(3);
+    expect(screen.getAllByTestId('inbox-item')).toHaveLength(3);
   });
 
   it('should render an empty list when the API returns no items', async () => {
@@ -71,7 +71,7 @@ describe('InboxList', () => {
 
     const list = await screen.findByTestId('inbox-list');
     expect(list).toBeInTheDocument();
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryAllByTestId('inbox-item')).toHaveLength(0);
   });
 
   it('should fetch and append the next page when the sentinel scrolls into view', async () => {

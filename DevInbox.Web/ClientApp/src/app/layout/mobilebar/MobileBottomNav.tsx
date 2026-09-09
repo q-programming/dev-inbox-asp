@@ -8,6 +8,8 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { AppRoute } from '@app/routes.ts';
 import ProfileMenuContent from '../profile/ProfileMenuContent.tsx';
+import { buildInboxSearch } from '@feature/inbox/utils/inboxFilter.ts';
+import { ItemType } from '@api';
 
 const PROFILE_TAB_VALUE = '__profile__';
 
@@ -54,7 +56,7 @@ const MobileBottomNav = memo(() => {
         />
         <BottomNavigationAction
           component={RouterLink}
-          to={AppRoute.NOTES}
+          to={`${AppRoute.INBOX}${buildInboxSearch({ itemType: ItemType.Note })}`}
           label="Notes"
           value={AppRoute.NOTES}
           icon={<StickyNote2Icon />}

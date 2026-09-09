@@ -1,4 +1,4 @@
-import { InboxReason, ItemSource, ItemStatus, ItemType } from '@api';
+import { InboxReason, InboxSort, ItemSource, ItemStatus, ItemType } from '@api';
 
 /** Filter criteria that can be applied to the inbox item listing via query params. */
 export interface InboxFilter {
@@ -6,6 +6,7 @@ export interface InboxFilter {
   itemType?: ItemType;
   reason?: InboxReason;
   status?: ItemStatus;
+  sort?: InboxSort;
 }
 
 /** Builds a `?key=value` query string from an inbox filter (empty string when no filter). */
@@ -27,6 +28,9 @@ export const buildInboxSearch = (filter?: InboxFilter): string => {
   if (filter.status) {
     params.set('status', filter.status);
   }
+  if (filter.sort) {
+    params.set('sort', filter.sort);
+  }
 
   const query = params.toString();
   return query ? `?${query}` : '';
@@ -38,4 +42,6 @@ export const parseInboxFilter = (searchParams: URLSearchParams): InboxFilter => 
   itemType: (searchParams.get('itemType') as ItemType) || undefined,
   reason: (searchParams.get('reason') as InboxReason) || undefined,
   status: (searchParams.get('status') as ItemStatus) || undefined,
+  sort: (searchParams.get('sort') as InboxSort) || undefined,
 });
+

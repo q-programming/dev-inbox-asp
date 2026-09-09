@@ -1,4 +1,4 @@
-import { InboxClient, InboxReason, ItemSource, ItemStatus, ItemType, SyncClient, TriggerType, type InboxPage, type SyncTriggerResultDto } from '@api';
+import { InboxClient, InboxReason, InboxSort, ItemSource, ItemStatus, ItemType, SyncClient, TriggerType, type InboxPage, type SyncTriggerResultDto } from '@api';
 import { ApiError, apiFetch, BASE_URL } from '@shared/api/httpClient';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import useAlertStore from '@shared/store/alert.store';
@@ -26,7 +26,7 @@ export const inboxKeys = {
  */
 export const useInboxQuery = (filter?: InboxFilter) =>
   useInfiniteQuery({
-    queryKey: [...inboxKeys.items, filter?.source, filter?.itemType, filter?.reason, filter?.status],
+    queryKey: [...inboxKeys.items, filter?.source, filter?.itemType, filter?.reason, filter?.status, filter?.sort],
     queryFn: ({ pageParam }) =>
       inboxApi.listInboxItems(
         pageParam,
@@ -35,6 +35,7 @@ export const useInboxQuery = (filter?: InboxFilter) =>
         filter?.itemType as ItemType | undefined,
         filter?.status as ItemStatus | undefined,
         filter?.reason as InboxReason | undefined,
+        filter?.sort as InboxSort | undefined,
       ),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
@@ -116,3 +117,21 @@ export const useSyncMutation = () =>
       },
     });
   };
+
+/** Bulk-updates isDone/isSaved for a set of inbox item ids in a single request — used by the
+ * inbox list's multi-select "Actions" menu (e.g. "Mark done" on N selected rows at once). */
+export const useBulkUpdateInboxItemsMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, ApiError, { ids: number[]; isDone?: boolean; isSaved?: boolean }>({
+    mutationFn: ({ ids, isDone, isSaved }) => inboxApi.bulkUpdateInboxItems({ ids, isDone, isSaved }),
+    onSuccess: (_data, { ids }) => {
+      // Invalidate the inbox list/summary, plus each affected item's own detail query — same
+      // reasoning as the single-item mark-done/save mutations above, just fanned out over ids.
+      queryClient.invalidateQueries({ queryKey: inboxKeys.items });
+      queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
+      ids.forEach((itemId) => {
+        queryClient.invalidateQueries({ queryKey: [...inboxKeys.detail, itemId] });
+      });
+    },
+  });
+};

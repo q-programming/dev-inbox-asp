@@ -6,7 +6,16 @@ namespace DevInbox.Web.Features.Inbox.Domain;
 public interface IInboxItemRepository : IRepository<InboxItem>
 {
     IQueryable<InboxItem> Query();
-    Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(int page, int size, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason);
+    Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(int page, int size, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason, InboxSort? sort = null);
+
+    /// <summary>
+    /// Applies the same isDone/isSaved overlay update to every item in <paramref name="ids"/> that
+    /// belongs to <paramref name="userId"/> — ids that don't exist or belong to another user are
+    /// silently skipped rather than failing the whole batch, matching the multi-tenant scoping every
+    /// other inbox item query already enforces. A null flag leaves that field untouched, so callers
+    /// can update isDone and isSaved independently or together in the same request.
+    /// </summary>
+    Task BulkUpdateStateAsync(long userId, IReadOnlyCollection<long> ids, bool? isDone, bool? isSaved);
 
     Task<InboxItem?> GetByIdForUserAsync(long id, long userId);
 
@@ -55,5 +64,13 @@ public interface IInboxItemRepository : IRepository<InboxItem>
     /// <param name="source">The source of the inbox items to delete.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task DeleteBySourceAsync(long userId, ItemSource source, string? organization = null);
+
+    /// <summary>
+    /// Cascades the closed/done state of the given (already-updated) parent items onto any note
+    /// attached to them — e.g. once a PR is merged/closed (and thus auto-marked done), the note a
+    /// user attached to it should follow suit instead of lingering as an unfinished, still-open item.
+    /// A no-op for parents with no attached note.
+    /// </summary>
+    Task SyncAttachedNotesStateAsync(IEnumerable<InboxItem> parentItems);
 }
 

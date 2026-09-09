@@ -75,7 +75,7 @@ public class GitHubService(
         // last successful sync time so both new activity and a close/merge in the meantime surface.
         var isInitialSync = updatedSince is null;
 
-        logger.LogInformation(
+        logger.LogDebug(
             "[GitHub] Starting {SyncKind} sync for {GitHubLogin}",
             isInitialSync ? "initial (open PRs only)" : $"incremental (since {updatedSince:O})", profile.GitHubLogin);
 
@@ -96,11 +96,11 @@ public class GitHubService(
             return [];
         }
 
-        logger.LogInformation(
+        logger.LogDebug(
             "[GitHub] Fetched {Count} pull request(s) involving {GitHubLogin}",
             pullRequests.Count, profile.GitHubLogin);
 
-        logger.LogInformation(
+        logger.LogDebug(
             "[GitHub] Synchronization completed for {GitHubLogin}",
             profile.GitHubLogin);
         return await UpsertInboxItemsAsync(profile, pullRequests);
@@ -157,7 +157,12 @@ public class GitHubService(
             await inboxItemRepository.SaveChangesAsync();
         }
 
-        logger.LogInformation(
+        if (updatedItems.Count > 0)
+        {
+            await inboxItemRepository.SyncAttachedNotesStateAsync(updatedItems);
+        }
+
+        logger.LogDebug(
             "[GitHub] Upserted inbox items for {GitHubLogin}: {NewCount} new, {UpdatedCount} updated, {UnchangedCount} unchanged",
             profile.GitHubLogin, newItems.Count, updatedItems.Count, pullRequests.Count - newItems.Count - updatedItems.Count);
         return [

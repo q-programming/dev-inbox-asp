@@ -6,9 +6,14 @@ namespace DevInbox.Web.Features.Inbox;
 public class InboxController(IInboxService inboxService) : IInboxBaseController, IComponent
 {
     private InboxMapper _inboxMapper = new();
-    public Task<InboxPage> ListInboxItemsAsync(int page, int size, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason)
+    public Task<InboxPage> ListInboxItemsAsync(int page, int size, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason, InboxSort? sort)
     {
-        return inboxService.ListInboxItemsAsync(page, size, source, itemType, status, reason);
+        return inboxService.ListInboxItemsAsync(page, size, source, itemType, status, reason, sort);
+    }
+
+    public Task BulkUpdateInboxItemsAsync(BulkInboxItemUpdateRequest body)
+    {
+        return inboxService.BulkUpdateInboxItemsAsync(body.Ids, body.IsDone, body.IsSaved);
     }
 
     public Task<InboxItemDetail> GetInboxItemAsync(long id)

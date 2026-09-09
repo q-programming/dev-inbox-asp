@@ -29,6 +29,8 @@ beforeEach(() => {
   useInboxStore.setState({
     status: undefined,
     selectedItemId: undefined,
+    selectedIds: new Set(),
+    selectionMode: false,
     openItem: (itemId) => useInboxStore.setState({ selectedItemId: itemId }),
     closeItem: () => useInboxStore.setState({ selectedItemId: undefined }),
     clear: () => useInboxStore.setState({ status: undefined, selectedItemId: undefined }),
@@ -109,6 +111,92 @@ describe('InboxItem', () => {
       renderWithProviders(<InboxItem item={makeInboxItem({ id: 123 })} />);
 
       expect(screen.getByTestId('inbox-item').className).not.toMatch(/Mui-selected/);
+    });
+  });
+
+  describe('selection checkbox', () => {
+    it('is hidden by default when not in selection mode', () => {
+      renderWithProviders(<InboxItem item={makeInboxItem({ id: 55 })} />);
+
+      expect(screen.queryByTestId('inbox-item-select-checkbox')).toBeNull();
+    });
+
+    it('is shown, unchecked, once selection mode is active, and calls toggleItemSelected without opening the item on click', async () => {
+      const user = userEvent.setup();
+      const openItem = vi.fn();
+      const toggleItemSelected = vi.fn();
+      useInboxStore.setState({
+        openItem,
+        toggleItemSelected,
+        selectedIds: new Set(),
+        selectionMode: true,
+      });
+
+      renderWithProviders(<InboxItem item={makeInboxItem({ id: 55 })} />);
+
+      const checkbox = screen.getByTestId('inbox-item-select-checkbox').querySelector('input')!;
+      expect(checkbox).not.toBeChecked();
+
+      await user.click(checkbox);
+
+      expect(toggleItemSelected).toHaveBeenCalledWith(55);
+      expect(openItem).not.toHaveBeenCalled();
+    });
+
+    it('renders checked when the item id is in the store selectedIds set, even without selectionMode explicitly set', () => {
+      useInboxStore.setState({ selectedIds: new Set([123]) });
+
+      renderWithProviders(<InboxItem item={makeInboxItem({ id: 123 })} />);
+
+      const checkbox = screen.getByTestId('inbox-item-select-checkbox').querySelector('input')!;
+      expect(checkbox).toBeChecked();
+    });
+  });
+
+  describe('long press to enter selection mode', () => {
+    it('enters selection mode and selects the item after a long press', () => {
+      vi.useFakeTimers();
+      const enterSelectionMode = vi.fn();
+      useInboxStore.setState({ enterSelectionMode });
+
+      renderWithProviders(<InboxItem item={makeInboxItem({ id: 321 })} />);
+
+      const row = screen.getByTestId('inbox-item');
+      row.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 }));
+      vi.advanceTimersByTime(500);
+
+      expect(enterSelectionMode).toHaveBeenCalledWith(321);
+      vi.useRealTimers();
+    });
+
+    it('does not enter selection mode nor open the item on a normal short click', async () => {
+      const user = userEvent.setup();
+      const enterSelectionMode = vi.fn();
+      const openItem = vi.fn();
+      useInboxStore.setState({ enterSelectionMode, openItem });
+
+      renderWithProviders(<InboxItem item={makeInboxItem({ id: 321 })} />);
+
+      await user.click(screen.getByTestId('inbox-item'));
+
+      expect(enterSelectionMode).not.toHaveBeenCalled();
+      expect(openItem).toHaveBeenCalledWith(321);
+    });
+
+    it('cancels the pending long press when the pointer is released early', () => {
+      vi.useFakeTimers();
+      const enterSelectionMode = vi.fn();
+      useInboxStore.setState({ enterSelectionMode });
+
+      renderWithProviders(<InboxItem item={makeInboxItem({ id: 321 })} />);
+
+      const row = screen.getByTestId('inbox-item');
+      row.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 }));
+      row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      vi.advanceTimersByTime(500);
+
+      expect(enterSelectionMode).not.toHaveBeenCalled();
+      vi.useRealTimers();
     });
   });
 

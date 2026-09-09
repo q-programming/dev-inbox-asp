@@ -1,4 +1,4 @@
-import { InboxReason, ItemSource, ItemType } from '@api';
+import { InboxReason, InboxSort, ItemSource, ItemType } from '@api';
 import { describe, expect, it } from 'vitest';
 import { buildInboxSearch, parseInboxFilter } from './inboxFilter';
 
@@ -65,6 +65,18 @@ describe('inboxFilter utilities', () => {
         itemType: ItemType.PR,
         reason: undefined,
       });
+    });
+
+    it('should build and round-trip a sort value alongside other filters', () => {
+      const filter = { source: ItemSource.Github, sort: InboxSort.PriorityDesc };
+      const search = buildInboxSearch(filter);
+
+      expect(search).toContain('sort=PriorityDesc');
+      expect(parseInboxFilter(new URLSearchParams(search.slice(1)))).toEqual(filter);
+    });
+
+    it('should leave sort undefined when not present in the query string', () => {
+      expect(parseInboxFilter(new URLSearchParams('source=Github')).sort).toBeUndefined();
     });
   });
 });

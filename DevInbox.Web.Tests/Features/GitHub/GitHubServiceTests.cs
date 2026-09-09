@@ -346,6 +346,29 @@ public class GitHubServiceTests
         await _inboxItemRepository.Received(1).SaveChangesAsync();
     }
 
+    [Fact(DisplayName = "SyncUserPRAsync should cascade the closed/done state onto any note attached to a PR that just closed")]
+    public async Task SyncUserPRAsyncShouldCascadeClosedStateToAttachedNoteAsync()
+    {
+        var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
+        _profileRepository.GetByUserIdAsync(1).Returns(profile);
+        var pr = BuildPr(number: 1, repo: "r/r", authorLogin: "octocat", state: "MERGED");
+        SetupSearch(profile, [pr]);
+
+        var existing = BuildInboxItem(repository: "r/r", externalId: "1", inboxId: 1);
+        existing.State.IsDone = false;
+        existing.State.IsClosed = false;
+
+        _inboxItemRepository.GetExistingItemsAsync(Arg.Any<long>(), Arg.Any<DomainItemSource>(), Arg.Any<DomainItemType>(), Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(new List<InboxItem> { existing });
+
+        await _service.SyncUserPRAsync(1, DateTimeOffset.UtcNow);
+
+        // The attached-note cascade lives in the repository (integration-tested there); here we
+        // just verify the service asks for it, passing along the item that just got closed/done.
+        await _inboxItemRepository.Received(1).SyncAttachedNotesStateAsync(
+            Arg.Is<IEnumerable<InboxItem>>(items => items.Contains(existing)));
+    }
+
     [Fact(DisplayName = "SyncUserPRAsync should update existing item and clear done/closed flags when the PR was reopened")]
     public async Task SyncUserPRAsyncShouldMarkUnreadWhenReopenedAsync()
     {

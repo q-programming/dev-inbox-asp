@@ -3,6 +3,7 @@ import { parseInboxFilter } from "@feature/inbox/utils/inboxFilter";
 import CircularProgress from "@mui/material/CircularProgress";
 import List from "@mui/material/List";
 import InboxItem from "../inboxItem/InboxItem";
+import InboxListHeader from "./InboxListHeader";
 import { useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useInfiniteScrollTrigger } from "@shared/hooks/useInfiniteScrollTrigger";
@@ -46,32 +47,41 @@ const InboxList = () => {
 
   return (
     <Box
-      ref={scrollContainerRef}
-      sx={{ height: '100%', overflowY: 'auto' }}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+      }}
     >
-      <List
-        data-testid="inbox-list"
-        disablePadding
-        sx={{ bgcolor: 'background.default' }}
+      <InboxListHeader />
+      <Box
+        ref={scrollContainerRef}
+        sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}
       >
-        {items.map((item) => (
-          <InboxItem
-            key={item.id}
-            item={item}
-          />
-        ))}
-      </List>
-
-      {/* Sentinel — pulls in the next page once it scrolls into view; removed once no more pages remain. */}
-      {hasNextPage && (
-        <Box
-          ref={sentinelRef}
-          data-testid="inbox-list-load-more-sentinel"
-          sx={{ display: 'flex', justifyContent: 'center', py: 2 }}
+        <List
+          data-testid="inbox-list"
+          disablePadding
+          sx={{ bgcolor: 'background.default' }}
         >
-          <CircularProgress size={24} />
-        </Box>
-      )}
+          {items.map((item) => (
+            <InboxItem
+              key={item.id}
+              item={item}
+            />
+          ))}
+        </List>
+
+        {/* Sentinel — pulls in the next page once it scrolls into view; removed once no more pages remain. */}
+        {hasNextPage && (
+          <Box
+            ref={sentinelRef}
+            data-testid="inbox-list-load-more-sentinel"
+            sx={{ display: 'flex', justifyContent: 'center', py: 2 }}
+          >
+            <CircularProgress size={24} />
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 };

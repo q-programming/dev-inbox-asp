@@ -10,6 +10,7 @@ using InboxEntity = DevInbox.Web.Features.Inbox.Domain.Inbox;
 using GeneratedItemSource = DevInbox.Web.Infrastructure.OpenApi.Generated.ItemSource;
 using GeneratedInboxItemDetail = DevInbox.Web.Infrastructure.OpenApi.Generated.InboxItemDetail;
 using InboxSummary = DevInbox.Web.Infrastructure.OpenApi.Generated.InboxSummary;
+using GeneratedInboxSort = DevInbox.Web.Infrastructure.OpenApi.Generated.InboxSort;
 
 namespace DevInbox.Web.Tests.Features.Inbox;
 
@@ -194,6 +195,20 @@ public class InboxServiceTests
         Assert.Equal(0, result.TotalElements);
     }
 
+    [Fact(DisplayName = "ListInboxItemsAsync should forward the requested sort order to the repository")]
+    public async Task ListInboxItemsAsyncShouldForwardSortToRepositoryAsync()
+    {
+        _ = _inboxItemRepository
+            .GetInboxItemsFilteredAsync(0, 20, UserId, null, null, null, null, GeneratedInboxSort.PriorityDesc)
+            .Returns(([], 0L));
+
+        var result = await _service.ListInboxItemsAsync(0, 20, null, null, null, null, GeneratedInboxSort.PriorityDesc);
+
+        Assert.Equal(0, result.TotalElements);
+        await _inboxItemRepository.Received(1)
+            .GetInboxItemsFilteredAsync(0, 20, UserId, null, null, null, null, GeneratedInboxSort.PriorityDesc);
+    }
+
     // ── GetInboxItemByIdAsync ─────────────────────────────────────────────────
 
     [Fact(DisplayName = "GetInboxItemByIdAsync should return detail dto and populate it via the detail service")]
@@ -334,4 +349,27 @@ public class InboxServiceTests
 
         await _inboxItemRepository.DidNotReceive().UpdateAsync(Arg.Any<InboxItem>());
     }
+
+    // ── BulkUpdateInboxItemsAsync ─────────────────────────────────────────────
+
+    [Fact(DisplayName = "BulkUpdateInboxItemsAsync should forward the current user and requested ids/flags to the repository")]
+    public async Task BulkUpdateInboxItemsAsyncShouldForwardToRepositoryAsync()
+    {
+        long[] ids = [5, 6, 7];
+
+        await _service.BulkUpdateInboxItemsAsync(ids, isDone: true, isSaved: null);
+
+        await _inboxItemRepository.Received(1).BulkUpdateStateAsync(UserId, ids, true, null);
+    }
+
+    [Fact(DisplayName = "BulkUpdateInboxItemsAsync should support updating isSaved only, leaving isDone untouched")]
+    public async Task BulkUpdateInboxItemsAsyncShouldForwardIsSavedOnlyAsync()
+    {
+        long[] ids = [1, 2];
+
+        await _service.BulkUpdateInboxItemsAsync(ids, isDone: null, isSaved: false);
+
+        await _inboxItemRepository.Received(1).BulkUpdateStateAsync(UserId, ids, null, false);
+    }
 }
+

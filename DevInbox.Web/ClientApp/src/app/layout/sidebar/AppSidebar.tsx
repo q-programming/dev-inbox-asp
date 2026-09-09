@@ -79,12 +79,16 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
         return summary.myPullRequests;
       case 'ado-items':
         return summary.adoItems;
+      case 'github-items':
+        return summary.githubItems;
       case 'notes':
         return summary.notes;
       case 'saved':
         return summary.saved;
       case 'needs-attention':
         return summary.needsAttention;
+      case 'assigned':
+        return summary.assignedTo;
       case 'stale':
         return summary.stale;
       default:
@@ -94,7 +98,15 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
 
   const focusItems = useMemo(
     () =>
-      [...CORE_FOCUS_ITEMS, ...INTEGRATION_FOCUS_ITEMS, ...BOTTOM_FOCUS_ITEMS].map((item) => ({
+      [...CORE_FOCUS_ITEMS, ...BOTTOM_FOCUS_ITEMS].map((item) => ({
+        ...item,
+        count: getCountForItem(item.id, summary),
+      })),
+    [summary],
+  );
+  const integrationItems = useMemo(
+    () =>
+      INTEGRATION_FOCUS_ITEMS.map((item) => ({
         ...item,
         count: getCountForItem(item.id, summary),
       })),
@@ -131,6 +143,21 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
       <SectionLabel label="Focus" collapsed={collapsed} />
       <List disablePadding dense>
         {focusItems.map((item) => (
+          <NavRow
+            key={item.id}
+            item={item}
+            activeId={activeId}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
+        ))}
+      </List>
+
+      <Divider sx={{ marginY: 1 }} />
+
+      <SectionLabel label="Integrations" collapsed={collapsed} />
+      <List disablePadding dense>
+        {integrationItems.map((item) => (
           <NavRow
             key={item.id}
             item={item}

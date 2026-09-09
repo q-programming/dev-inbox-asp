@@ -1,23 +1,31 @@
 import type { InboxItemSummary } from '@api';
 import { formatRelativeTime } from '@utils/date';
+import { useMemo, useRef } from 'react';
 
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
 import ListItemButton from '@mui/material/ListItemButton';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
-import EditNoteIcon from '@mui/icons-material/EditNote';
 
-import InboxItemBadges from '../inboxItemBadge/InboxItemBadge';
-import InboxItemIcon from '../inboxItemIcon/InboxItemIcon';
+import { Density, ItemType } from '@api';
 import { useInboxStore } from '@feature/inbox/store/inbox.store';
 import useSettingsStore from '@feature/settings/store/settings.store';
-import { Density } from '@api';
+import { useTheme } from '@mui/material';
+import InboxItemBadges from '../inboxItemBadge/InboxItemBadge';
+import InboxItemIcon from '../inboxItemIcon/InboxItemIcon';
 
 interface IInboxItem {
   item: InboxItemSummary;
 }
+
+/** Long-press duration (ms) required to enter selection mode — mirrors the typical mobile
+ * "long press to select" gesture, and is deliberately long enough to not trigger on a normal
+ * click-to-open tap. */
+const LONG_PRESS_MS = 500;
 
 /**
  * Row vertical spacing per density level — mirrors the ratios shown in the Settings preview cards.
@@ -31,7 +39,13 @@ const DENSITY_ROW_STYLES: Record<
 > = {
   [Density.Relaxed]: { py: 1.25, minHeight: 68, gap: 1.5, rowMarginTop: 0.5, stackOnMobile: true },
   [Density.Tight]: { py: 0.75, minHeight: 52, gap: 1, rowMarginTop: 0.25, stackOnMobile: true },
-  [Density.SuperTight]: { py: 0.375, minHeight: 40, gap: 0.75, rowMarginTop: 0.125, stackOnMobile: false },
+  [Density.SuperTight]: {
+    py: 0.375,
+    minHeight: 40,
+    gap: 0.75,
+    rowMarginTop: 0.125,
+    stackOnMobile: false,
+  },
 };
 
 /** Fixed gap between the unread dot and source icon — kept constant across densities so the two
@@ -39,16 +53,79 @@ const DENSITY_ROW_STYLES: Record<
 const LEADING_GAP = 0.75;
 
 const InboxItem = ({ item }: IInboxItem) => {
-  const { openItem, selectedItemId } = useInboxStore();
+  const theme = useTheme();
+  const { openItem, selectedItemId, selectedIds, selectionMode, toggleItemSelected, enterSelectionMode } =
+    useInboxStore();
   const density = useSettingsStore((state) => state.density);
   const isSelected = selectedItemId === item.id;
+  const isChecked = item.id != null && selectedIds.has(item.id);
+  const showCheckbox = selectionMode || isChecked;
   const { py, minHeight, gap, rowMarginTop, stackOnMobile } = DENSITY_ROW_STYLES[density];
+
+  const longPressTimer = useRef<ReturnType<typeof setTimeout>>();
+  const longPressTriggered = useRef(false);
+
+  const clearLongPressTimer = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = undefined;
+    }
+  };
+
+  const startLongPress = () => {
+    longPressTriggered.current = false;
+    clearLongPressTimer();
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      if (item.id != null) {
+        enterSelectionMode(item.id);
+      }
+    }, LONG_PRESS_MS);
+  };
+
+  const type = useMemo(() => {
+    switch (item.itemType) {
+      case ItemType.PR:
+        return (
+          <Box
+            component="img"
+            src={`/git-pull-request.svg`}
+            sx={{
+              width: 16,
+              height: 16,
+              filter: theme.palette.mode === 'dark' ? 'invert(1) brightness(2)' : 'none',
+              opacity: 0.75,
+            }}
+          />
+        );
+      case ItemType.WorkItem:
+      case ItemType.Issue:
+        return '#';  
+      default:
+        return '';
+    }
+  }, [item.itemType]);
 
   return (
     <ListItemButton
       data-testid="inbox-item"
       selected={isSelected}
-      onClick={() => openItem(item?.id)}
+      onClick={() => {
+        if (longPressTriggered.current) {
+          longPressTriggered.current = false;
+          return;
+        }
+        openItem(item?.id);
+      }}
+      onPointerDown={(event) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) {
+          return;
+        }
+        startLongPress();
+      }}
+      onPointerUp={clearLongPressTimer}
+      onPointerLeave={clearLongPressTimer}
+      onPointerCancel={clearLongPressTimer}
       divider
       sx={{
         alignItems: 'stretch',
@@ -73,6 +150,21 @@ const InboxItem = ({ item }: IInboxItem) => {
           flexShrink: 0,
         }}
       >
+        {showCheckbox && (
+          <Checkbox
+            data-testid="inbox-item-select-checkbox"
+            size="small"
+            checked={isChecked}
+            onClick={(event) => event.stopPropagation()}
+            onChange={() => {
+              if (item.id != null) {
+                toggleItemSelected(item.id);
+              }
+            }}
+            sx={{ p: 0.25 }}
+          />
+        )}
+
         <Box
           sx={{
             width: 8,
@@ -178,6 +270,22 @@ const InboxItem = ({ item }: IInboxItem) => {
               flex: { xs: stackOnMobile ? undefined : 1, sm: 1 },
             }}
           >
+            {!!item.externalId && (
+              <Typography
+                variant="body2"
+                sx={{
+                  display: 'flex', alignItems: 'center', gap: 0.25,
+                  color: 'text.secondary',
+                  fontSize: '0.75rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '100%',
+                }}
+              >
+                {type}{item.externalId}
+              </Typography>
+            )}
             {!!item.repository && (
               <Typography
                 variant="body2"
@@ -208,7 +316,9 @@ const InboxItem = ({ item }: IInboxItem) => {
               }}
             >
               {!!item.commentCount && (
-                <Tooltip title={`${item.commentCount} comment${item.commentCount === 1 ? '' : 's'}`}>
+                <Tooltip
+                  title={`${item.commentCount} comment${item.commentCount === 1 ? '' : 's'}`}
+                >
                   <Box
                     data-testid="inbox-item-comment-count"
                     sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}

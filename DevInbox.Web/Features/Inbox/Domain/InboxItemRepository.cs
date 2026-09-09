@@ -31,7 +31,7 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
             .LongCountAsync();
     }
 
-    public async Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(int page, int size, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason)
+    public async Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(int page, int size, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason, InboxSort? sort = null)
     {
         // Closed items (fully done with, e.g. a merged/closed PR) are excluded from every other
         // view — they only ever show up when the caller explicitly asks for the Closed status.
@@ -76,8 +76,19 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
 
         var totalElements = await query.LongCountAsync();
 
-        var items = await query
-            .OrderByDescending(i => i.ActivityAt)
+        // Every sort keeps ActivityAt desc as a stable tie-breaker/secondary key, so items with equal
+        // priority/comment counts/etc. still fall back to the original "most recently active" order
+        // instead of an arbitrary (and unstable across pages) database order.
+        var orderedQuery = sort switch
+        {
+            InboxSort.ActivityAsc => query.OrderBy(i => i.ActivityAt),
+            InboxSort.PriorityDesc => query.OrderByDescending(i => i.State.Priority).ThenByDescending(i => i.ActivityAt),
+            InboxSort.CreatedDesc => query.OrderByDescending(i => i.CreatedAt),
+            InboxSort.CommentsDesc => query.OrderByDescending(i => i.CommentCount).ThenByDescending(i => i.ActivityAt),
+            _ => query.OrderByDescending(i => i.ActivityAt),
+        };
+
+        var items = await orderedQuery
             .Skip(page * size)
             .Take(size)
             .ToListAsync();
@@ -85,6 +96,37 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
         await PopulateHasNoteAsync(items);
 
         return (items, totalElements);
+    }
+
+    public async Task BulkUpdateStateAsync(long userId, IReadOnlyCollection<long> ids, bool? isDone, bool? isSaved)
+    {
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        var items = await Set
+            .Include(i => i.State)
+            .Where(i => i.InboxId == userId && ids.Contains(i.Id))
+            .ToListAsync();
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var item in items)
+        {
+            if (isDone.HasValue)
+            {
+                item.State.IsDone = isDone.Value;
+            }
+
+            if (isSaved.HasValue)
+            {
+                item.State.IsSaved = isSaved.Value;
+            }
+
+            item.State.UpdatedAt = now;
+        }
+
+        await Context.SaveChangesAsync();
     }
 
     public async Task<InboxItem?> GetByIdForUserAsync(long id, long userId)
@@ -150,6 +192,37 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
         {
             item.HasNote = idsWithNotes.Contains(item.Id);
         }
+    }
+
+    public async Task SyncAttachedNotesStateAsync(IEnumerable<InboxItem> parentItems)
+    {
+        var parentsById = parentItems.ToDictionary(i => i.Id);
+        if (parentsById.Count == 0)
+        {
+            return;
+        }
+
+        var attachedNotes = await dbContext.Notes
+            .Include(note => note.InboxItem)
+            .ThenInclude(item => item.State)
+            .Where(note => note.AttachedToInboxItemId != null && parentsById.Keys.Contains(note.AttachedToInboxItemId.Value))
+            .ToListAsync();
+
+        if (attachedNotes.Count == 0)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var note in attachedNotes)
+        {
+            var parent = parentsById[note.AttachedToInboxItemId!.Value];
+            note.InboxItem.State.IsDone = parent.State.IsDone;
+            note.InboxItem.State.IsClosed = parent.State.IsClosed;
+            note.InboxItem.State.UpdatedAt = now;
+        }
+
+        await Context.SaveChangesAsync();
     }
 
     public async Task DeleteBySourceAsync(long userId, ItemSource source, string? organization = null)

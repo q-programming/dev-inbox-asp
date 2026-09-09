@@ -42,7 +42,7 @@ const NavRow = memo(({ item, activeId, collapsed, onNavigate }: NavRowProps) => 
   const { minHeight, marginY } = DENSITY_NAV_ROW_STYLES[density];
   const icon =
     typeof item.icon === 'string' ? (
-      <IntegrationIcon integration={item.icon} size={20} />
+      <IntegrationIcon integration={item.icon} size={20} active={isActive} />
     ) : (
       item.icon
     );

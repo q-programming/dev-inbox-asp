@@ -309,6 +309,11 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/InboxReason"
+        - name: sort
+          in: query
+          description: Sort order for the returned page. Defaults to most recently active first.
+          schema:
+            $ref: "#/components/schemas/InboxSort"
 
       responses:
         "200":
@@ -317,6 +322,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InboxPage"
+
+  /inbox/bulk:
+    patch:
+      operationId: bulkUpdateInboxItems
+      tags: [inbox]
+      summary: Bulk-update the done/saved state of a set of inbox items belonging to the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkInboxItemUpdateRequest"
+      responses:
+        "204":
+          description: Items updated
+        "400":
+          description: No item ids provided
 
   /inbox/status:
     get:
@@ -771,6 +793,10 @@ components:
             type: integer
             format: int64
             description: Number of inbox items that are saved and not done
+          assignedTo:
+            type: integer
+            format: int64
+            description: Number of inbox items that are assigned to current user
           needsAttention:
             type: integer
             format: int64
@@ -795,6 +821,10 @@ components:
             type: integer
             format: int64
             description: Number of inbox items that are ADO items
+          githubItems:
+            type: integer
+            format: int64
+            description: Number of inbox items that are GitHub items and not done
           newItemsSinceLastSync:
             type: integer
             description: Number of new items since last sync            
@@ -810,6 +840,8 @@ components:
         id:
           type: integer
           format: int64
+        externalId:
+          type: string
         sourceType:
           $ref: "#/components/schemas/ItemSource"
         itemType:
@@ -1144,6 +1176,31 @@ components:
     InboxReason:
       type: string
       enum: [Unknown, ReviewRequested, Mentioned, Assigned, Authored, FollowUp, Note]
+
+    InboxSort:
+      type: string
+      description: >
+        Sort order applied to a listInboxItems page. ActivityDesc (most recently active first) is
+        the default when omitted, matching the inbox's original "what changed" ordering.
+      enum: [ActivityDesc, ActivityAsc, PriorityDesc, CreatedDesc, CommentsDesc]
+
+    BulkInboxItemUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+          minItems: 1
+        isDone:
+          type: boolean
+          nullable: true
+        isSaved:
+          type: boolean
+          nullable: true
 
     # ── Notes ──────────────────────────────────────────────────
     CreateNoteRequest:
