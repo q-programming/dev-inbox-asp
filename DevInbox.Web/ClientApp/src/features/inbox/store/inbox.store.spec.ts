@@ -12,6 +12,7 @@ beforeEach(() => {
   localStorage.clear();
   useInboxStore.setState({
     status: undefined,
+    itemIds: [],
     selectedItemId: undefined,
     selectedIds: new Set(),
     selectionMode: false,
@@ -133,8 +134,20 @@ describe('useInboxStore', () => {
     });
   });
 
+  describe('itemIds', () => {
+    it('should default to an empty array', () => {
+      expect(useInboxStore.getState().itemIds).toEqual([]);
+    });
+
+    it('should replace the id list', () => {
+      useInboxStore.getState().setItemIds([1, 2, 3]);
+
+      expect(useInboxStore.getState().itemIds).toEqual([1, 2, 3]);
+    });
+  });
+
   describe('localStorage persistence', () => {
-    it('should persist status and selectedItemId after actions', () => {
+    it('should persist status but NOT selectedItemId', () => {
       useInboxStore.getState().setStatus(createStatus({ version: 5 }));
       useInboxStore.getState().openItem(77);
 
@@ -148,10 +161,10 @@ describe('useInboxStore', () => {
           version: 5,
         }),
       );
-      expect(parsed.state.selectedItemId).toBe(77);
+      expect(parsed.state.selectedItemId).toBeUndefined();
     });
 
-    it('should persist cleared values as undefined state fields', () => {
+    it('should persist cleared status as undefined', () => {
       useInboxStore.getState().setStatus(createStatus({ version: 2 }));
       useInboxStore.getState().openItem(11);
 
@@ -162,7 +175,6 @@ describe('useInboxStore', () => {
       const parsed = JSON.parse(raw!);
 
       expect(parsed.state.status).toBeUndefined();
-      expect(parsed.state.selectedItemId).toBeUndefined();
     });
 
     it('should not persist selectedIds — a reload should never restore a stale multi-selection', () => {
@@ -173,6 +185,16 @@ describe('useInboxStore', () => {
       const parsed = JSON.parse(raw!);
 
       expect(parsed.state.selectedIds).toBeUndefined();
+    });
+
+    it('should not persist itemIds — it is a live mirror of the current query, not user data', () => {
+      useInboxStore.getState().setItemIds([1, 2, 3]);
+
+      const raw = localStorage.getItem(INBOX_STORAGE_KEY);
+      expect(raw).not.toBeNull();
+      const parsed = JSON.parse(raw!);
+
+      expect(parsed.state.itemIds).toBeUndefined();
     });
   });
 });

@@ -83,10 +83,23 @@ public class InboxService(
     }
 
 
-    public async Task<InboxPage> ListInboxItemsAsync(int page, int size, Infrastructure.OpenApi.Generated.ItemSource? source, Infrastructure.OpenApi.Generated.ItemType? itemType, ItemStatus? status, Infrastructure.OpenApi.Generated.InboxReason? reason, InboxSort? sort = null)
+    public async Task<InboxPage> ListInboxItemsAsync(
+        PageRequest pageRequest,
+        Infrastructure.OpenApi.Generated.ItemSource? source,
+        Infrastructure.OpenApi.Generated.ItemType? itemType,
+        ItemStatus? status,
+        Infrastructure.OpenApi.Generated.InboxReason? reason,
+        string? searchTerm)
     {
         var userId = GetCurrentUserId();
-        var (items, totalElements) = await inboxItemRepository.GetInboxItemsFilteredAsync(page, size, userId, (ItemSource?)source, (ItemType?)itemType, status, (InboxReason?)reason, sort);
+        var (items, totalElements) = await inboxItemRepository.GetInboxItemsFilteredAsync(
+            pageRequest,
+            userId,
+            (ItemSource?)source,
+            (ItemType?)itemType,
+            status,
+            (InboxReason?)reason,
+            searchTerm);
 
         return new InboxPage
         {
@@ -94,8 +107,8 @@ public class InboxService(
                 .Select(_inboxMapper.ToDto)
                 .ToList(),
             TotalElements = totalElements,
-            Page = page,
-            Size = size
+            Page = pageRequest.Page,
+            Size = pageRequest.Size
         };
     }
 

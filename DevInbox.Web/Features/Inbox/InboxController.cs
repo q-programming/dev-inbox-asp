@@ -5,10 +5,35 @@ namespace DevInbox.Web.Features.Inbox;
 
 public class InboxController(IInboxService inboxService) : IInboxBaseController, IComponent
 {
+    private const int MinimumSearchTermLength = 2;
+    private const int MaximumSearchTermLength = 200;
+
     private InboxMapper _inboxMapper = new();
-    public Task<InboxPage> ListInboxItemsAsync(int page, int size, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason, InboxSort? sort)
+
+    public Task<InboxPage> ListInboxItemsAsync(
+        int page,
+        int size,
+        InboxSort? sort,
+        ItemSource? source,
+        ItemType? itemType,
+        ItemStatus? status,
+        InboxReason? reason,
+        string? term)
     {
-        return inboxService.ListInboxItemsAsync(page, size, source, itemType, status, reason, sort);
+        if (term is not null &&
+            (term.Length < MinimumSearchTermLength || term.Length > MaximumSearchTermLength))
+        {
+            throw new BadRequestException(
+                $"The inbox search term must contain between {MinimumSearchTermLength} and {MaximumSearchTermLength} characters.");
+        }
+
+        return inboxService.ListInboxItemsAsync(
+            new Domain.PageRequest { Page = page, Size = size, Sort = sort ?? InboxSort.ActivityDesc },
+            source,
+            itemType,
+            status,
+            reason,
+            term);
     }
 
     public Task BulkUpdateInboxItemsAsync(BulkInboxItemUpdateRequest body)

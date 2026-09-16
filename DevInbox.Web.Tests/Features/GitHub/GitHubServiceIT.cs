@@ -7,6 +7,7 @@ using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.FeatureManagement;
 using NSubstitute;
 using DomainInboxReason = DevInbox.Web.Features.Inbox.Domain.InboxReason;
 using DomainItemSource = DevInbox.Web.Features.Inbox.Domain.ItemSource;
@@ -54,7 +55,7 @@ public class GitHubServiceIT : DatabaseIntegrationTest
 
         _service = new GitHubService(
             new GitHubProfileRepository(DataBase),
-            new InboxItemRepository(DataBase),
+            new InboxItemRepository(DataBase, Substitute.For<IFeatureManager>()),
             _gitHubClient,
             NullLogger<GitHubService>.Instance);
     }

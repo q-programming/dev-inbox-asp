@@ -5,14 +5,18 @@ using DevInbox.Web.Features.Inbox;
 using DevInbox.Web.Features.Inbox.Details;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Features.Notes.Domain;
+using DevInbox.Web.Features.Inbox.Config;
+using DevInbox.Web.Features.Inbox.Exceptions;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.FeatureManagement;
 using NSubstitute;
 using InboxEntity = DevInbox.Web.Features.Inbox.Domain.Inbox;
 using GeneratedItemSource = DevInbox.Web.Infrastructure.OpenApi.Generated.ItemSource;
 using GeneratedInboxItemDetail = DevInbox.Web.Infrastructure.OpenApi.Generated.InboxItemDetail;
 using GeneratedInboxSort = DevInbox.Web.Infrastructure.OpenApi.Generated.InboxSort;
+using PageRequest = DevInbox.Web.Features.Inbox.Domain.PageRequest;
 
 namespace DevInbox.Web.Tests.Features.Inbox;
 
@@ -47,12 +51,27 @@ public class InboxServiceIT : DatabaseIntegrationTest
         await DataBase.SaveChangesAsync();
 
         var accessor = CreateAccessorWithClaim(_user.Id);
-        _inboxItemRepository = new InboxItemRepository(DataBase);
+        _inboxItemRepository = CreateInboxItemRepository();
         _service = new InboxService(
             new InboxRepository(DataBase),
             _inboxItemRepository,
             _detailService,
             accessor);
+    }
+
+    /// <summary>
+    /// Builds an <see cref="InboxItemRepository"/> with the search-scope guard's feature flag and
+    /// candidate threshold overridable per test — defaults match production (guard off,
+    /// <see cref="InboxItemRepository.MaxSearchCandidates"/>'s built-in 10000) so most tests don't
+    /// need to think about it.
+    /// </summary>
+    private InboxItemRepository CreateInboxItemRepository(bool searchScopeGuardEnabled = false, int? maxCandidates = null)
+    {
+        var featureManager = Substitute.For<IFeatureManager>();
+        featureManager.IsEnabledAsync(InboxFeatureFlags.SearchScopeGuard).Returns(searchScopeGuardEnabled);
+        return maxCandidates.HasValue
+            ? new InboxItemRepository(DataBase, featureManager) { MaxSearchCandidates = maxCandidates.Value }
+            : new InboxItemRepository(DataBase, featureManager);
     }
 
     public override async Task DisposeAsync()
@@ -146,7 +165,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
         await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.Issue, InboxReason.Mentioned, activityAt: DateTimeOffset.UtcNow.AddMinutes(-2));
         await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned, activityAt: DateTimeOffset.UtcNow.AddMinutes(-3));
 
-        var result = await _service.ListInboxItemsAsync(0, 1, GeneratedItemSource.Github, null, null, null);
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 1 }, GeneratedItemSource.Github, null, null, null, null);
 
         Assert.Equal(2, result.TotalElements);
         _ = Assert.Single(result.Items);
@@ -160,7 +179,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var oldest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-10));
         var newest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-1));
 
-        var result = await _service.ListInboxItemsAsync(0, 10, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10 }, null, null, null, null, null);
 
         Assert.Equal([newest.Id, oldest.Id], result.Items.Select(i => i.Id).ToArray());
     }
@@ -171,7 +190,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var oldest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-10));
         var newest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-1));
 
-        var result = await _service.ListInboxItemsAsync(0, 10, null, null, null, null, GeneratedInboxSort.ActivityAsc);
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.ActivityAsc }, null, null, null, null, null);
 
         Assert.Equal([oldest.Id, newest.Id], result.Items.Select(i => i.Id).ToArray());
     }
@@ -183,7 +202,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var critical = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, priority: Priority.Critical);
         var medium = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, priority: Priority.Medium);
 
-        var result = await _service.ListInboxItemsAsync(0, 10, null, null, null, null, GeneratedInboxSort.PriorityDesc);
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.PriorityDesc }, null, null, null, null, null);
 
         Assert.Equal([critical.Id, medium.Id, low.Id], result.Items.Select(i => i.Id).ToArray());
     }
@@ -194,9 +213,83 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var older = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, createdAt: DateTimeOffset.UtcNow.AddDays(-2));
         var newer = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, createdAt: DateTimeOffset.UtcNow.AddDays(-1));
 
-        var result = await _service.ListInboxItemsAsync(0, 10, null, null, null, null, GeneratedInboxSort.CreatedDesc);
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.CreatedDesc }, null, null, null, null, null);
 
         Assert.Equal([newer.Id, older.Id], result.Items.Select(i => i.Id).ToArray());
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should search titles case-insensitively and exclude non-matching items")]
+    public async Task ListInboxItemsAsyncShouldSearchTitlesCaseInsensitivelyAsync()
+    {
+        var firstMatch = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+        firstMatch.Title = "Quarterly release checklist";
+        var secondMatch = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.Issue, InboxReason.Mentioned);
+        secondMatch.Title = "RELEASE notes";
+        var nonMatch = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.WorkItem, InboxReason.Assigned);
+        nonMatch.Title = "Unrelated maintenance";
+        await DataBase.SaveChangesAsync();
+
+        var result = await _service.ListInboxItemsAsync(
+            new PageRequest { Page = 0, Size = 10 },
+            null,
+            null,
+            null,
+            null,
+            "release");
+
+        Assert.Equal(2, result.TotalElements);
+        Assert.Equal(
+            [firstMatch.Id, secondMatch.Id],
+            result.Items.Select(item => item.Id).OrderBy(id => id).ToArray());
+        Assert.DoesNotContain(nonMatch.Id, result.Items.Select(item => item.Id));
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should reject an overly broad search when the scope guard feature flag is enabled")]
+    public async Task ListInboxItemsAsyncShouldRejectOverlyBroadSearchWhenScopeGuardEnabledAsync()
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+        }
+
+        var service = new InboxService(
+            new InboxRepository(DataBase),
+            CreateInboxItemRepository(searchScopeGuardEnabled: true, maxCandidates: 2),
+            _detailService,
+            CreateAccessorWithClaim(_user.Id));
+
+        await Assert.ThrowsAsync<SearchScopeTooBroadException>(() => service.ListInboxItemsAsync(
+            new PageRequest { Page = 0, Size = 10 },
+            null,
+            null,
+            null,
+            null,
+            "test"));
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should not reject an overly broad search when the scope guard feature flag is disabled")]
+    public async Task ListInboxItemsAsyncShouldNotRejectOverlyBroadSearchWhenScopeGuardDisabledAsync()
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+        }
+
+        var service = new InboxService(
+            new InboxRepository(DataBase),
+            CreateInboxItemRepository(searchScopeGuardEnabled: false, maxCandidates: 2),
+            _detailService,
+            CreateAccessorWithClaim(_user.Id));
+
+        var result = await service.ListInboxItemsAsync(
+            new PageRequest { Page = 0, Size = 10 },
+            null,
+            null,
+            null,
+            null,
+            "test item");
+
+        Assert.Equal(3, result.TotalElements);
     }
 
     [Fact(DisplayName = "BulkUpdateInboxItemsAsync should mark only the requested items done, scoped to the current user")]

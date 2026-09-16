@@ -6,7 +6,7 @@ namespace DevInbox.Web.Features.Inbox.Domain;
 public interface IInboxItemRepository : IRepository<InboxItem>
 {
     IQueryable<InboxItem> Query();
-    Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(int page, int size, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason, InboxSort? sort = null);
+    Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(PageRequest pageRequest, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason, string? searchTerm);
 
     /// <summary>
     /// Applies the same isDone/isSaved overlay update to every item in <paramref name="ids"/> that
@@ -73,4 +73,3 @@ public interface IInboxItemRepository : IRepository<InboxItem>
     /// </summary>
     Task SyncAttachedNotesStateAsync(IEnumerable<InboxItem> parentItems);
 }
-

@@ -8,6 +8,8 @@ interface InboxStore {
   status?: InboxStatus;
   setStatus: (status: InboxStatus) => void;
   updateVersion: (version: number) => void;
+  itemIds: number[];
+  setItemIds: (itemIds: number[]) => void;
   selectedItemId?: number;
   openItem: (itemId?: number) => void;
   closeItem: () => void;
@@ -17,12 +19,16 @@ interface InboxStore {
   selectionMode: boolean;
   enterSelectionMode: (itemId: number) => void;
   clear: () => void;
+  searchTerm?: string;
+  setSearchTerm: (searchTerm?: string) => void;
 }
 
 export const useInboxStore = create<InboxStore>()(
   persist(
     (set) => ({
       status: undefined,
+      searchTerm: '',
+      setSearchTerm: (searchTerm) => set({ searchTerm }),
       setStatus: (status) => set({ status }),
       updateVersion: (version) =>
         set((state) => ({
@@ -33,6 +39,8 @@ export const useInboxStore = create<InboxStore>()(
               }
             : undefined,
         })),
+      itemIds: [],
+      setItemIds: (itemIds) => set({ itemIds }),
       openItem: (itemId) => set({ selectedItemId: itemId }),
       closeItem: () => set({ selectedItemId: undefined }),
       selectedIds: new Set<number>(),
@@ -49,7 +57,10 @@ export const useInboxStore = create<InboxStore>()(
       clearSelectedIds: () => set({ selectedIds: new Set<number>(), selectionMode: false }),
       selectionMode: false,
       enterSelectionMode: (itemId) =>
-        set((state) => ({ selectionMode: true, selectedIds: new Set(state.selectedIds).add(itemId) })),
+        set((state) => ({
+          selectionMode: true,
+          selectedIds: new Set(state.selectedIds).add(itemId),
+        })),
       clear: () =>
         set({
           status: undefined,
@@ -61,7 +72,11 @@ export const useInboxStore = create<InboxStore>()(
     {
       name: INBOX_STORAGE_KEY,
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ status: state.status, selectedItemId: state.selectedItemId }),
-    }
-  )
+      // itemIds and selectedItemId are both live/derived-from-the-current-session state (list
+      // order from the active query, current reading-pane selection) — persisting either would
+      // let a stale id from a previous session/filter resurface on the next load, so only
+      // `status` (sync heartbeat) survives a reload.
+      partialize: (state) => ({ status: state.status }),
+    },
+  ),
 );

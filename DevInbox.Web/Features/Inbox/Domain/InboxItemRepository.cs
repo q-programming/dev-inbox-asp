@@ -1,11 +1,23 @@
 using System.Linq.Expressions;
+using DevInbox.Web.Features.Inbox.Config;
+using DevInbox.Web.Features.Inbox.Exceptions;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using DevInbox.Web.Infrastructure.Persistence;
+using Microsoft.FeatureManagement;
 
 namespace DevInbox.Web.Features.Inbox.Domain;
 
-public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>(dbContext), IInboxItemRepository
+public class InboxItemRepository(AppDbContext dbContext, IFeatureManager featureManager) : Repository<InboxItem>(dbContext), IInboxItemRepository
 {
+    /// <summary>
+    /// Upper bound on how many rows (already scoped by userId/source/type/status/reason, but before
+    /// decrypting Title and matching the search term) may be pulled into memory for a single search
+    /// request while <see cref="InboxFeatureFlags.SearchScopeGuard"/> is enabled — see
+    /// <see cref="Exceptions.SearchScopeTooBroadException"/>. Settable (not just a bare constant) so
+    /// tests can exercise the guard without seeding 10000+ rows; production always uses the default.
+    /// </summary>
+    internal int MaxSearchCandidates { get; init; } = 10_000;
+
     public IQueryable<InboxItem> Query()
     {
         return Set;
@@ -31,7 +43,7 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
             .LongCountAsync();
     }
 
-    public async Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(int page, int size, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason, InboxSort? sort = null)
+    public async Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(PageRequest pageRequest, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason, string? searchTerm)
     {
         // Closed items (fully done with, e.g. a merged/closed PR) are excluded from every other
         // view — they only ever show up when the caller explicitly asks for the Closed status.
@@ -74,12 +86,10 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
             };
         }
 
-        var totalElements = await query.LongCountAsync();
-
         // Every sort keeps ActivityAt desc as a stable tie-breaker/secondary key, so items with equal
         // priority/comment counts/etc. still fall back to the original "most recently active" order
         // instead of an arbitrary (and unstable across pages) database order.
-        var orderedQuery = sort switch
+        var orderedQuery = pageRequest.Sort switch
         {
             InboxSort.ActivityAsc => query.OrderBy(i => i.ActivityAt),
             InboxSort.PriorityDesc => query.OrderByDescending(i => i.State.Priority).ThenByDescending(i => i.ActivityAt),
@@ -88,10 +98,50 @@ public class InboxItemRepository(AppDbContext dbContext) : Repository<InboxItem>
             _ => query.OrderByDescending(i => i.ActivityAt),
         };
 
-        var items = await orderedQuery
-            .Skip(page * size)
-            .Take(size)
-            .ToListAsync();
+        List<InboxItem> items;
+        long totalElements;
+
+        var trimmedSearchTerm = searchTerm?.Trim();
+        if (!string.IsNullOrEmpty(trimmedSearchTerm))
+        {
+            // Guard is itself feature-flagged — independent of whether search is used at all (search is
+            // never disabled). While the flag is on, an overly broad candidate set (rows already scoped
+            // by userId/source/type/status/reason, before decrypting Title) is rejected up front instead
+            // of paying for an unbounded decrypt-and-scan below.
+            if (await featureManager.IsEnabledAsync(InboxFeatureFlags.SearchScopeGuard))
+            {
+                var candidateCount = await query.LongCountAsync();
+                if (candidateCount > MaxSearchCandidates)
+                {
+                    throw new SearchScopeTooBroadException();
+                }
+            }
+
+            // Title is stored encrypted at rest (see AppDbContext's EncryptedStringConverter), so its
+            // ciphertext bears no relationship to the plaintext — a server-side ILIKE/LIKE against the
+            // column is both impossible to translate correctly and would never match. Every other
+            // filter above still runs in SQL; only the search term is applied after the (already
+            // userId/source/type/status/reason-scoped) rows are decrypted in memory, using an ordinary
+            // case-insensitive string comparison — not a SQL pattern — so there is no SQL injection
+            // surface and no LIKE wildcard-escaping concern either.
+            var matched = (await orderedQuery.ToListAsync())
+                .Where(i => i.Title != null && i.Title.Contains(trimmedSearchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            totalElements = matched.Count;
+            items = matched
+                .Skip(pageRequest.Page * pageRequest.Size)
+                .Take(pageRequest.Size)
+                .ToList();
+        }
+        else
+        {
+            totalElements = await query.LongCountAsync();
+            items = await orderedQuery
+                .Skip(pageRequest.Page * pageRequest.Size)
+                .Take(pageRequest.Size)
+                .ToListAsync();
+        }
 
         await PopulateHasNoteAsync(items);
 

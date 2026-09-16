@@ -17,11 +17,18 @@ public class ApiExceptionFilter : IExceptionFilter
             return;
         }
 
-        context.Result = new ObjectResult(new ProblemDetails
+        var problemDetails = new ProblemDetails
         {
             Status = ex.StatusCode,
             Title = ex.Message
-        })
+        };
+
+        if (ex.ErrorCode is not null)
+        {
+            problemDetails.Extensions["errorCode"] = ex.ErrorCode;
+        }
+
+        context.Result = new ObjectResult(problemDetails)
         {
             StatusCode = ex.StatusCode
         };
