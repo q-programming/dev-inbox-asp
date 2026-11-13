@@ -172,4 +172,18 @@ describe('GithubIntegrationCard', () => {
       expect(screen.getByTestId('github-pat-input')).toBeTruthy();
     });
   });
+
+  describe('invalid token state', () => {
+    beforeEach(() => {
+      setIdentity([{ type: IntegrationType.Github, status: IntegrationStatus.INVALID }]);
+    });
+
+    it('shows the invalid badge and a disconnect button, not the connected badge', () => {
+      renderWithProviders(<GithubIntegrationCard />);
+      expect(screen.getByTestId('github-invalid-badge')).toBeTruthy();
+      expect(screen.queryByTestId('github-connected-badge')).toBeNull();
+      expect(screen.queryByTestId('github-expired-badge')).toBeNull();
+      expect(screen.getByTestId('github-disconnect-btn')).toBeTruthy();
+    });
+  });
 });

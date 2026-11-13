@@ -43,6 +43,11 @@ internal static class GitHubGraphQlQueries
               name
             }
           }
+          assignees(first: 20) {
+            nodes {
+              login
+            }
+          }
           reviewRequests(first: 20) {
             nodes {
               requestedReviewer {
@@ -96,6 +101,26 @@ internal static class GitHubGraphQlQueries
         """;
 
     /// <summary>
+    /// Id-only search used with a "mentions:" qualifier to learn which PRs actually @-mention the user
+    /// — "involves:" can't tell a mention apart from authoring, assignment or commenting.
+    /// </summary>
+    public const string SearchPullRequestIds = """
+        query SearchPullRequestIds($searchQuery: String!, $first: Int!, $after: String) {
+          search(query: $searchQuery, type: ISSUE, first: $first, after: $after) {
+            pageInfo {
+              endCursor
+              hasNextPage
+            }
+            nodes {
+              ... on PullRequest {
+                id
+              }
+            }
+          }
+        }
+        """;
+
+    /// <summary>
     /// Fetches full detail for a single pull request, identified by owner/repo/number — used to
     /// populate the inbox item detail panel. Reuses the same fields as the search query plus the
     /// actual comment bodies (search only exposes a comment count) via a REST-avoiding one-shot query
@@ -118,6 +143,32 @@ internal static class GitHubGraphQlQueries
                   author {
                     login
                     avatarUrl
+                  }
+                }
+              }
+              latestReviewBodies: reviews(last: $latestComments, states: [APPROVED, CHANGES_REQUESTED, COMMENTED]) {
+                nodes {
+                  body
+                  url
+                  createdAt
+                  author {
+                    login
+                    avatarUrl
+                  }
+                }
+              }
+              latestReviewThreads: reviewThreads(last: $latestComments) {
+                nodes {
+                  comments(first: 1) {
+                    nodes {
+                      body
+                      url
+                      createdAt
+                      author {
+                        login
+                        avatarUrl
+                      }
+                    }
                   }
                 }
               }

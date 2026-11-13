@@ -65,6 +65,12 @@ public class AdoService(
             await inboxItemRepository.DeleteAsync(item);
             throw new NotFoundException($"ADO item {item.ExternalId} no longer exists and has been removed from your inbox.");
         }
+        catch (Exception ex) when (IsUnauthorized(ex))
+        {
+            await MarkInvalidAsync(profile, ex);
+            throw new ForbiddenException(
+                $"Azure DevOps rejected the stored token for organization '{organization}' — reconnect it with the required scopes.");
+        }
     }
 
     private async Task<AdoWorkItemDetail> GetWorkItemDetailsAsync(string accessToken, InboxItem item, CancellationToken ct)
@@ -95,6 +101,8 @@ public class AdoService(
             State = workItem.Fields.State ?? string.Empty,
             Description = workItem.Fields.Description ?? string.Empty,
             DescriptionFormat = ContentFormatDetector.Detect(workItem.Fields.Description),
+            AcceptanceCriteria = workItem.Fields.AcceptanceCriteria,
+            AcceptanceCriteriaFormat = ContentFormatDetector.Detect(workItem.Fields.AcceptanceCriteria),
             Area = workItem.Fields.AreaPath ?? string.Empty,
             AssignedTo = MapPerson(workItem.Fields.AssignedTo),
             CreatedAt = workItem.Fields.CreatedDate ?? DateTimeOffset.UtcNow,
@@ -706,5 +714,6 @@ public class AdoService(
     }
 
     private static bool IsUnauthorized(Exception ex) =>
-        ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.Unauthorized };
+        ex is AdoAuthorizationException
+        or HttpRequestException { StatusCode: System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden };
 }

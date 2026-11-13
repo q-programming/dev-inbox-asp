@@ -40,6 +40,11 @@ public class AdoIntegrationService(
         {
             connectionData = await adoClient.GetConnectionDataAsync(token, organization, ct);
         }
+        catch (AdoAuthorizationException ex)
+        {
+            logger.LogWarning(ex, "Azure DevOps rejected PAT for user {UserId}, organization {Organization}: {Reason}", userId, organization, ex.Reason);
+            throw new BadRequestException($"Azure DevOps rejected the token for this organization ({ex.Reason}). Check the organization name and that the PAT has the required scopes.");
+        }
         catch (HttpRequestException ex)
         {
             logger.LogWarning(ex, "Rejected invalid Azure DevOps PAT for user {UserId}, organization {Organization}", userId, organization);

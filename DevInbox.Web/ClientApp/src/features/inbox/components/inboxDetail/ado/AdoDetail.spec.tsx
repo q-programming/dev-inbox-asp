@@ -119,6 +119,27 @@ describe('AdoDetail', () => {
     expect(screen.queryByTestId('ado-detail-description')).toBeNull();
   });
 
+  it('renders the acceptance criteria when present', () => {
+    const details = makeInboxItemDetail({ ado: { acceptanceCriteria: 'Must do the thing' } });
+
+    renderWithProviders(<AdoDetail details={details} />);
+
+    expect(screen.getByTestId('ado-detail-acceptance-criteria')).toHaveTextContent(
+      'Acceptance Criteria',
+    );
+    expect(screen.getByTestId('ado-detail-acceptance-criteria')).toHaveTextContent(
+      'Must do the thing',
+    );
+  });
+
+  it('does not render the acceptance criteria section when missing', () => {
+    const details = makeInboxItemDetail({ ado: { acceptanceCriteria: undefined } });
+
+    renderWithProviders(<AdoDetail details={details} />);
+
+    expect(screen.queryByTestId('ado-detail-acceptance-criteria')).toBeNull();
+  });
+
   it('renders tags when present', () => {
     const details = makeInboxItemDetail({ ado: { tags: ['backend', 'urgent'] } });
 

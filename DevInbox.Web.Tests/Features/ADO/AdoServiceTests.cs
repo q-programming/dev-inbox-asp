@@ -1,3 +1,4 @@
+using DevInbox.Web.Common;
 using DevInbox.Web.Features.ADO;
 using DevInbox.Web.Features.ADO.Client;
 using DevInbox.Web.Features.ADO.Client.DTO;
@@ -68,6 +69,7 @@ public class AdoServiceTests
                 AreaPath = "Alpha\\Backend",
                 Tags = "backend; sync",
                 Description = "Full work item description",
+                AcceptanceCriteria = "Retries up to 3 times",
                 AssignedTo = new AdoIdentityRefDTO { DisplayName = "John Doe", UniqueName = "john@doe.com" },
                 CreatedDate = new DateTimeOffset(2026, 1, 10, 9, 0, 0, TimeSpan.Zero),
                 ChangedDate = new DateTimeOffset(2026, 1, 14, 15, 30, 0, TimeSpan.Zero)
@@ -87,6 +89,7 @@ public class AdoServiceTests
         Assert.Equal("User Story", result.WorkItemType);
         Assert.Equal("Active", result.State);
         Assert.Equal("Full work item description", result.Description);
+        Assert.Equal("Retries up to 3 times", result.AcceptanceCriteria);
         Assert.Equal("Alpha\\Backend", result.Area);
         Assert.Equal("John Doe", result.AssignedTo.DisplayName);
         Assert.Contains("backend", result.Tags);
@@ -145,6 +148,48 @@ public class AdoServiceTests
         Assert.Equal("https://dev.azure.com/contoso/Alpha/_git/alpha-service/pullrequest/2101", result.Url);
         Assert.Single(result.Comments);
         Assert.Equal("LGTM", result.Comments[0].Body);
+    }
+
+    [Fact(DisplayName = "SyncWorkItemsAsync should mark the profile invalid when a project call is rejected with 401 (e.g. missing scope)")]
+    public async Task SyncWorkItemsAsyncShouldMarkProfileInvalidOnAuthorizationFailureAsync()
+    {
+        const long userId = 9;
+        var profile = new AdoProfile
+        {
+            UserId = userId,
+            Organization = "contoso",
+            AdoUserId = "ado-user-1",
+            AdoLogin = "Jane Doe",
+            AccessToken = Pat,
+            Status = DomainIntegrationStatus.Active
+        };
+        _profileRepository.GetAllByUserIdAsync(userId).Returns(new List<AdoProfile> { profile });
+        _adoClient.GetProjectsAsync(Pat, "contoso", Arg.Any<CancellationToken>())
+            .Returns([new AdoProjectDTO { Id = "proj-1", Name = "Alpha" }]);
+        _adoClient.QueryWorkItemIdsAsync(Pat, "contoso", "Alpha", Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _adoClient.GetWorkItemsBatchAsync(Pat, "contoso", "Alpha", Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _adoClient.GetPullRequestsAsync(Pat, "contoso", "Alpha", Arg.Any<AdoPullRequestSearchStatus>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<DateTimeOffset?>(), Arg.Any<CancellationToken>())
+            .Returns<Task<IReadOnlyList<AdoPullRequestDTO>>>(_ => throw new AdoAuthorizationException(System.Net.HttpStatusCode.Unauthorized, "pullrequests", "missing vso.code scope"));
+
+        await _service.SyncWorkItemsAsync(userId, updatedSince: null);
+
+        Assert.Equal(DomainIntegrationStatus.Invalid, profile.Status);
+        await _profileRepository.Received().UpdateAsync(profile);
+    }
+
+    [Fact(DisplayName = "GetDetailsAsync should mark the profile invalid and throw ForbiddenException when Azure DevOps rejects the token")]
+    public async Task GetDetailsAsyncShouldMarkProfileInvalidOnAuthorizationFailureAsync()
+    {
+        var item = new InboxItem { Id = 4, InboxId = UserId, Type = ItemType.WorkItem, Repository = "contoso/Alpha", ExternalId = "501" };
+        _adoClient.GetWorkItemDetailAsync(Pat, "contoso", 501, Arg.Any<CancellationToken>())
+            .Returns<Task<AdoWorkItemDTO>>(_ => throw new AdoAuthorizationException(System.Net.HttpStatusCode.Forbidden, "workitems", "missing vso.work scope"));
+
+        await Assert.ThrowsAsync<ForbiddenException>(() => _service.GetDetailsAsync(item, CancellationToken.None));
+
+        var profile = await _profileRepository.GetByUserIdAndOrganizationAsync(UserId, "contoso");
+        Assert.Equal(DomainIntegrationStatus.Invalid, profile!.Status);
     }
 
     [Fact(DisplayName = "GetDetailsAsync should throw when the inbox item has no repository/organization reference")]

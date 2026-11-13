@@ -689,7 +689,7 @@ components:
     IntegrationStatus:
       type: string
       default: INACTIVE
-      enum: [ACTIVE, EXPIRED, INACTIVE]
+      enum: [ACTIVE, EXPIRED, INVALID, INACTIVE]
 
     ConnectPatRequest:
       type: object
@@ -976,6 +976,10 @@ components:
           $ref: "#/components/schemas/PersonReference"
         reviewState:
           $ref: "#/components/schemas/ReviewState"
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
     GitHubPullRequestState:
       type: string
       enum:
@@ -1022,6 +1026,11 @@ components:
         description:
           type: string
         descriptionFormat:
+          $ref: "#/components/schemas/ContentFormat"
+        acceptanceCriteria:
+          type: string
+          nullable: true
+        acceptanceCriteriaFormat:
           $ref: "#/components/schemas/ContentFormat"
         area:
           type: string

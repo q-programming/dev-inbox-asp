@@ -39,8 +39,14 @@ public partial class GitHubIntegrationMapper
     private static IntegrationStatus ResolveStatus(GitHubProfile profile)
     {
         var isPastExpiry = profile.TokenExpiresAt is { } expiresAt && expiresAt <= DateTimeOffset.UtcNow;
-        return profile.Status == Sync.Domain.IntegrationStatus.Invalid || isPastExpiry
-            ? IntegrationStatus.EXPIRED
+        if (isPastExpiry)
+        {
+            return IntegrationStatus.EXPIRED;
+        }
+
+        // Rejected by GitHub (401) before its expiry date — revoked or missing scopes.
+        return profile.Status == Sync.Domain.IntegrationStatus.Invalid
+            ? IntegrationStatus.INVALID
             : IntegrationStatus.ACTIVE;
     }
 }

@@ -15,6 +15,7 @@ import InboxDetailFooter from '../InboxDetailFooter';
 import PersonAvatar from '../shared/PersonAvatar';
 import CommentCard from '../shared/CommentCard';
 import RichContent from '../shared/RichContent';
+import CollapsibleSection from '../shared/CollapsibleSection';
 
 interface IAdoDetail {
   details: InboxItemDetail;
@@ -156,16 +157,20 @@ const AdoDetail = ({ details }: IAdoDetail) => {
           )}
 
           {!!workItem.description && (
-            <Box sx={{ mt: 2.5, minWidth: 0 }} data-testid="ado-detail-description">
-              <Typography variant="overline" color="text.secondary">
-                Description
-              </Typography>
-              <Box sx={{ mt: 0.5 }}>
-                <RichContent format={workItem.descriptionFormat}>
-                  {workItem.description}
-                </RichContent>
-              </Box>
-            </Box>
+            <CollapsibleSection title="Description" data-testid="ado-detail-description">
+              <RichContent format={workItem.descriptionFormat}>{workItem.description}</RichContent>
+            </CollapsibleSection>
+          )}
+
+          {!!workItem.acceptanceCriteria && (
+            <CollapsibleSection
+              title="Acceptance Criteria"
+              data-testid="ado-detail-acceptance-criteria"
+            >
+              <RichContent format={workItem.acceptanceCriteriaFormat}>
+                {workItem.acceptanceCriteria}
+              </RichContent>
+            </CollapsibleSection>
           )}
         </Paper>
         {!!workItem.comments?.length && (

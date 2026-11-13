@@ -107,6 +107,20 @@ public class AdoIntegrationServiceTests
         await _profileRepository.DidNotReceive().UpdateAsync(Arg.Any<AdoProfile>());
     }
 
+    [Fact(DisplayName = "ConnectPatAsync should surface Azure DevOps' rejection reason in the BadRequestException and persist nothing")]
+    public async Task ConnectPatAsyncShouldIncludeAuthorizationReasonAsync()
+    {
+        _adoClient.GetConnectionDataAsync(Pat, Organization, Arg.Any<CancellationToken>())
+            .Returns<Task<AdoConnectionDataDTO>>(_ => throw new AdoAuthorizationException(System.Net.HttpStatusCode.Unauthorized, "connectionData", "missing vso.identity scope"));
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => _service.ConnectPatAsync(UserId, Organization, Pat, DateTimeOffset.UtcNow.AddDays(1)));
+
+        Assert.Contains("missing vso.identity scope", ex.Message);
+        Assert.DoesNotContain(Pat, ex.Message);
+        await _profileRepository.DidNotReceive().AddAsync(Arg.Any<AdoProfile>());
+        await _profileRepository.DidNotReceive().UpdateAsync(Arg.Any<AdoProfile>());
+    }
+
     [Fact(DisplayName = "ConnectPatAsync should convert an ADO validation failure into BadRequestException and persist nothing")]
     public async Task ConnectPatAsyncShouldWrapHttpRequestExceptionAsync()
     {

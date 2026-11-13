@@ -53,6 +53,8 @@ public sealed class GitHubPullRequestDTO
 
     /// <summary>Most recent review submitted per reviewer (latest state wins).</summary>
     public List<GitHubReviewDTO> Reviews { get; set; } = [];
+
+    public List<string> Assignees { get; set; } = [];
 }
 
 public sealed class GitHubActorDTO

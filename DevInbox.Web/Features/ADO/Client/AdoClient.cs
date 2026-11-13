@@ -213,7 +213,51 @@ public class AdoClient(HttpClient client) : IAdoClient, IService
         }
 
         var response = await httpClient.SendAsync(request, ct);
+        if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
+        {
+            throw new AdoAuthorizationException(response.StatusCode, requestUri, await ReadAuthFailureReasonAsync(response, ct));
+        }
+
         response.EnsureSuccessStatusCode();
         return response;
+    }
+
+    /// <summary>
+    /// Extracts the explanation Azure DevOps gives for a 401/403 (JSON <c>message</c>, e.g. "TF401444…"
+    /// or missing-scope text). Truncated, and never includes the request/PAT.
+    /// </summary>
+    private static async Task<string> ReadAuthFailureReasonAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        const int maxLength = 300;
+        string? body = null;
+        try
+        {
+            body = await response.Content.ReadAsStringAsync(ct);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException)
+        {
+            // fall through to the generic reason
+        }
+
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            try
+            {
+                using var json = System.Text.Json.JsonDocument.Parse(body);
+                if (json.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
+                    && json.RootElement.TryGetProperty("message", out var message)
+                    && message.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    body = message.GetString();
+                }
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // not JSON (e.g. an HTML sign-in page) — use the raw text
+            }
+        }
+
+        var reason = string.IsNullOrWhiteSpace(body) ? response.ReasonPhrase ?? "no reason given" : body.Trim();
+        return reason.Length > maxLength ? reason[..maxLength] : reason;
     }
 }

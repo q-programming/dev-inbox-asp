@@ -1,4 +1,5 @@
 using DevInbox.Web.Features.GitHub.Client.DTO;
+using DevInbox.Web.Features.GitHub.Config;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using Riok.Mapperly.Abstractions;
 
@@ -21,6 +22,9 @@ public partial class GitHubPullRequestMapper
     [MapProperty(nameof(GitHubGraphQLPullRequestNodeDTO.ReviewRequests), nameof(GitHubPullRequestDTO.RequestedReviewers))]
     [MapProperty(nameof(GitHubGraphQLPullRequestNodeDTO.Reviews), nameof(GitHubPullRequestDTO.Reviews))]
     public partial GitHubPullRequestDTO ToDto(GitHubGraphQLPullRequestNodeDTO node);
+
+    private static List<string> MapAssignees(GitHubGraphQLAssigneeConnectionDTO? assignees) =>
+        assignees?.Nodes.Select(a => a.Login).Where(login => !string.IsNullOrEmpty(login)).ToList() ?? [];
 
     /// <summary>Projects label nodes down to their name — used automatically for the Labels member above.</summary>
     private static List<string> MapLabels(GitHubGraphQLLabelConnectionDTO? labels) =>
@@ -57,13 +61,13 @@ public partial class GitHubPullRequestMapper
     /// unioned logic — State, Author, Reviewers and LatestComments — are filled in by hand below,
     /// since Mapperly can only do 1:1 or simple flattening mappings declaratively.
     /// </summary>
-    public GitHubPullRequestDetail ToDetail(GitHubGraphQLPullRequestDetailNodeDTO node)
+    public GitHubPullRequestDetail ToDetail(GitHubGraphQLPullRequestDetailNodeDTO node, int latestCommentsLimit = GithubOptions.DefaultLatestCommentsCount)
     {
         var detail = MapDetailCore(node);
         detail.Author = MapAuthor(node.Author);
         detail.State = MapState(node);
         detail.Reviewers = MapReviewers(node);
-        detail.LatestComments = MapLatestComments(node.LatestComments);
+        detail.LatestComments = MergeLatestComments(node, latestCommentsLimit);
         detail.SummaryFormat = ContentFormat.Markdown;
         return detail;
     }
@@ -88,6 +92,8 @@ public partial class GitHubPullRequestMapper
     [MapperIgnoreSource(nameof(GitHubGraphQLPullRequestDetailNodeDTO.ReviewRequests))]
     [MapperIgnoreSource(nameof(GitHubGraphQLPullRequestDetailNodeDTO.Reviews))]
     [MapperIgnoreSource(nameof(GitHubGraphQLPullRequestDetailNodeDTO.LatestComments))]
+    [MapperIgnoreSource(nameof(GitHubGraphQLPullRequestDetailNodeDTO.LatestReviewBodies))]
+    [MapperIgnoreSource(nameof(GitHubGraphQLPullRequestDetailNodeDTO.LatestReviewThreads))]
     [MapProperty(nameof(GitHubGraphQLPullRequestDetailNodeDTO.Number), nameof(GitHubPullRequestDetail.PullRequestNumber))]
     [MapProperty(
         nameof(GitHubGraphQLPullRequestDetailNodeDTO.Repository) + "." + nameof(GitHubGraphQLRepositoryDTO.NameWithOwner),
@@ -141,7 +147,8 @@ public partial class GitHubPullRequestMapper
                 .Select(r => new PullRequestReviewer
                 {
                     Reviewer = MapAuthor(r.Author),
-                    ReviewState = MapReviewState(r.State)
+                    ReviewState = MapReviewState(r.State),
+                    ReviewedAt = r.SubmittedAt
                 }));
         }
 
@@ -154,6 +161,24 @@ public partial class GitHubPullRequestMapper
         "CHANGES_REQUESTED" => ReviewState.ChangesRequested,
         _ => ReviewState.Commented
     };
+
+    /// <summary>
+    /// Conversation comments, review summaries and inline review-thread openers are three separate
+    /// GitHub concepts; the detail panel treats them as one chronological discussion (oldest first).
+    /// </summary>
+    private static List<CommentPreview> MergeLatestComments(GitHubGraphQLPullRequestDetailNodeDTO node, int limit)
+    {
+        var threadComments = node.LatestReviewThreads?.Nodes
+            .SelectMany(t => t.Comments?.Nodes ?? []) ?? [];
+        var all = (node.LatestComments?.Nodes ?? [])
+            .Concat(node.LatestReviewBodies?.Nodes ?? [])
+            .Concat(threadComments)
+            .Where(c => !string.IsNullOrWhiteSpace(c.Body))
+            .OrderBy(c => c.CreatedAt)
+            .ToList();
+
+        return MapLatestComments(new GitHubGraphQLCommentConnectionDTO { Nodes = [.. all.TakeLast(limit)] });
+    }
 
     private static List<CommentPreview> MapLatestComments(GitHubGraphQLCommentConnectionDTO? comments) =>
         comments?.Nodes

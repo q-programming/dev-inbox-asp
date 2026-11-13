@@ -99,6 +99,37 @@ public sealed class GitHubGraphQLPullRequestNodeDTO
 
     [JsonPropertyName("reviews")]
     public GitHubGraphQLReviewConnectionDTO? Reviews { get; set; }
+
+    [JsonPropertyName("assignees")]
+    public GitHubGraphQLAssigneeConnectionDTO? Assignees { get; set; }
+}
+
+public sealed class GitHubGraphQLAssigneeConnectionDTO
+{
+    [JsonPropertyName("nodes")]
+    public List<GitHubGraphQLActorDTO> Nodes { get; set; } = [];
+}
+
+/// <summary>Raw shape of the id-only search response — see <see cref="GitHubGraphQlQueries.SearchPullRequestIds"/>.</summary>
+public sealed class GitHubGraphQLSearchPullRequestIdsDataDTO
+{
+    [JsonPropertyName("search")]
+    public GitHubGraphQLSearchIdsDTO Search { get; set; } = new();
+}
+
+public sealed class GitHubGraphQLSearchIdsDTO
+{
+    [JsonPropertyName("pageInfo")]
+    public GitHubGraphQLPageInfoDTO PageInfo { get; set; } = new();
+
+    [JsonPropertyName("nodes")]
+    public List<GitHubGraphQLIdNodeDTO?> Nodes { get; set; } = [];
+}
+
+public sealed class GitHubGraphQLIdNodeDTO
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
 }
 
 public sealed class GitHubGraphQLRepositoryDTO
@@ -268,6 +299,26 @@ public sealed class GitHubGraphQLPullRequestDetailNodeDTO
 
     [JsonPropertyName("latestComments")]
     public GitHubGraphQLCommentConnectionDTO? LatestComments { get; set; }
+
+    /// <summary>Review submissions — their body is the "review summary" comment; empty for inline-only reviews.</summary>
+    [JsonPropertyName("latestReviewBodies")]
+    public GitHubGraphQLCommentConnectionDTO? LatestReviewBodies { get; set; }
+
+    /// <summary>Inline code-review threads; only each thread's opening comment is requested.</summary>
+    [JsonPropertyName("latestReviewThreads")]
+    public GitHubGraphQLReviewThreadConnectionDTO? LatestReviewThreads { get; set; }
+}
+
+public sealed class GitHubGraphQLReviewThreadConnectionDTO
+{
+    [JsonPropertyName("nodes")]
+    public List<GitHubGraphQLReviewThreadDTO> Nodes { get; set; } = [];
+}
+
+public sealed class GitHubGraphQLReviewThreadDTO
+{
+    [JsonPropertyName("comments")]
+    public GitHubGraphQLCommentConnectionDTO? Comments { get; set; }
 }
 
 public sealed class GitHubGraphQLCommentConnectionDTO
