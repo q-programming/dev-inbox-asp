@@ -7,7 +7,8 @@ import BookmarkIcon from '@mui/icons-material/Bookmark';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
-import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import PersonIcon from '@mui/icons-material/Person';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import GroupIcon from '@mui/icons-material/Group';
@@ -58,20 +59,35 @@ export const CORE_FOCUS_ITEMS: SidebarNavItem[] = [
     route: AppRoute.INBOX,
     filter: { reason: InboxReason.Mentioned },
   },
-];
-
-/**
- * Integration-contributed focus items.
- * GitHub and ADO use SVG assets; future integrations (Jira, etc.) extend here.
- * Icons are rendered inline — the consuming component handles theme-aware SVG styling.
- */
-export const INTEGRATION_FOCUS_ITEMS: SidebarNavItem[] = [
+  {
+    id: 'assigned',
+    label: 'Assigned',
+    icon: <PersonIcon fontSize="small" />,
+    route: AppRoute.INBOX,
+    filter: { reason: InboxReason.Assigned },
+  },
   {
     id: 'my-prs',
     label: 'My PRs',
     icon: 'git-pull-request',
     route: AppRoute.INBOX,
     filter: { itemType: ItemType.PR, reason: InboxReason.Authored },
+  },
+];
+
+/**
+ * Integration-contributed focus items — rendered under their own "Integrations"
+ * section, separated from the core Focus items by a divider.
+ * GitHub and ADO use SVG assets; future integrations (Jira, etc.) extend here.
+ * Icons are rendered inline — the consuming component handles theme-aware SVG styling.
+ */
+export const INTEGRATION_FOCUS_ITEMS: SidebarNavItem[] = [
+  {
+    id: 'github-items',
+    label: 'GitHub items',
+    icon: IntegrationType.Github,
+    route: AppRoute.INBOX,
+    filter: { source: ItemSource.Github },
   },
   {
     id: 'ado-items',
@@ -107,16 +123,23 @@ export const FILTER_ITEMS: SidebarNavItem[] = [
     route: AppRoute.INBOX,
     filter: { status: ItemStatus.ToDo },
   },
+  { id: 'needs-attention', label: 'Needs attention', icon: <ErrorOutlineIcon fontSize="small" /> },
+  { id: 'stale', label: 'Stale', icon: <AccessTimeIcon fontSize="small" /> },
   {
     id: 'done',
     label: 'Done',
-    icon: <TaskAltIcon fontSize="small" />,
+    icon: <CheckCircle fontSize="small" />,
     route: AppRoute.INBOX,
     filter: { status: ItemStatus.Done },
   },
 
-  { id: 'needs-attention', label: 'Needs attention', icon: <ErrorOutlineIcon fontSize="small" /> },
-  { id: 'stale', label: 'Stale', icon: <AccessTimeIcon fontSize="small" /> },
+  {
+    id: 'closed',
+    label: 'Closed',
+    icon: <ArchiveIcon fontSize="small" />,
+    route: AppRoute.INBOX,
+    filter: { status: ItemStatus.Closed },
+  },
   {
     id: 'repositories',
     label: 'Repositories',
@@ -125,11 +148,4 @@ export const FILTER_ITEMS: SidebarNavItem[] = [
   },
   { id: 'teams', label: 'Teams', icon: <GroupIcon fontSize="small" />, expandable: true },
   { id: 'labels', label: 'Labels', icon: <LabelIcon fontSize="small" />, expandable: true },
-  {
-    id: 'closed',
-    label: 'Closed',
-    icon: <ArchiveIcon fontSize="small" />,
-    route: AppRoute.INBOX,
-    filter: { status: ItemStatus.Closed },
-  },
 ];

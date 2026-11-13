@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using DevInbox.Web.Features.GitHub.Client.DTO;
+using DevInbox.Web.Features.GitHub.Config;
 using DevInbox.Web.Features.GitHub.Mapper;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using GraphQL;
@@ -41,14 +42,36 @@ public class GitHubClient(HttpClient client, IHttpClientFactory httpClientFactor
         string accessToken,
         string searchQuery,
         CancellationToken ct = default) =>
-        SearchAllPagesAsync(accessToken, searchQuery, ct);
+        SearchAllPagesAsync<GitHubGraphQLSearchPullRequestsDataDTO, GitHubPullRequestDTO>(
+            accessToken,
+            searchQuery,
+            GitHubGraphQlQueries.SearchPullRequests,
+            "SearchPullRequestsInvolvingUser",
+            data => (data.Search.Nodes.Select(_pullRequestMapper.ToDto), data.Search.PageInfo),
+            ct);
+
+    public async Task<IReadOnlySet<string>> GetPullRequestNodeIdsAsync(
+        string accessToken,
+        string searchQuery,
+        CancellationToken ct = default)
+    {
+        var ids = await SearchAllPagesAsync<GitHubGraphQLSearchPullRequestIdsDataDTO, string>(
+            accessToken,
+            searchQuery,
+            GitHubGraphQlQueries.SearchPullRequestIds,
+            "SearchPullRequestIds",
+            data => (data.Search.Nodes.Select(n => n?.Id).OfType<string>().Where(id => id.Length > 0), data.Search.PageInfo),
+            ct);
+
+        return ids.ToHashSet();
+    }
 
     public async Task<GitHubPullRequestDetail> GetPullRequestDetailAsync(
         string accessToken,
         string owner,
         string name,
         int pullRequestNumber,
-        int latestCommentsCount = 5,
+        int latestCommentsCount = GithubOptions.DefaultLatestCommentsCount,
         CancellationToken ct = default)
     {
         using var graphQlClient = CreateGraphQlClient(accessToken);
@@ -72,25 +95,41 @@ public class GitHubClient(HttpClient client, IHttpClientFactory httpClientFactor
         var node = response.Data.Repository?.PullRequest
             ?? throw new InvalidOperationException($"GitHub PR {owner}/{name}#{pullRequestNumber} was not found.");
 
-        return _pullRequestMapper.ToDetail(node);
+        return _pullRequestMapper.ToDetail(node, latestCommentsCount);
     }
 
-    private async Task<IReadOnlyList<GitHubPullRequestDTO>> SearchAllPagesAsync(
+    /// <summary>
+    /// Pages through a GraphQL search connection. <paramref name="select"/> extracts the items and
+    /// page info from the operation-specific response, so full-PR and id-only searches share one loop.
+    /// </summary>
+    private async Task<IReadOnlyList<TItem>> SearchAllPagesAsync<TData, TItem>(
         string accessToken,
         string searchQuery,
+        string query,
+        string operationName,
+        Func<TData, (IEnumerable<TItem> Items, GitHubGraphQLPageInfoDTO PageInfo)> select,
         CancellationToken ct)
     {
-        var results = new List<GitHubPullRequestDTO>();
+        using var graphQlClient = CreateGraphQlClient(accessToken);
+        var results = new List<TItem>();
         string? cursor = null;
-        var page = 0;
 
-        while (true)
+        for (var page = 1; ; page++)
         {
-            page++;
-            var pageResult = await FetchPageAsync(accessToken, searchQuery, cursor, PageSize, ct);
-            results.AddRange(pageResult.Items);
+            var request = new GraphQLRequest
+            {
+                Query = query,
+                OperationName = operationName,
+                Variables = new { searchQuery, first = PageSize, after = cursor }
+            };
 
-            if (!pageResult.HasNextPage)
+            var response = await graphQlClient.SendQueryAsync<TData>(request, ct);
+            ThrowIfErrors(response);
+
+            var (items, pageInfo) = select(response.Data);
+            results.AddRange(items);
+
+            if (!pageInfo.HasNextPage)
             {
                 break;
             }
@@ -98,50 +137,15 @@ public class GitHubClient(HttpClient client, IHttpClientFactory httpClientFactor
             if (page >= MaxPages)
             {
                 logger.LogWarning(
-                    "GitHub PR search {SearchQuery} stopped after {MaxPages} pages ({Count} PRs) — narrow the sync window if this recurs.",
+                    "GitHub PR search {SearchQuery} stopped after {MaxPages} pages ({Count} results) — narrow the sync window if this recurs.",
                     searchQuery, MaxPages, results.Count);
                 break;
             }
 
-            cursor = pageResult.EndCursor;
+            cursor = pageInfo.EndCursor;
         }
 
         return results;
-    }
-
-    private async Task<GitHubPullRequestSearchResultDTO> FetchPageAsync(
-        string accessToken,
-        string searchQuery,
-        string? after,
-        int pageSize,
-        CancellationToken ct)
-    {
-        using var graphQlClient = CreateGraphQlClient(accessToken);
-
-        var request = new GraphQLRequest
-        {
-            Query = GitHubGraphQlQueries.SearchPullRequests,
-            OperationName = "SearchPullRequestsInvolvingUser",
-            Variables = new
-            {
-                searchQuery,
-                first = pageSize,
-                after
-            }
-        };
-
-        var response = await graphQlClient.SendQueryAsync<GitHubGraphQLSearchPullRequestsDataDTO>(request, ct);
-        ThrowIfErrors(response);
-
-        var search = response.Data.Search;
-
-        return new GitHubPullRequestSearchResultDTO
-        {
-            TotalCount = search.IssueCount,
-            HasNextPage = search.PageInfo.HasNextPage,
-            EndCursor = search.PageInfo.EndCursor,
-            Items = [.. search.Nodes.Select(_pullRequestMapper.ToDto)]
-        };
     }
 
     /// <summary>

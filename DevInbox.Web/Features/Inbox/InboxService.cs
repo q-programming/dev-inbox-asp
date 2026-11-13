@@ -46,9 +46,16 @@ public class InboxService(
             MyPullRequests = group.LongCount(item =>
                 item.Source == ItemSource.GitHub &&
                 item.Type == ItemType.PR &&
-                item.Reason == InboxReason.Authored),
+                item.Reason == InboxReason.Authored &&
+                !item.State.IsDone),
+            AssignedTo = group.LongCount(item =>
+                item.Reason == InboxReason.Assigned &&
+                !item.State.IsDone),
             AdoItems = group.LongCount(item =>
                 item.Source == ItemSource.Ado &&
+                !item.State.IsDone),
+            GithubItems = group.LongCount(item =>
+                item.Source == ItemSource.GitHub &&
                 !item.State.IsDone)
         }) ?? new InboxSummary();
 
@@ -76,10 +83,23 @@ public class InboxService(
     }
 
 
-    public async Task<InboxPage> ListInboxItemsAsync(int page, int size, Infrastructure.OpenApi.Generated.ItemSource? source, Infrastructure.OpenApi.Generated.ItemType? itemType, ItemStatus? status, Infrastructure.OpenApi.Generated.InboxReason? reason)
+    public async Task<InboxPage> ListInboxItemsAsync(
+        PageRequest pageRequest,
+        Infrastructure.OpenApi.Generated.ItemSource? source,
+        Infrastructure.OpenApi.Generated.ItemType? itemType,
+        ItemStatus? status,
+        Infrastructure.OpenApi.Generated.InboxReason? reason,
+        string? searchTerm)
     {
         var userId = GetCurrentUserId();
-        var (items, totalElements) = await inboxItemRepository.GetInboxItemsFilteredAsync(page, size, userId, (ItemSource?)source, (ItemType?)itemType, status, (InboxReason?)reason);
+        var (items, totalElements) = await inboxItemRepository.GetInboxItemsFilteredAsync(
+            pageRequest,
+            userId,
+            (ItemSource?)source,
+            (ItemType?)itemType,
+            status,
+            (InboxReason?)reason,
+            searchTerm);
 
         return new InboxPage
         {
@@ -87,8 +107,8 @@ public class InboxService(
                 .Select(_inboxMapper.ToDto)
                 .ToList(),
             TotalElements = totalElements,
-            Page = page,
-            Size = size
+            Page = pageRequest.Page,
+            Size = pageRequest.Size
         };
     }
 
@@ -119,6 +139,12 @@ public class InboxService(
         await inboxItemRepository.UpdateAsync(item);
     }
 
+
+    public async Task BulkUpdateInboxItemsAsync(IReadOnlyCollection<long> ids, bool? isDone, bool? isSaved)
+    {
+        var userId = GetCurrentUserId();
+        await inboxItemRepository.BulkUpdateStateAsync(userId, ids, isDone, isSaved);
+    }
 
     public async Task DeleteInboxItemsBySourceAsync(long userId, ItemSource source, string? organization, CancellationToken cancellationToken)
     {

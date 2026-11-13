@@ -209,6 +209,26 @@ describe('AdoIntegrationCard', () => {
       expect(screen.getByTestId('ado-expired-badge')).toBeTruthy();
     });
 
+    it('counts only active organizations in the header badge and flags invalid tokens', () => {
+      setIdentity([
+        { id: 1, type: IntegrationType.Ado, status: IntegrationStatus.ACTIVE, organization: 'contoso' },
+        { id: 2, type: IntegrationType.Ado, status: IntegrationStatus.INVALID, organization: 'fabrikam' },
+      ]);
+      renderWithProviders(<AdoIntegrationCard />);
+
+      expect(screen.getByTestId('ado-invalid-badge')).toBeTruthy();
+      expect(screen.getAllByTestId('ado-connected-badge')[0]).toHaveTextContent('1 connected');
+    });
+
+    it('hides the header badge when no organization is active', () => {
+      setIdentity([
+        { id: 2, type: IntegrationType.Ado, status: IntegrationStatus.INVALID, organization: 'fabrikam' },
+      ]);
+      renderWithProviders(<AdoIntegrationCard />);
+
+      expect(screen.queryByTestId('ado-connected-badge')).toBeNull();
+    });
+
     it('disconnects only the targeted organization', async () => {
       const requestedOrganizations: string[] = [];
       server.use(

@@ -10,6 +10,9 @@ using InboxEntity = DevInbox.Web.Features.Inbox.Domain.Inbox;
 using GeneratedItemSource = DevInbox.Web.Infrastructure.OpenApi.Generated.ItemSource;
 using GeneratedInboxItemDetail = DevInbox.Web.Infrastructure.OpenApi.Generated.InboxItemDetail;
 using InboxSummary = DevInbox.Web.Infrastructure.OpenApi.Generated.InboxSummary;
+using GeneratedInboxSort = DevInbox.Web.Infrastructure.OpenApi.Generated.InboxSort;
+using GeneratedItemStatus = DevInbox.Web.Infrastructure.OpenApi.Generated.ItemStatus;
+using PageRequest = DevInbox.Web.Features.Inbox.Domain.PageRequest;
 
 namespace DevInbox.Web.Tests.Features.Inbox;
 
@@ -168,11 +171,19 @@ public class InboxServiceTests
                 State = new InboxItemState { InboxItemId = 10 }
             }
         };
+        var pageRequest = new PageRequest { Page = 0, Size = 20, Sort = GeneratedInboxSort.ActivityDesc };
         _ = _inboxItemRepository
-            .GetInboxItemsFilteredAsync(0, 20, UserId, ItemSource.GitHub, null, null, null)
+            .GetInboxItemsFilteredAsync(
+                pageRequest,
+                UserId,
+                ItemSource.GitHub,
+                null,
+                null,
+                null,
+                null)
             .Returns((items, 1L));
 
-        var result = await _service.ListInboxItemsAsync(0, 20, GeneratedItemSource.Github, null, null, null);
+        var result = await _service.ListInboxItemsAsync(pageRequest, GeneratedItemSource.Github, null, null, null, null);
 
         Assert.Equal(1, result.TotalElements);
         Assert.Equal(0, result.Page);
@@ -184,14 +195,85 @@ public class InboxServiceTests
     [Fact(DisplayName = "ListInboxItemsAsync should return an empty page when the user has no items")]
     public async Task ListInboxItemsAsyncShouldReturnEmptyPageWhenNoItemsAsync()
     {
+        var pageRequest = new PageRequest { Page = 0, Size = 20, Sort = GeneratedInboxSort.ActivityDesc };
         _ = _inboxItemRepository
-            .GetInboxItemsFilteredAsync(0, 20, UserId, null, null, null, null)
+            .GetInboxItemsFilteredAsync(
+                pageRequest,
+                UserId,
+                null,
+                null,
+                null,
+                null,
+                null)
             .Returns(([], 0L));
 
-        var result = await _service.ListInboxItemsAsync(0, 20, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(pageRequest, null, null, null, null, null);
 
         Assert.Empty(result.Items);
         Assert.Equal(0, result.TotalElements);
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should forward the requested sort order to the repository")]
+    public async Task ListInboxItemsAsyncShouldForwardSortToRepositoryAsync()
+    {
+        var pageRequest = new PageRequest { Page = 0, Size = 20, Sort = GeneratedInboxSort.PriorityDesc };
+        _ = _inboxItemRepository
+            .GetInboxItemsFilteredAsync(
+                pageRequest,
+                UserId,
+                null,
+                null,
+                null,
+                null,
+                null)
+            .Returns(([], 0L));
+
+        var result = await _service.ListInboxItemsAsync(pageRequest, null, null, null, null, null);
+
+        Assert.Equal(0, result.TotalElements);
+        await _inboxItemRepository.Received(1)
+            .GetInboxItemsFilteredAsync(
+                pageRequest,
+                UserId,
+                null,
+                null,
+                null,
+                null,
+                null);
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should forward the search term with the same page request and filters")]
+    public async Task ListInboxItemsAsyncShouldForwardSearchTermWithPageRequestAndFiltersAsync()
+    {
+        var pageRequest = new PageRequest { Page = 1, Size = 10, Sort = GeneratedInboxSort.CreatedDesc };
+        var source = GeneratedItemSource.Github;
+        var itemType = DevInbox.Web.Infrastructure.OpenApi.Generated.ItemType.PR;
+        var status = GeneratedItemStatus.ToDo;
+        var reason = DevInbox.Web.Infrastructure.OpenApi.Generated.InboxReason.Authored;
+        const string searchTerm = "release";
+
+        _ = _inboxItemRepository
+                .GetInboxItemsFilteredAsync(
+                    pageRequest,
+                    UserId,
+                    (ItemSource)source,
+                    (ItemType)itemType,
+                    (GeneratedItemStatus)status,
+                    (InboxReason)reason,
+                    searchTerm)
+                .Returns(([], 0L));
+
+        await _service.ListInboxItemsAsync(pageRequest, source, itemType, status, reason, searchTerm);
+
+        await _inboxItemRepository.Received(1)
+                .GetInboxItemsFilteredAsync(
+                    pageRequest,
+                    UserId,
+                    (ItemSource)source,
+                    (ItemType)itemType,
+                    (GeneratedItemStatus)status,
+                    (InboxReason)reason,
+                    searchTerm);
     }
 
     // ── GetInboxItemByIdAsync ─────────────────────────────────────────────────
@@ -333,5 +415,27 @@ public class InboxServiceTests
         _ = await Assert.ThrowsAsync<NotFoundException>(() => _service.SaveInboxItemAsync(5, true));
 
         await _inboxItemRepository.DidNotReceive().UpdateAsync(Arg.Any<InboxItem>());
+    }
+
+    // ── BulkUpdateInboxItemsAsync ─────────────────────────────────────────────
+
+    [Fact(DisplayName = "BulkUpdateInboxItemsAsync should forward the current user and requested ids/flags to the repository")]
+    public async Task BulkUpdateInboxItemsAsyncShouldForwardToRepositoryAsync()
+    {
+        long[] ids = [5, 6, 7];
+
+        await _service.BulkUpdateInboxItemsAsync(ids, isDone: true, isSaved: null);
+
+        await _inboxItemRepository.Received(1).BulkUpdateStateAsync(UserId, ids, true, null);
+    }
+
+    [Fact(DisplayName = "BulkUpdateInboxItemsAsync should support updating isSaved only, leaving isDone untouched")]
+    public async Task BulkUpdateInboxItemsAsyncShouldForwardIsSavedOnlyAsync()
+    {
+        long[] ids = [1, 2];
+
+        await _service.BulkUpdateInboxItemsAsync(ids, isDone: null, isSaved: false);
+
+        await _inboxItemRepository.Received(1).BulkUpdateStateAsync(UserId, ids, null, false);
     }
 }

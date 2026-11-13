@@ -205,6 +205,22 @@ public class AdoClientTests
         Assert.Equal("Detailed PR description", result.Description);
     }
 
+    [Theory(DisplayName = "Client calls should throw AdoAuthorizationException carrying Azure DevOps' reason on 401/403")]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    public async Task ClientShouldThrowAuthorizationExceptionWithReasonAsync(HttpStatusCode status)
+    {
+        _mockHttp.When(HttpMethod.Get, $"{BaseUrl}{Organization}/MyProject/_apis/git/pullrequests")
+            .Respond(status, "application/json", """{ "message": "The PAT lacks the vso.code scope." }""");
+
+        var ex = await Assert.ThrowsAsync<AdoAuthorizationException>(
+            () => _client.GetPullRequestsAsync(Pat, Organization, "MyProject", AdoPullRequestSearchStatus.Active, null, null, null));
+
+        Assert.Equal(status, ex.StatusCode);
+        Assert.Equal("The PAT lacks the vso.code scope.", ex.Reason);
+        Assert.DoesNotContain(Pat, ex.Message);
+    }
+
     [Fact(DisplayName = "GetPullRequestThreadsAsync should return the deserialized thread list")]
     public async Task GetPullRequestThreadsAsyncShouldReturnThreadsAsync()
     {

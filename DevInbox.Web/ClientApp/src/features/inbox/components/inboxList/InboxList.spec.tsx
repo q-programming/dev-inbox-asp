@@ -4,6 +4,7 @@ import { delay, http, HttpResponse } from 'msw';
 import { InboxReason, ItemSource, ItemType, type InboxItemSummary } from '@api';
 import { renderWithProviders } from '@test/renderWithProviders';
 import { server } from '@test/setupBrowserTests';
+import { useInboxStore } from '@feature/inbox/store/inbox.store';
 import InboxList from './InboxList';
 
 const createInboxItem = (overrides: Partial<InboxItemSummary> = {}): InboxItemSummary => ({
@@ -57,7 +58,7 @@ describe('InboxList', () => {
     expect(screen.getByText('Review PR')).toBeInTheDocument();
     expect(screen.getByText('Investigate alert')).toBeInTheDocument();
     expect(screen.getByText('Plan next steps')).toBeInTheDocument();
-    expect(screen.getAllByRole('button')).toHaveLength(3);
+    expect(screen.getAllByTestId('inbox-item')).toHaveLength(3);
   });
 
   it('should render an empty list when the API returns no items', async () => {
@@ -71,7 +72,7 @@ describe('InboxList', () => {
 
     const list = await screen.findByTestId('inbox-list');
     expect(list).toBeInTheDocument();
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryAllByTestId('inbox-item')).toHaveLength(0);
   });
 
   it('should fetch and append the next page when the sentinel scrolls into view', async () => {
@@ -118,5 +119,38 @@ describe('InboxList', () => {
     renderWithProviders(<InboxList />, { initialEntries: ['/inbox?source=Github'] });
 
     await waitFor(() => expect(screen.getByTestId('inbox-list')).toBeInTheDocument());
+  });
+
+  it('should request inbox items using a valid search term from Zustand', async () => {
+    useInboxStore.setState({ searchTerm: 'release notes' });
+    server.use(
+      http.get('/api/inbox', ({ request }) => {
+        expect(new URL(request.url).searchParams.get('term')).toBe('release notes');
+        return HttpResponse.json({ items: [], totalElements: 0, page: 0, size: 20 });
+      }),
+    );
+
+    renderWithProviders(<InboxList />, { initialEntries: ['/inbox'] });
+
+    await waitFor(() => expect(screen.getByTestId('inbox-list')).toBeInTheDocument());
+  });
+
+  it('should sync the store\'s itemIds with the loaded (flattened) list, in order', async () => {
+    useInboxStore.setState({ itemIds: [] });
+    const items = [
+      createInboxItem({ id: 1, title: 'Review PR' }),
+      createInboxItem({ id: 2, title: 'Investigate alert' }),
+      createInboxItem({ id: 3, title: 'Plan next steps' }),
+    ];
+
+    server.use(
+      http.get('/api/inbox', () =>
+        HttpResponse.json({ items, totalElements: items.length, page: 0, size: 20 }),
+      ),
+    );
+
+    renderWithProviders(<InboxList />, { initialEntries: ['/inbox'] });
+
+    await waitFor(() => expect(useInboxStore.getState().itemIds).toEqual([1, 2, 3]));
   });
 });

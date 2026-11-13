@@ -1,7 +1,18 @@
-import { InboxClient, InboxReason, ItemSource, ItemStatus, ItemType, SyncClient, TriggerType, type InboxPage, type SyncTriggerResultDto } from '@api';
+import {
+  InboxClient,
+  InboxReason,
+  InboxSort,
+  ItemSource,
+  ItemStatus,
+  ItemType,
+  SyncClient,
+  TriggerType,
+  type InboxPage,
+  type SyncTriggerResultDto,
+} from '@api';
 import { ApiError, apiFetch, BASE_URL } from '@shared/api/httpClient';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import useAlertStore from '@shared/store/alert.store';
+import useAlertStore, { AlertType } from '@shared/store/alert.store';
 import { heartbeatKeys } from './useInboxHeartBeat';
 import { buildSyncItemAlerts } from '../utils/syncAlerts';
 import type { InboxFilter } from '../utils/inboxFilter';
@@ -26,15 +37,25 @@ export const inboxKeys = {
  */
 export const useInboxQuery = (filter?: InboxFilter) =>
   useInfiniteQuery({
-    queryKey: [...inboxKeys.items, filter?.source, filter?.itemType, filter?.reason, filter?.status],
+    queryKey: [
+      ...inboxKeys.items,
+      filter?.source,
+      filter?.itemType,
+      filter?.reason,
+      filter?.status,
+      filter?.sort,
+      filter?.term,
+    ],
     queryFn: ({ pageParam }) =>
       inboxApi.listInboxItems(
         pageParam,
         INBOX_PAGE_SIZE,
+        filter?.sort as InboxSort | undefined,
         filter?.source as ItemSource | undefined,
         filter?.itemType as ItemType | undefined,
         filter?.status as ItemStatus | undefined,
         filter?.reason as InboxReason | undefined,
+        filter?.term
       ),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
@@ -47,7 +68,8 @@ export const useInboxQuery = (filter?: InboxFilter) =>
   });
 
 /** Flattens the pages of an infinite inbox query into a single item array for rendering. */
-export const flattenInboxPages = (pages?: InboxPage[]) => pages?.flatMap((page) => page.items ?? []) ?? [];
+export const flattenInboxPages = (pages?: InboxPage[]) =>
+  pages?.flatMap((page) => page.items ?? []) ?? [];
 
 export const useInboxSummaryQuery = () =>
   useQuery({
@@ -63,56 +85,77 @@ export const useInboxItemQuery = (itemId?: number) =>
     meta: { silent: true },
     staleTime: 30_000, // 30 seconds
     gcTime: 5 * 60_000, // 5 minutes
-  });  
+  });
 
-export const useSyncMutation = () =>
-  {
-    const queryClient = useQueryClient();
-    const { addAlert } = useAlertStore();
-    return useMutation<SyncTriggerResultDto | null, ApiError, TriggerType>({
-      mutationFn: (trigger) => syncApi.triggerSync(trigger),
-      onSuccess: (result) => {
-        // Invalidate the inbox query to refetch the latest items after a successful sync.
-        queryClient.invalidateQueries({ queryKey: inboxKeys.all });
-        queryClient.invalidateQueries({ queryKey: heartbeatKeys.status });
+export const useSyncMutation = () => {
+  const queryClient = useQueryClient();
+  const { addAlert } = useAlertStore();
+  return useMutation<SyncTriggerResultDto | null, ApiError, TriggerType>({
+    mutationFn: (trigger) => syncApi.triggerSync(trigger),
+    onSuccess: (result) => {
+      // Invalidate the inbox query to refetch the latest items after a successful sync.
+      queryClient.invalidateQueries({ queryKey: inboxKeys.all });
+      queryClient.invalidateQueries({ queryKey: heartbeatKeys.status });
+      const items = result?.items ?? [];
+      if (items.length > 0) {
+        buildSyncItemAlerts(items).forEach((alert) => addAlert(alert));
+      }
+    },
+  });
+};
 
-        // Same Outlook-style per-item alerts a background sync tick shows, so a manual sync
-        // surfaces what actually changed instead of a generic "updating inbox" message.
-        const items = result?.items ?? [];
-        if (items.length > 0) {
-          buildSyncItemAlerts(items).forEach((alert) => addAlert(alert));
-        }
-      },
-    });
-  };
+export const useMarkInboxItemDoneMutation = () => {
+  const queryClient = useQueryClient();
+  const { addAlert } = useAlertStore();
+  return useMutation<void, ApiError, { itemId: number; isDone: boolean; itemTitle?: string }>({
+    mutationFn: ({ itemId, isDone }) => inboxApi.markInboxItemDone(itemId, isDone),
+    onSuccess: (_data, { itemId, isDone, itemTitle }) => {
+      // Invalidate the inbox query to refetch the latest items after marking an item as done.
+      queryClient.invalidateQueries({ queryKey: inboxKeys.items });
+      queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
+      queryClient.invalidateQueries({ queryKey: [...inboxKeys.detail, itemId] });
+      const label = itemTitle ? `"${itemTitle}"` : 'Item';
+      addAlert({
+        message: isDone ? `${label} marked as done` : `${label} marked as not done`,
+        type: isDone ? AlertType.SUCCESS : AlertType.INFO,
+      });
+    },
+  });
+};
+export const useSaveInboxItemMutation = () => {
+  const queryClient = useQueryClient();
+  const { addAlert } = useAlertStore();
+  return useMutation<void, ApiError, { itemId: number; isSaved: boolean; itemTitle?: string }>({
+    mutationFn: ({ itemId, isSaved }) => inboxApi.saveInboxItem(itemId, isSaved),
+    onSuccess: (_data, { itemId, isSaved, itemTitle }) => {
+      // Invalidate the inbox query to refetch the latest items after saving an item.
+      queryClient.invalidateQueries({ queryKey: inboxKeys.items });
+      queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
+      queryClient.invalidateQueries({ queryKey: [...inboxKeys.detail, itemId] });
+      const label = itemTitle ? `"${itemTitle}"` : 'Item';
+      addAlert({
+        message: isSaved ? `${label} saved` : `${label} unsaved`,
+        type: isSaved ? AlertType.SUCCESS : AlertType.INFO,
+      });
+    },
+  });
+};
 
-  export const useMarkInboxItemDoneMutation = () =>
-  {
-    const queryClient = useQueryClient();
-    return useMutation<void, ApiError, { itemId: number; isDone: boolean }>({
-      mutationFn: ({ itemId, isDone }) => inboxApi.markInboxItemDone(itemId, isDone),
-      onSuccess: (_data, { itemId }) => {
-        // Invalidate the inbox query to refetch the latest items after marking an item as done.
-        queryClient.invalidateQueries({ queryKey: inboxKeys.items });
-        queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
-        // The detail panel reads from its own cached query (staleTime: 30s) keyed by itemId —
-        // without this it would keep showing the pre-mutation isDone until that staleTime elapses.
+/** Bulk-updates isDone/isSaved for a set of inbox item ids in a single request — used by the
+ * inbox list's multi-select "Actions" menu (e.g. "Mark done" on N selected rows at once). */
+export const useBulkUpdateInboxItemsMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, ApiError, { ids: number[]; isDone?: boolean; isSaved?: boolean }>({
+    mutationFn: ({ ids, isDone, isSaved }) =>
+      inboxApi.bulkUpdateInboxItems({ ids, isDone, isSaved }),
+    onSuccess: (_data, { ids }) => {
+      // Invalidate the inbox list/summary, plus each affected item's own detail query — same
+      // reasoning as the single-item mark-done/save mutations above, just fanned out over ids.
+      queryClient.invalidateQueries({ queryKey: inboxKeys.items });
+      queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
+      ids.forEach((itemId) => {
         queryClient.invalidateQueries({ queryKey: [...inboxKeys.detail, itemId] });
-      },
-    });
-  };
-    export const useSaveInboxItemMutation = () =>
-  {
-    const queryClient = useQueryClient();
-    return useMutation<void, ApiError, { itemId: number; isSaved: boolean }>({
-      mutationFn: ({ itemId, isSaved }) => inboxApi.saveInboxItem(itemId, isSaved),
-      onSuccess: (_data, { itemId }) => {
-        // Invalidate the inbox query to refetch the latest items after saving an item.
-        queryClient.invalidateQueries({ queryKey: inboxKeys.items });
-        queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
-        // The detail panel reads from its own cached query (staleTime: 30s) keyed by itemId —
-        // without this it would keep showing the pre-mutation isSaved until that staleTime elapses.
-        queryClient.invalidateQueries({ queryKey: [...inboxKeys.detail, itemId] });
-      },
-    });
-  };
+      });
+    },
+  });
+};

@@ -6,6 +6,11 @@ public class GithubOptions
     public required string ClientId { get; set; } = string.Empty;
     public required string ClientSecret { get; set; } = string.Empty;
     public string Scope { get; set; } = "read:user user:email repo";
+
+    public const int DefaultLatestCommentsCount = 10;
+
+    /// <summary>How many of the most recent PR comments the detail panel shows. Env var: <c>GitHub__LatestCommentsCount</c>.</summary>
+    public int LatestCommentsCount { get; set; } = DefaultLatestCommentsCount;
     public string AuthorizationUri { get; set; } = "https://github.com/login/oauth/authorize";
     public string TokenUri { get; set; } = "https://github.com/login/oauth/access_token";
 

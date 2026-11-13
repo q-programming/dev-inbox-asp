@@ -19,12 +19,12 @@ public class AdoIntegrationMapperTests
         Assert.Equal(DevInbox.Web.Infrastructure.OpenApi.Generated.IntegrationAuthMethod.Pat, result.AuthMethod);
     }
 
-    [Fact(DisplayName = "ToIntegrationDto should return EXPIRED when the profile status is invalid")]
-    public void ToIntegrationDtoShouldReturnExpiredForInvalidProfile()
+    [Fact(DisplayName = "ToIntegrationDto should return INVALID when the profile status is invalid and the PAT has not expired")]
+    public void ToIntegrationDtoShouldReturnInvalidForInvalidProfile()
     {
         var result = _mapper.ToIntegrationDto(BuildProfile(status: DomainIntegrationStatus.Invalid, expiresAt: DateTimeOffset.UtcNow.AddDays(7)));
 
-        Assert.Equal(DevInbox.Web.Infrastructure.OpenApi.Generated.IntegrationStatus.EXPIRED, result.Status);
+        Assert.Equal(DevInbox.Web.Infrastructure.OpenApi.Generated.IntegrationStatus.INVALID, result.Status);
     }
 
     [Fact(DisplayName = "ToIntegrationDto should return EXPIRED when the PAT expiry is in the past")]

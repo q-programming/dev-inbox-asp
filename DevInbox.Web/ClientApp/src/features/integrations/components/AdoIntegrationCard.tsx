@@ -24,6 +24,7 @@ import ConfirmModal from '@shared/components/confirmModal/ConfirmModal';
 const AdoOrganizationRow = memo(({ integration }: { integration: IntegrationDto }) => {
   const isConnected = integration.status === IntegrationStatus.ACTIVE;
   const isExpired = integration.status === IntegrationStatus.EXPIRED;
+  const isInvalid = integration.status === IntegrationStatus.INVALID;
   const [isDisconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
   const disconnect = useDisconnectAdoOrganizationMutation();
 
@@ -47,6 +48,9 @@ const AdoOrganizationRow = memo(({ integration }: { integration: IntegrationDto 
       )}
       {isExpired && (
         <Chip label="Token expired" color="warning" size="small" data-testid="ado-expired-badge" />
+      )}
+      {isInvalid && (
+        <Chip label="Token invalid" color="error" size="small" data-testid="ado-invalid-badge" />
       )}
       <Button
         variant="outlined"
@@ -89,6 +93,8 @@ const AdoIntegrationCard = memo(() => {
     [allIntegrations],
   );
 
+  const activeCount = integrations.filter((entry) => entry.status === IntegrationStatus.ACTIVE).length;
+
   const [organization, setOrganization] = useState('');
   const [token, setToken] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
@@ -116,10 +122,10 @@ const AdoIntegrationCard = memo(() => {
             Track assigned work items and pull requests across one or more Azure DevOps organizations.
           </Typography>
         </Box>
-        {integrations.length > 0 && (
+        {activeCount > 0 && (
           <Chip
             icon={<CheckCircleIcon />}
-            label={`${integrations.length} connected`}
+            label={`${activeCount} connected`}
             color="success"
             size="small"
             data-testid="ado-connected-badge"

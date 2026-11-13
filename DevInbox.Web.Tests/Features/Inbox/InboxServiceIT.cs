@@ -5,13 +5,18 @@ using DevInbox.Web.Features.Inbox;
 using DevInbox.Web.Features.Inbox.Details;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Features.Notes.Domain;
+using DevInbox.Web.Features.Inbox.Config;
+using DevInbox.Web.Features.Inbox.Exceptions;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.FeatureManagement;
 using NSubstitute;
 using InboxEntity = DevInbox.Web.Features.Inbox.Domain.Inbox;
 using GeneratedItemSource = DevInbox.Web.Infrastructure.OpenApi.Generated.ItemSource;
 using GeneratedInboxItemDetail = DevInbox.Web.Infrastructure.OpenApi.Generated.InboxItemDetail;
+using GeneratedInboxSort = DevInbox.Web.Infrastructure.OpenApi.Generated.InboxSort;
+using PageRequest = DevInbox.Web.Features.Inbox.Domain.PageRequest;
 
 namespace DevInbox.Web.Tests.Features.Inbox;
 
@@ -26,6 +31,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
     private User _user = default!;
     private User _otherUser = default!;
     private InboxService _service = default!;
+    private InboxItemRepository _inboxItemRepository = default!;
     private readonly IInboxDetailService _detailService = Substitute.For<IInboxDetailService>();
 
     public override async Task InitializeAsync()
@@ -45,11 +51,27 @@ public class InboxServiceIT : DatabaseIntegrationTest
         await DataBase.SaveChangesAsync();
 
         var accessor = CreateAccessorWithClaim(_user.Id);
+        _inboxItemRepository = CreateInboxItemRepository();
         _service = new InboxService(
             new InboxRepository(DataBase),
-            new InboxItemRepository(DataBase),
+            _inboxItemRepository,
             _detailService,
             accessor);
+    }
+
+    /// <summary>
+    /// Builds an <see cref="InboxItemRepository"/> with the search-scope guard's feature flag and
+    /// candidate threshold overridable per test — defaults match production (guard off,
+    /// <see cref="InboxItemRepository.MaxSearchCandidates"/>'s built-in 10000) so most tests don't
+    /// need to think about it.
+    /// </summary>
+    private InboxItemRepository CreateInboxItemRepository(bool searchScopeGuardEnabled = false, int? maxCandidates = null)
+    {
+        var featureManager = Substitute.For<IFeatureManager>();
+        featureManager.IsEnabledAsync(InboxFeatureFlags.SearchScopeGuard).Returns(searchScopeGuardEnabled);
+        return maxCandidates.HasValue
+            ? new InboxItemRepository(DataBase, featureManager) { MaxSearchCandidates = maxCandidates.Value }
+            : new InboxItemRepository(DataBase, featureManager);
     }
 
     public override async Task DisposeAsync()
@@ -102,28 +124,29 @@ public class InboxServiceIT : DatabaseIntegrationTest
     [Fact(DisplayName = "GetInboxSummaryAsync should aggregate counts across the current user's items only")]
     public async Task GetInboxSummaryAsyncShouldAggregateCountsForCurrentUserAsync()
     {
-        // Done — MyPullRequests requires no not-done gating, so this item can be done
-        // without breaking the not-done-gated ReviewRequests/Mentions/AdoItems counts below.
-        // Saved is also gated on not-done, so this saved+done item must not count towards Saved.
-        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, isDone: true, isSaved: true);
-        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.ReviewRequested, isDone: false, isSaved: true);
+        // Saved is gated on not-done, so this saved item must count towards Saved.
+        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, isDone: false, isSaved: true);
+        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.ReviewRequested, isDone: false, isSaved: false);
         await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Mentioned, priority: Priority.Critical);
         await AddItemAsync(_user.Id, ItemSource.Note, ItemType.Note, InboxReason.Note);
         // Belongs to another user - must not be counted.
         await AddItemAsync(_otherUser.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
         // Closed — must be excluded from the inbox summary entirely.
         await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, isClosed: true);
+        // Done — MyPullRequests and GithubItems are gated on not-done, so this authored PR must not count.
+        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, isDone: true);
 
         var summary = await _service.GetInboxSummaryAsync();
 
-        Assert.Equal(4, summary.Total);
-        Assert.Equal(3, summary.ToDo);
+        Assert.Equal(5, summary.Total);
+        Assert.Equal(4, summary.ToDo);
         Assert.Equal(1, summary.Saved);
         Assert.Equal(1, summary.NeedsAttention);
         Assert.Equal(1, summary.ReviewRequests);
         Assert.Equal(1, summary.Mentions);
         Assert.Equal(1, summary.MyPullRequests);
         Assert.Equal(1, summary.AdoItems);
+        Assert.Equal(2, summary.GithubItems);
         Assert.Equal(1, summary.Notes);
     }
 
@@ -142,12 +165,165 @@ public class InboxServiceIT : DatabaseIntegrationTest
         await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.Issue, InboxReason.Mentioned, activityAt: DateTimeOffset.UtcNow.AddMinutes(-2));
         await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned, activityAt: DateTimeOffset.UtcNow.AddMinutes(-3));
 
-        var result = await _service.ListInboxItemsAsync(0, 1, GeneratedItemSource.Github, null, null, null);
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 1 }, GeneratedItemSource.Github, null, null, null, null);
 
         Assert.Equal(2, result.TotalElements);
         _ = Assert.Single(result.Items);
         Assert.Equal(0, result.Page);
         Assert.Equal(1, result.Size);
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should default to most-recently-active-first when no sort is requested")]
+    public async Task ListInboxItemsAsyncShouldDefaultToActivityDescAsync()
+    {
+        var oldest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-10));
+        var newest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-1));
+
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10 }, null, null, null, null, null);
+
+        Assert.Equal([newest.Id, oldest.Id], result.Items.Select(i => i.Id).ToArray());
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should sort by activity ascending when requested")]
+    public async Task ListInboxItemsAsyncShouldSortByActivityAscAsync()
+    {
+        var oldest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-10));
+        var newest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-1));
+
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.ActivityAsc }, null, null, null, null, null);
+
+        Assert.Equal([oldest.Id, newest.Id], result.Items.Select(i => i.Id).ToArray());
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should sort by priority descending when requested")]
+    public async Task ListInboxItemsAsyncShouldSortByPriorityDescAsync()
+    {
+        var low = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, priority: Priority.Low);
+        var critical = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, priority: Priority.Critical);
+        var medium = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, priority: Priority.Medium);
+
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.PriorityDesc }, null, null, null, null, null);
+
+        Assert.Equal([critical.Id, medium.Id, low.Id], result.Items.Select(i => i.Id).ToArray());
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should sort by created date descending when requested")]
+    public async Task ListInboxItemsAsyncShouldSortByCreatedDescAsync()
+    {
+        var older = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, createdAt: DateTimeOffset.UtcNow.AddDays(-2));
+        var newer = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, createdAt: DateTimeOffset.UtcNow.AddDays(-1));
+
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.CreatedDesc }, null, null, null, null, null);
+
+        Assert.Equal([newer.Id, older.Id], result.Items.Select(i => i.Id).ToArray());
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should search titles case-insensitively and exclude non-matching items")]
+    public async Task ListInboxItemsAsyncShouldSearchTitlesCaseInsensitivelyAsync()
+    {
+        var firstMatch = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+        firstMatch.Title = "Quarterly release checklist";
+        var secondMatch = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.Issue, InboxReason.Mentioned);
+        secondMatch.Title = "RELEASE notes";
+        var nonMatch = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.WorkItem, InboxReason.Assigned);
+        nonMatch.Title = "Unrelated maintenance";
+        await DataBase.SaveChangesAsync();
+
+        var result = await _service.ListInboxItemsAsync(
+            new PageRequest { Page = 0, Size = 10 },
+            null,
+            null,
+            null,
+            null,
+            "release");
+
+        Assert.Equal(2, result.TotalElements);
+        Assert.Equal(
+            [firstMatch.Id, secondMatch.Id],
+            result.Items.Select(item => item.Id).OrderBy(id => id).ToArray());
+        Assert.DoesNotContain(nonMatch.Id, result.Items.Select(item => item.Id));
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should reject an overly broad search when the scope guard feature flag is enabled")]
+    public async Task ListInboxItemsAsyncShouldRejectOverlyBroadSearchWhenScopeGuardEnabledAsync()
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+        }
+
+        var service = new InboxService(
+            new InboxRepository(DataBase),
+            CreateInboxItemRepository(searchScopeGuardEnabled: true, maxCandidates: 2),
+            _detailService,
+            CreateAccessorWithClaim(_user.Id));
+
+        await Assert.ThrowsAsync<SearchScopeTooBroadException>(() => service.ListInboxItemsAsync(
+            new PageRequest { Page = 0, Size = 10 },
+            null,
+            null,
+            null,
+            null,
+            "test"));
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should not reject an overly broad search when the scope guard feature flag is disabled")]
+    public async Task ListInboxItemsAsyncShouldNotRejectOverlyBroadSearchWhenScopeGuardDisabledAsync()
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+        }
+
+        var service = new InboxService(
+            new InboxRepository(DataBase),
+            CreateInboxItemRepository(searchScopeGuardEnabled: false, maxCandidates: 2),
+            _detailService,
+            CreateAccessorWithClaim(_user.Id));
+
+        var result = await service.ListInboxItemsAsync(
+            new PageRequest { Page = 0, Size = 10 },
+            null,
+            null,
+            null,
+            null,
+            "test item");
+
+        Assert.Equal(3, result.TotalElements);
+    }
+
+    [Fact(DisplayName = "BulkUpdateInboxItemsAsync should mark only the requested items done, scoped to the current user")]
+    public async Task BulkUpdateInboxItemsAsyncShouldMarkRequestedItemsDoneAsync()
+    {
+        var first = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+        var second = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+        var untouched = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+        var otherUsersItem = await AddItemAsync(_otherUser.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+
+        await _service.BulkUpdateInboxItemsAsync([first.Id, second.Id, otherUsersItem.Id], isDone: true, isSaved: null);
+
+        var states = await DataBase.InboxItems.AsNoTracking().Include(i => i.State)
+            .Where(i => i.Id == first.Id || i.Id == second.Id || i.Id == untouched.Id || i.Id == otherUsersItem.Id)
+            .ToDictionaryAsync(i => i.Id, i => i.State.IsDone);
+
+        Assert.True(states[first.Id]);
+        Assert.True(states[second.Id]);
+        Assert.False(states[untouched.Id]);
+        // Belongs to another user — must be left untouched even though its id was included in the request.
+        Assert.False(states[otherUsersItem.Id]);
+    }
+
+    [Fact(DisplayName = "BulkUpdateInboxItemsAsync should update isSaved and isDone independently when only one is provided")]
+    public async Task BulkUpdateInboxItemsAsyncShouldUpdateOnlyProvidedFlagsAsync()
+    {
+        var item = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, isDone: true, isSaved: false);
+
+        await _service.BulkUpdateInboxItemsAsync([item.Id], isDone: null, isSaved: true);
+
+        var reloaded = await DataBase.InboxItems.AsNoTracking().Include(i => i.State).SingleAsync(i => i.Id == item.Id);
+        Assert.True(reloaded.State.IsSaved);
+        // isDone was not part of this request — must remain whatever it was before.
+        Assert.True(reloaded.State.IsDone);
     }
 
     [Fact(DisplayName = "GetInboxItemByIdAsync should return the item detail when it belongs to the current user")]
@@ -183,6 +359,49 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var reloaded = await context.Inboxes.AsNoTracking().SingleAsync(i => i.UserId == _user.Id);
         Assert.Equal(SyncStatus.Running, reloaded.SyncStatus);
         Assert.Equal(inbox.Version, reloaded.Version);
+    }
+
+    [Fact(DisplayName = "SyncAttachedNotesStateAsync should mark a note's inbox item done+closed once its target item is closed (e.g. PR merged)")]
+    public async Task SyncAttachedNotesStateAsyncShouldMarkAttachedNoteDoneAndClosedAsync()
+    {
+        var prItem = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, isDone: false, isClosed: false);
+        var attachedNote = await AddNoteAsync(_user.Id, attachedToInboxItemId: prItem.Id);
+        var standaloneNote = await AddNoteAsync(_user.Id, attachedToInboxItemId: null);
+
+        // Simulate the PR getting merged/closed during a sync.
+        prItem.State.IsDone = true;
+        prItem.State.IsClosed = true;
+
+        await _inboxItemRepository.SyncAttachedNotesStateAsync([prItem]);
+
+        var reloadedAttachedNoteEnvelope = await DataBase.InboxItems.AsNoTracking().Include(i => i.State).SingleAsync(i => i.Id == attachedNote.InboxItemId);
+        Assert.True(reloadedAttachedNoteEnvelope.State.IsDone);
+        Assert.True(reloadedAttachedNoteEnvelope.State.IsClosed);
+
+        // A standalone note (not attached to the PR) must be unaffected.
+        var reloadedStandaloneNoteEnvelope = await DataBase.InboxItems.AsNoTracking().Include(i => i.State).SingleAsync(i => i.Id == standaloneNote.InboxItemId);
+        Assert.False(reloadedStandaloneNoteEnvelope.State.IsDone);
+        Assert.False(reloadedStandaloneNoteEnvelope.State.IsClosed);
+    }
+
+    [Fact(DisplayName = "SyncAttachedNotesStateAsync should reopen a note's inbox item when its target item is reopened")]
+    public async Task SyncAttachedNotesStateAsyncShouldReopenAttachedNoteWhenParentReopensAsync()
+    {
+        var prItem = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, isDone: true, isClosed: true);
+        var attachedNote = await AddNoteAsync(_user.Id, attachedToInboxItemId: prItem.Id);
+        attachedNote.InboxItem.State.IsDone = true;
+        attachedNote.InboxItem.State.IsClosed = true;
+        await DataBase.SaveChangesAsync();
+
+        // Simulate the PR getting reopened during a sync.
+        prItem.State.IsDone = false;
+        prItem.State.IsClosed = false;
+
+        await _inboxItemRepository.SyncAttachedNotesStateAsync([prItem]);
+
+        var reloadedAttachedNoteEnvelope = await DataBase.InboxItems.AsNoTracking().Include(i => i.State).SingleAsync(i => i.Id == attachedNote.InboxItemId);
+        Assert.False(reloadedAttachedNoteEnvelope.State.IsDone);
+        Assert.False(reloadedAttachedNoteEnvelope.State.IsClosed);
     }
 
     [Fact(DisplayName = "DeleteInboxItemsBySourceAsync should remove items for the given source, along with any attached notes")]

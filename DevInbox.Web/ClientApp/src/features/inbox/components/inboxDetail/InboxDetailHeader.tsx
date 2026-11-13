@@ -21,7 +21,6 @@ import {
   useMarkInboxItemDoneMutation,
   useSaveInboxItemMutation,
 } from '@feature/inbox/hooks/useInboxQuery';
-import useAlertStore, { AlertType } from '@shared/store/alert.store';
 
 interface IInboxDetailHeader {
   details: InboxItemDetail;
@@ -43,51 +42,25 @@ const SOURCE_INTEGRATION: Partial<Record<ItemSource, IntegrationType | string>> 
  */
 const InboxDetailHeader = ({ details, url }: IInboxDetailHeader) => {
   const { closeItem } = useInboxStore();
-  const { addAlert } = useAlertStore();
   const openNoteModal = useNoteModalStore((state) => state.open);
   const markAsDone = useMarkInboxItemDoneMutation();
   const saveInboxItem = useSaveInboxItemMutation();
 
+  // Success/failure alerts are raised centrally by the mutations themselves (see
+  // useMarkInboxItemDoneMutation/useSaveInboxItemMutation) so every caller — this button, the
+  // `s`/`d` keyboard shortcuts, ... — shows the exact same message instead of each duplicating it.
   const handleMarkAsDone = () => {
     if (!details.id) {
       return;
     }
-    markAsDone.mutate(
-      { itemId: details.id, isDone: !details.isDone },
-      {
-        onSuccess: () => {
-          if (!details.isDone) {
-            addAlert({
-              message: `"${details.title ?? 'Item'}" marked as done`,
-              type: AlertType.SUCCESS,
-            });
-          } else {
-            addAlert({
-              message: `"${details.title ?? 'Item'}" marked as not done`,
-              type: AlertType.INFO,
-            });
-          }
-        },
-      },
-    );
+    markAsDone.mutate({ itemId: details.id, isDone: !details.isDone, itemTitle: details.title });
   };
 
   const handleSaveItem = () => {
     if (!details.id) {
       return;
     }
-    saveInboxItem.mutate(
-      { itemId: details.id, isSaved: !details.isSaved },
-      {
-        onSuccess: () => {
-          if (!details.isSaved) {
-            addAlert({ message: 'Item saved', type: AlertType.SUCCESS });
-          } else {
-            addAlert({ message: 'Item unsaved', type: AlertType.INFO });
-          }
-        },
-      },
-    );
+    saveInboxItem.mutate({ itemId: details.id, isSaved: !details.isSaved, itemTitle: details.title });
   };
 
   const integration = useMemo(

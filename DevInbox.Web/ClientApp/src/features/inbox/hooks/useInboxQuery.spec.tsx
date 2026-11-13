@@ -23,6 +23,7 @@ import { heartbeatKeys } from './useInboxHeartBeat';
 import {
   flattenInboxPages,
   inboxKeys,
+  useBulkUpdateInboxItemsMutation,
   useInboxItemQuery,
   useInboxQuery,
   useInboxSummaryQuery,
@@ -90,11 +91,14 @@ describe('useInboxQuery hooks', () => {
   describe('useInboxQuery', () => {
     it('should return inbox items on success', async () => {
       const items = [createInboxItem(), createInboxItem({ id: 2, title: 'Follow up issue' })];
-      server.use(
-        http.get('/api/inbox', () =>
-          HttpResponse.json({ items, totalElements: items.length, page: 0, size: 20 }),
-        ),
-      );
+      server.use(http.get('/api/inbox', ({ request }) => {
+        const url = new URL(request.url);
+        expect(url.searchParams.get('page')).toBe('0');
+        expect(url.searchParams.get('size')).toBe('20');
+        expect(url.searchParams.get('sort')).toBeNull();
+        expect(url.searchParams.get('term')).toBeNull();
+        return HttpResponse.json({ items, totalElements: items.length, page: 0, size: 20 });
+      }));
 
       const { Wrapper } = makeWrapper();
       const { result } = renderHook(() => useInboxQuery(), { wrapper: Wrapper });
@@ -168,12 +172,45 @@ describe('useInboxQuery hooks', () => {
       });
       await waitFor(() => expect(second.result.current.isSuccess).toBe(true));
 
-      const githubKey = [...inboxKeys.items, githubFilter.source, undefined, undefined, undefined] as const;
-      const adoKey = [...inboxKeys.items, adoFilter.source, undefined, adoFilter.reason, undefined] as const;
+      const githubKey = [
+        ...inboxKeys.items,
+        githubFilter.source,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      ] as const;
+      const adoKey = [
+        ...inboxKeys.items,
+        adoFilter.source,
+        undefined,
+        adoFilter.reason,
+        undefined,
+        undefined,
+        undefined,
+      ] as const;
 
       expect(client.getQueryData(githubKey)).toBeDefined();
       expect(client.getQueryData(adoKey)).toBeDefined();
       expect(client.getQueryState(githubKey)).not.toBe(client.getQueryState(adoKey));
+    });
+
+    it('should send a valid search term as a flat query parameter', async () => {
+      const { Wrapper } = makeWrapper();
+      server.use(
+        http.get('/api/inbox', ({ request }) => {
+          expect(new URL(request.url).searchParams.get('term')).toBe('release notes');
+          return HttpResponse.json({ items: [], totalElements: 0, page: 0, size: 20 });
+        }),
+      );
+
+      const { result } = renderHook(
+        () => useInboxQuery({ term: 'release notes' }),
+        { wrapper: Wrapper },
+      );
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
     });
 
     it('should set isError when the server returns 500', async () => {
@@ -318,6 +355,53 @@ describe('useInboxQuery hooks', () => {
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.items });
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.summary });
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: [...inboxKeys.detail, 42] });
+    });
+  });
+
+  describe('useBulkUpdateInboxItemsMutation', () => {
+    it('should send the requested ids and flags in a single PATCH request', async () => {
+      let requestBody: unknown;
+      server.use(
+        http.patch('/api/inbox/bulk', async ({ request }) => {
+          requestBody = await request.json();
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useBulkUpdateInboxItemsMutation(), { wrapper: Wrapper });
+
+      result.current.mutate({ ids: [1, 2, 3], isDone: true });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(requestBody).toEqual({ ids: [1, 2, 3], isDone: true });
+    });
+
+    it('should invalidate inbox items, summary and every affected item detail query after a successful bulk update', async () => {
+      server.use(http.patch('/api/inbox/bulk', () => new HttpResponse(null, { status: 204 })));
+
+      const { client, Wrapper } = makeWrapper();
+      const invalidateQueriesSpy = vi.spyOn(client, 'invalidateQueries');
+      const { result } = renderHook(() => useBulkUpdateInboxItemsMutation(), { wrapper: Wrapper });
+
+      result.current.mutate({ ids: [1, 2], isSaved: true });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.items });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: inboxKeys.summary });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: [...inboxKeys.detail, 1] });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: [...inboxKeys.detail, 2] });
+    });
+
+    it('should set isError when the server returns 500', async () => {
+      server.use(http.patch('/api/inbox/bulk', () => HttpResponse.json({}, { status: 500 })));
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useBulkUpdateInboxItemsMutation(), { wrapper: Wrapper });
+
+      result.current.mutate({ ids: [1], isDone: true });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
     });
   });
 

@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, screen } from '@testing-library/react';
 import { renderWithProviders } from '@test/renderWithProviders.tsx';
-import { FOCUS_SEARCH_EVENT } from '@shared/hooks/useGlobalShortcuts.ts';
+import { FOCUS_SEARCH_EVENT } from '@shared/shortcuts/shortcuts.constants';
+import { useInboxStore } from '@feature/inbox/store/inbox.store';
 import GlobalSearch from './GlobalSearch.tsx';
 
 function renderSearch() {
@@ -13,6 +14,11 @@ function getInput() {
 }
 
 describe('GlobalSearch', () => {
+  beforeEach(() => {
+    useInboxStore.setState({ searchTerm: '' });
+    vi.useRealTimers();
+  });
+
   describe('FOCUS_SEARCH_EVENT', () => {
     it('should call focus() on the input when FOCUS_SEARCH_EVENT is dispatched', () => {
       renderSearch();
@@ -46,6 +52,43 @@ describe('GlobalSearch', () => {
       const input = getInput();
       fireEvent.change(input, { target: { value: 'react query' } });
       expect(input.value).toBe('react query');
+    });
+
+    it('should send the trimmed value to Zustand after the debounce', () => {
+      vi.useFakeTimers();
+      renderSearch();
+      const input = getInput();
+
+      fireEvent.change(input, { target: { value: '  react query  ' } });
+
+      expect(useInboxStore.getState().searchTerm).toBe('');
+
+      act(() => {
+        vi.runAllTimers();
+      });
+
+      expect(useInboxStore.getState().searchTerm).toBe('react query');
+    });
+  });
+
+  describe('clear button', () => {
+    it('should be hidden when the search input is empty', () => {
+      renderSearch();
+
+      expect(screen.queryByTestId('clear-search-button')).not.toBeInTheDocument();
+    });
+
+    it('should clear the input and Zustand search term when clicked', () => {
+      useInboxStore.setState({ searchTerm: 'react query' });
+      renderSearch();
+
+      expect(screen.getByTestId('clear-search-button')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('clear-search-button'));
+
+      expect(getInput().value).toBe('');
+      expect(useInboxStore.getState().searchTerm).toBe('');
+      expect(screen.queryByTestId('clear-search-button')).not.toBeInTheDocument();
     });
   });
 

@@ -1,10 +1,12 @@
 using DevInbox.Web.Features.GitHub;
 using DevInbox.Web.Features.GitHub.Client;
 using DevInbox.Web.Features.GitHub.Client.DTO;
+using DevInbox.Web.Features.GitHub.Config;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using GraphQL.Client.Http;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using DomainInboxReason = DevInbox.Web.Features.Inbox.Domain.InboxReason;
@@ -30,6 +32,7 @@ public class GitHubServiceTests
             _profileRepository,
             _inboxItemRepository,
             _gitHubClient,
+            Options.Create(new GithubOptions { ClientId = "id", ClientSecret = "secret", LatestCommentsCount = 7 }),
             Substitute.For<ILogger<GitHubService>>());
     }
 
@@ -44,7 +47,7 @@ public class GitHubServiceTests
         var profile = BuildProfile(userId: 1, accessToken: "token-abc");
         _profileRepository.GetByUserIdAsync(1).Returns(profile);
         var detail = new GitHubPullRequestDetail { PullRequestNumber = 42 };
-        _gitHubClient.GetPullRequestDetailAsync("token-abc", "octocat", "hello-world", 42, ct: Arg.Any<CancellationToken>())
+        _gitHubClient.GetPullRequestDetailAsync("token-abc", "octocat", "hello-world", 42, 7, Arg.Any<CancellationToken>())
             .Returns(detail);
 
         var result = await _service.GetDetailsAsync(item);
@@ -248,13 +251,105 @@ public class GitHubServiceTests
         Assert.Equal(DomainInboxReason.ReviewRequested, captured!.Reason);
     }
 
-    [Fact(DisplayName = "SyncUserPRAsync should infer Mentioned reason when neither author nor requested reviewer matches")]
+    [Fact(DisplayName = "SyncUserPRAsync should infer Mentioned reason when the mentions search contains the PR")]
     public async Task SyncUserPRAsyncShouldInferMentionedReasonAsync()
+    {
+        var captured = await SyncSingleNewPrAsync(
+            BuildPr(number: 1, repo: "r/r", authorLogin: "someone-else", state: "OPEN"),
+            mentionedNodeIds: ["node-1"]);
+
+        Assert.Equal(DomainInboxReason.Mentioned, captured.Reason);
+        await _gitHubClient.Received(1).GetPullRequestNodeIdsAsync(
+            "token-abc", Arg.Is<string>(q => q.Contains("mentions:octocat") && !q.Contains("involves:")), Arg.Any<CancellationToken>());
+    }
+
+    [Fact(DisplayName = "SyncUserPRAsync should infer ReviewRequested when the user already reviewed and was not mentioned")]
+    public async Task SyncUserPRAsyncShouldInferReviewRequestedForSubmittedReviewAsync()
+    {
+        var pr = BuildPr(number: 1, repo: "r/r", authorLogin: "someone-else", state: "OPEN");
+        pr.Reviews = [new GitHubReviewDTO { ReviewerLogin = "OctoCat", State = "APPROVED" }];
+
+        var captured = await SyncSingleNewPrAsync(pr, mentionedNodeIds: []);
+
+        Assert.Equal(DomainInboxReason.ReviewRequested, captured.Reason);
+        await _gitHubClient.DidNotReceive().GetPullRequestNodeIdsAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact(DisplayName = "SyncUserPRAsync should infer Assigned reason when the user is an assignee")]
+    public async Task SyncUserPRAsyncShouldInferAssignedReasonAsync()
+    {
+        var pr = BuildPr(number: 1, repo: "r/r", authorLogin: "someone-else", state: "OPEN");
+        pr.Assignees = ["octocat"];
+
+        var captured = await SyncSingleNewPrAsync(pr, mentionedNodeIds: ["node-1"]);
+
+        Assert.Equal(DomainInboxReason.Assigned, captured.Reason);
+    }
+
+    [Fact(DisplayName = "SyncUserPRAsync should infer Unknown reason when no signal explains the PR and it is not in the mentions search")]
+    public async Task SyncUserPRAsyncShouldInferUnknownReasonAsync()
+    {
+        var captured = await SyncSingleNewPrAsync(
+            BuildPr(number: 1, repo: "r/r", authorLogin: "someone-else", state: "OPEN"),
+            mentionedNodeIds: []);
+
+        Assert.Equal(DomainInboxReason.Unknown, captured.Reason);
+    }
+
+    [Fact(DisplayName = "SyncUserPRAsync should fall back to Mentioned reason when the mentions search fails")]
+    public async Task SyncUserPRAsyncShouldFallBackToMentionedWhenMentionsSearchFailsAsync()
+    {
+        var captured = await SyncSingleNewPrAsync(
+            BuildPr(number: 1, repo: "r/r", authorLogin: "someone-else", state: "OPEN"),
+            mentionedNodeIds: null);
+
+        Assert.Equal(DomainInboxReason.Mentioned, captured.Reason);
+    }
+
+    [Fact(DisplayName = "SyncUserPRAsync should correct the reason of an existing item even when nothing else changed")]
+    public async Task SyncUserPRAsyncShouldUpdateReasonOfExistingItemAsync()
     {
         var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
         _profileRepository.GetByUserIdAsync(1).Returns(profile);
+        var updatedAt = DateTimeOffset.UtcNow;
         var pr = BuildPr(number: 1, repo: "r/r", authorLogin: "someone-else", state: "OPEN");
+        pr.CommentsCount = 3;
+        pr.UpdatedAt = updatedAt;
+        pr.Reviews = [new GitHubReviewDTO { ReviewerLogin = "octocat", State = "APPROVED" }];
         SetupSearch(profile, [pr]);
+
+        var existing = BuildInboxItem(repository: "r/r", externalId: "1", inboxId: 1);
+        existing.Reason = DomainInboxReason.Mentioned;
+        existing.CommentCount = 3;
+        existing.ActivityAt = updatedAt;
+        existing.State.IsDone = true;
+        _inboxItemRepository.GetExistingItemsAsync(Arg.Any<long>(), Arg.Any<DomainItemSource>(), Arg.Any<DomainItemType>(), Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(new List<InboxItem> { existing });
+
+        await _service.SyncUserPRAsync(1, DateTimeOffset.UtcNow);
+
+        Assert.Equal(DomainInboxReason.ReviewRequested, existing.Reason);
+        Assert.True(existing.State.IsDone); // a reason correction alone is not new activity
+        await _inboxItemRepository.Received(1).SaveChangesAsync();
+    }
+
+    /// <summary>Syncs one new PR and returns the created item. A null <paramref name="mentionedNodeIds"/> makes the mentions search throw.</summary>
+    private async Task<InboxItem> SyncSingleNewPrAsync(GitHubPullRequestDTO pr, string[]? mentionedNodeIds)
+    {
+        var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
+        _profileRepository.GetByUserIdAsync(1).Returns(profile);
+        SetupSearch(profile, [pr]);
+        if (mentionedNodeIds is null)
+        {
+            _gitHubClient.GetPullRequestNodeIdsAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .ThrowsAsync(new InvalidOperationException("boom"));
+        }
+        else
+        {
+            _gitHubClient.GetPullRequestNodeIdsAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(mentionedNodeIds.ToHashSet());
+        }
         _inboxItemRepository.GetExistingItemsAsync(Arg.Any<long>(), Arg.Any<DomainItemSource>(), Arg.Any<DomainItemType>(), Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
             .Returns(new List<InboxItem>());
 
@@ -264,7 +359,7 @@ public class GitHubServiceTests
         await _service.SyncUserPRAsync(1, DateTimeOffset.UtcNow);
 
         Assert.NotNull(captured);
-        Assert.Equal(DomainInboxReason.Mentioned, captured!.Reason);
+        return captured!;
     }
 
     // -------------------------------------------------------------------------
@@ -344,6 +439,29 @@ public class GitHubServiceTests
         Assert.True(existing.State.IsDone);
         Assert.True(existing.State.IsClosed);
         await _inboxItemRepository.Received(1).SaveChangesAsync();
+    }
+
+    [Fact(DisplayName = "SyncUserPRAsync should cascade the closed/done state onto any note attached to a PR that just closed")]
+    public async Task SyncUserPRAsyncShouldCascadeClosedStateToAttachedNoteAsync()
+    {
+        var profile = BuildProfile(userId: 1, accessToken: "token-abc", login: "octocat");
+        _profileRepository.GetByUserIdAsync(1).Returns(profile);
+        var pr = BuildPr(number: 1, repo: "r/r", authorLogin: "octocat", state: "MERGED");
+        SetupSearch(profile, [pr]);
+
+        var existing = BuildInboxItem(repository: "r/r", externalId: "1", inboxId: 1);
+        existing.State.IsDone = false;
+        existing.State.IsClosed = false;
+
+        _inboxItemRepository.GetExistingItemsAsync(Arg.Any<long>(), Arg.Any<DomainItemSource>(), Arg.Any<DomainItemType>(), Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(new List<InboxItem> { existing });
+
+        await _service.SyncUserPRAsync(1, DateTimeOffset.UtcNow);
+
+        // The attached-note cascade lives in the repository (integration-tested there); here we
+        // just verify the service asks for it, passing along the item that just got closed/done.
+        await _inboxItemRepository.Received(1).SyncAttachedNotesStateAsync(
+            Arg.Is<IEnumerable<InboxItem>>(items => items.Contains(existing)));
     }
 
     [Fact(DisplayName = "SyncUserPRAsync should update existing item and clear done/closed flags when the PR was reopened")]

@@ -35,6 +35,7 @@ const GithubIntegrationCard = memo(() => {
   );
   const isConnected = integration?.status === IntegrationStatus.ACTIVE;
   const isExpired = integration?.status === IntegrationStatus.EXPIRED;
+  const isInvalid = integration?.status === IntegrationStatus.INVALID;
 
   const [mode, setMode] = useState<GithubAuthMode>(GithubAuthMode.Pat);
   const [token, setToken] = useState('');
@@ -88,9 +89,17 @@ const GithubIntegrationCard = memo(() => {
             data-testid="github-expired-badge"
           />
         )}
+        {isInvalid && (
+          <Chip
+            label="Token invalid"
+            color="error"
+            size="small"
+            data-testid="github-invalid-badge"
+          />
+        )}
       </Stack>
 
-      {(isConnected || isExpired) && (
+      {(isConnected || isExpired || isInvalid) && (
         <Button
           variant="outlined"
           color="inherit"

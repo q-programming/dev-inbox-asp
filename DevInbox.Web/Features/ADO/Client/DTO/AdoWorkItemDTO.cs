@@ -105,6 +105,10 @@ public sealed class AdoWorkItemFieldsDTO
     /// </summary>
     [JsonPropertyName("System.Description")]
     public string? Description { get; set; }
+
+    /// <summary>Populated by the single-item detail fetch only (<c>$expand=all</c>); absent on work item types without the field.</summary>
+    [JsonPropertyName("Microsoft.VSTS.Common.AcceptanceCriteria")]
+    public string? AcceptanceCriteria { get; set; }
 }
 
 /// <summary>Azure DevOps' common "identity reference" shape — used for AssignedTo/CreatedBy/reviewers alike.</summary>

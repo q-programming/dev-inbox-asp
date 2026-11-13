@@ -1,4 +1,5 @@
 using DevInbox.Web.Features.GitHub.Client.DTO;
+using DevInbox.Web.Features.GitHub.Config;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
 namespace DevInbox.Web.Features.GitHub.Client;
@@ -27,6 +28,16 @@ public interface IGitHubClient
         CancellationToken ct = default);
 
     /// <summary>
+    /// Runs a pull request search and returns only the GraphQL node ids of the matches (matching
+    /// <see cref="GitHubPullRequestDTO.NodeId"/>), paging internally. Cheap way to ask a yes/no
+    /// question per PR — e.g. with a "mentions:" qualifier — without hydrating every field.
+    /// </summary>
+    Task<IReadOnlySet<string>> GetPullRequestNodeIdsAsync(
+        string accessToken,
+        string searchQuery,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Fetches full detail for a single pull request — repository, review state, requested reviewers
     /// and the most recent comments — used to populate the inbox item detail panel. One GraphQL round
     /// trip in place of what would otherwise be several REST calls (PR, reviews, requested reviewers,
@@ -42,6 +53,6 @@ public interface IGitHubClient
         string owner,
         string name,
         int pullRequestNumber,
-        int latestCommentsCount = 5,
+        int latestCommentsCount = GithubOptions.DefaultLatestCommentsCount,
         CancellationToken ct = default);
 }

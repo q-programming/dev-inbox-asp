@@ -1,12 +1,15 @@
 using DevInbox.Web.Features.GitHub;
 using DevInbox.Web.Features.GitHub.Client;
 using DevInbox.Web.Features.GitHub.Client.DTO;
+using DevInbox.Web.Features.GitHub.Config;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Microsoft.FeatureManagement;
 using NSubstitute;
 using DomainInboxReason = DevInbox.Web.Features.Inbox.Domain.InboxReason;
 using DomainItemSource = DevInbox.Web.Features.Inbox.Domain.ItemSource;
@@ -54,8 +57,9 @@ public class GitHubServiceIT : DatabaseIntegrationTest
 
         _service = new GitHubService(
             new GitHubProfileRepository(DataBase),
-            new InboxItemRepository(DataBase),
+            new InboxItemRepository(DataBase, Substitute.For<IFeatureManager>()),
             _gitHubClient,
+            Options.Create(new GithubOptions { ClientId = "id", ClientSecret = "secret" }),
             NullLogger<GitHubService>.Instance);
     }
 

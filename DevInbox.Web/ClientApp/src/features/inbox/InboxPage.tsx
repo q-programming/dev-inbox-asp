@@ -23,8 +23,9 @@ const InboxPage = () => {
   const hasSelectedItem = selectedItemId !== undefined && selectedItemId !== null;
 
   // Deep-link support: opening /inbox/{itemId} directly (bookmark, page refresh) selects
-  // that item on mount. Zustand (persisted) remains the single source of truth for the
-  // selection afterwards — the URL param is only read once to seed it.
+  // that item on mount. The URL is the source of truth for restoring selection after a
+  // reload — `selectedItemId` itself is intentionally NOT persisted (see inbox.store.ts),
+  // so a stale selection from a previous session never resurfaces on its own.
   useEffect(() => {
     const parsed = itemIdParam ? Number(itemIdParam) : undefined;
     if (parsed !== undefined && !Number.isNaN(parsed)) {

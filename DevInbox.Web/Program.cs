@@ -8,6 +8,7 @@ using DevInbox.Web.Infrastructure.Auth;
 using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.Filters;
 using DevInbox.Web.Infrastructure.Persistence;
+using Microsoft.FeatureManagement;
 using Serilog;
 
 Banner.Print();
@@ -94,6 +95,10 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddGitHubClient(builder.Configuration);
 builder.Services.AddAdoClient(builder.Configuration);
 builder.Services.Configure<IdentityOptions>(builder.Configuration.GetSection(IdentityOptions.SectionName));
+
+// Feature flags (Microsoft.FeatureManagement), read from the "FeatureManagement" section in
+// appsettings.json by convention — e.g. the inbox search "too broad" guard (see InboxFeatureFlags).
+builder.Services.AddFeatureManagement();
 
 builder.Services.AddEncryption(builder.Configuration);
 

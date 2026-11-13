@@ -16,6 +16,7 @@ import InboxDetailHeader from '../InboxDetailHeader';
 import InboxDetailFooter from '../InboxDetailFooter';
 import PersonAvatar from '../shared/PersonAvatar';
 import RichContent from '../shared/RichContent';
+import CollapsibleSection from '../shared/CollapsibleSection';
 import CommentCard from '../shared/CommentCard';
 import { Tooltip } from '@mui/material';
 
@@ -24,6 +25,13 @@ interface IGithubDetail {
 }
 
 /** Colour of the small review-state dot shown next to each reviewer. */
+const REVIEW_STATE_LABEL: Record<ReviewState, string> = {
+  [ReviewState.Approved]: 'Approved',
+  [ReviewState.ChangesRequested]: 'Changes requested',
+  [ReviewState.Commented]: 'Commented',
+  [ReviewState.Waiting]: 'Waiting',
+};
+
 const REVIEW_STATE_COLOR: Record<ReviewState, string> = {
   [ReviewState.Approved]: 'success.main',
   [ReviewState.ChangesRequested]: 'error.main',
@@ -139,40 +147,84 @@ const GithubDetail = ({ details }: IGithubDetail) => {
             }}
           >
             {!!pr.reviewers?.length && (
-              <Box sx={{ minWidth: 0 }} data-testid="github-detail-reviewers">
-                <Typography variant="overline" color="text.secondary">
-                  Reviewers
-                </Typography>
-                <Stack spacing={0.75} sx={{ mt: 0.5 }}>
-                  {pr.reviewers.map((reviewer, index) => (
-                    <Stack
-                      key={reviewer.reviewer?.login ?? index}
-                      data-testid={`github-reviewer-${reviewer.reviewer?.login ?? index}`}
-                      data-review-state={reviewer.reviewState}
-                      direction="row"
-                      spacing={1}
-                      sx={{ alignItems: 'center' }}
-                    >
-                      <PersonAvatar person={reviewer.reviewer} size={20} />
-                      <Typography variant="body2" noWrap>
-                        {reviewer.reviewer?.displayName ?? reviewer.reviewer?.login}
-                      </Typography>
-                      <Tooltip title={reviewer.reviewState ?? ReviewState.Waiting}>
-                        <Box
+              <CollapsibleSection
+                title="Reviewers"
+                noTopMargin
+                data-testid="github-detail-reviewers"
+              >
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                      xs: 'minmax(0, 1fr) auto',
+                      sm: 'minmax(0, 1fr) auto auto',
+                    },
+                    columnGap: 2,
+                    rowGap: 0.75,
+                    alignItems: 'center',
+                  }}
+                >
+                  {pr.reviewers.map((reviewer, index) => {
+                    const state = reviewer.reviewState ?? ReviewState.Waiting;
+                    return (
+                      <Box
+                        key={reviewer.reviewer?.login ?? index}
+                        data-testid={`github-reviewer-${reviewer.reviewer?.login ?? index}`}
+                        data-review-state={reviewer.reviewState}
+                        sx={{ display: 'contents' }}
+                      >
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{ alignItems: 'center', minWidth: 0 }}
+                        >
+                          <PersonAvatar person={reviewer.reviewer} size={20} />
+                          <Typography variant="body2" noWrap>
+                            {reviewer.reviewer?.displayName ?? reviewer.reviewer?.login}
+                          </Typography>
+                        </Stack>
+                        <Tooltip title={REVIEW_STATE_LABEL[state]}>
+                          <Stack
+                            direction="row"
+                            spacing={0.75}
+                            sx={{ alignItems: 'center', justifyContent: 'flex-start' }}
+                          >
+                            <Box
+                              sx={{
+                                width: 6,
+                                height: 6,
+                                flexShrink: 0,
+                                borderRadius: '50%',
+                                bgcolor: REVIEW_STATE_COLOR[state],
+                              }}
+                            />
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              data-testid="github-reviewer-state-label"
+                              sx={{ display: { xs: 'none', sm: 'inline' }, whiteSpace: 'nowrap' }}
+                            >
+                              {REVIEW_STATE_LABEL[state]}
+                            </Typography>
+                          </Stack>
+                        </Tooltip>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          data-testid="github-reviewer-time"
                           sx={{
-                            width: 6,
-                            height: 6,
-                            flexShrink: 0,
-                            borderRadius: '50%',
-                            bgcolor:
-                              REVIEW_STATE_COLOR[reviewer.reviewState ?? ReviewState.Waiting],
+                            display: { xs: 'none', sm: 'block' },
+                            whiteSpace: 'nowrap',
+                            textAlign: 'right',
                           }}
-                        />
-                      </Tooltip>
-                    </Stack>
-                  ))}
-                </Stack>
-              </Box>
+                        >
+                          {formatRelativeTime(reviewer.reviewedAt)}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </CollapsibleSection>
             )}
 
             {!!pr.linkedWorkItems?.length && (
@@ -231,14 +283,9 @@ const GithubDetail = ({ details }: IGithubDetail) => {
           )}
 
           {!!pr.summary && (
-            <Box sx={{ mt: 2.5 }} data-testid="github-detail-summary">
-              <Typography variant="overline" color="text.secondary">
-                Description
-              </Typography>
-              <Box sx={{ mt: 0.5 }}>
-                <RichContent format={pr.summaryFormat}>{pr.summary}</RichContent>
-              </Box>
-            </Box>
+            <CollapsibleSection title="Description" data-testid="github-detail-summary">
+              <RichContent format={pr.summaryFormat}>{pr.summary}</RichContent>
+            </CollapsibleSection>
           )}
         </Paper>
         {!!pr.latestComments?.length && (

@@ -65,6 +65,12 @@ public class AdoService(
             await inboxItemRepository.DeleteAsync(item);
             throw new NotFoundException($"ADO item {item.ExternalId} no longer exists and has been removed from your inbox.");
         }
+        catch (Exception ex) when (IsUnauthorized(ex))
+        {
+            await MarkInvalidAsync(profile, ex);
+            throw new ForbiddenException(
+                $"Azure DevOps rejected the stored token for organization '{organization}' — reconnect it with the required scopes.");
+        }
     }
 
     private async Task<AdoWorkItemDetail> GetWorkItemDetailsAsync(string accessToken, InboxItem item, CancellationToken ct)
@@ -95,6 +101,8 @@ public class AdoService(
             State = workItem.Fields.State ?? string.Empty,
             Description = workItem.Fields.Description ?? string.Empty,
             DescriptionFormat = ContentFormatDetector.Detect(workItem.Fields.Description),
+            AcceptanceCriteria = workItem.Fields.AcceptanceCriteria,
+            AcceptanceCriteriaFormat = ContentFormatDetector.Detect(workItem.Fields.AcceptanceCriteria),
             Area = workItem.Fields.AreaPath ?? string.Empty,
             AssignedTo = MapPerson(workItem.Fields.AssignedTo),
             CreatedAt = workItem.Fields.CreatedDate ?? DateTimeOffset.UtcNow,
@@ -228,7 +236,7 @@ public class AdoService(
         // it's treated the same as a forced full sync for the purposes of scoping the WIQL query.
         var isInitialSync = updatedSince is null || forceFullSync;
 
-        logger.LogInformation(
+        logger.LogDebug(
             "[ADO] Starting {SyncKind} sync for {AdoLogin} (organization {Organization})",
             isInitialSync ? "initial/full" : $"incremental (since {updatedSince:O})", profile.AdoLogin, profile.Organization);
 
@@ -245,7 +253,7 @@ public class AdoService(
 
         if (projects.Count == 0)
         {
-            logger.LogInformation("[ADO] No accessible projects for {AdoLogin} (organization {Organization}) — nothing to sync", profile.AdoLogin, profile.Organization);
+            logger.LogDebug("[ADO] No accessible projects for {AdoLogin} (organization {Organization}) — nothing to sync", profile.AdoLogin, profile.Organization);
             return [];
         }
 
@@ -258,7 +266,7 @@ public class AdoService(
             var pullRequests = results.SelectMany(r => r.PullRequests).ToList();
             var staleProjectCount = results.Count(r => r.ProjectIsStale);
 
-            logger.LogInformation(
+            logger.LogDebug(
                 "[ADO] Fetched {WorkItemCount} work item(s) and {PrCount} pull request(s) across {ProjectCount} project(s) for {AdoLogin} (organization {Organization}){StaleSuffix}",
                 workItems.Count, pullRequests.Count, projects.Count, profile.AdoLogin, profile.Organization,
                 staleProjectCount > 0 ? $" ({staleProjectCount} stale project(s) skipped, cache invalidated)" : string.Empty);
@@ -282,7 +290,7 @@ public class AdoService(
             return [];
         }
 
-        logger.LogInformation("[ADO] Synchronization completed for {AdoLogin} (organization {Organization})", profile.AdoLogin, profile.Organization);
+        logger.LogDebug("[ADO] Synchronization completed for {AdoLogin} (organization {Organization})", profile.AdoLogin, profile.Organization);
         return changedItems;
     }
 
@@ -475,7 +483,12 @@ public class AdoService(
             await inboxItemRepository.SaveChangesAsync();
         }
 
-        logger.LogInformation(
+        if (updatedItems.Count > 0)
+        {
+            await inboxItemRepository.SyncAttachedNotesStateAsync(updatedItems);
+        }
+
+        logger.LogDebug(
             "[ADO] Upserted work items for {AdoLogin}: {NewCount} new, {UpdatedCount} updated",
             profile.AdoLogin, newItems.Count, updatedItems.Count);
         return [
@@ -530,7 +543,12 @@ public class AdoService(
             await inboxItemRepository.SaveChangesAsync();
         }
 
-        logger.LogInformation(
+        if (updatedItems.Count > 0)
+        {
+            await inboxItemRepository.SyncAttachedNotesStateAsync(updatedItems);
+        }
+
+        logger.LogDebug(
             "[ADO] Upserted pull requests for {AdoLogin}: {NewCount} new, {UpdatedCount} updated",
             profile.AdoLogin, newItems.Count, updatedItems.Count);
         return [
@@ -696,5 +714,6 @@ public class AdoService(
     }
 
     private static bool IsUnauthorized(Exception ex) =>
-        ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.Unauthorized };
+        ex is AdoAuthorizationException
+        or HttpRequestException { StatusCode: System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden };
 }

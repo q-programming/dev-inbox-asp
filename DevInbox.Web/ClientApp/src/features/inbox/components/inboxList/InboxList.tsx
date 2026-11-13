@@ -1,21 +1,33 @@
-import { flattenInboxPages, useInboxQuery } from "@feature/inbox/hooks/useInboxQuery";
-import { parseInboxFilter } from "@feature/inbox/utils/inboxFilter";
-import CircularProgress from "@mui/material/CircularProgress";
-import List from "@mui/material/List";
-import InboxItem from "../inboxItem/InboxItem";
-import { useMemo, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
-import { useInfiniteScrollTrigger } from "@shared/hooks/useInfiniteScrollTrigger";
+import { flattenInboxPages, useInboxQuery } from '@feature/inbox/hooks/useInboxQuery';
+import { useInboxStore } from '@feature/inbox/store/inbox.store';
+import { InboxFilter, parseInboxFilter, toInboxSearchTerm } from '@feature/inbox/utils/inboxFilter';
+import CircularProgress from '@mui/material/CircularProgress';
+import List from '@mui/material/List';
+import { useInfiniteScrollTrigger } from '@shared/hooks/useInfiniteScrollTrigger';
+import { useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import InboxItem from '../inboxItem/InboxItem';
+import InboxListHeader from './InboxListHeader';
 
 import Box from '@mui/material/Box';
 
-
 const InboxList = () => {
   const [searchParams] = useSearchParams();
-  const filter = useMemo(() => parseInboxFilter(searchParams), [searchParams]);
+  const searchTerm = useInboxStore((state) => state.searchTerm);
+  const setItemIds = useInboxStore((state) => state.setItemIds);
+  const filter = useMemo((): InboxFilter => {
+    return { ...parseInboxFilter(searchParams), term: toInboxSearchTerm(searchTerm) };
+  }, [searchParams, searchTerm]);
   const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInboxQuery(filter);
   const items = useMemo(() => flattenInboxPages(data?.pages), [data?.pages]);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Keeps the store's flat id list in sync with whatever this list currently has loaded (filter,
+  // sort, infinite-scroll pages) — it's what powers list-navigation shortcuts (j/k, ...) globally
+  // without every consumer needing its own copy of the paged query data.
+  useEffect(() => {
+    setItemIds(items.map((item) => item.id).filter((id): id is number => id !== undefined));
+  }, [items, setItemIds]);
 
   // The list owns its own scroll region (bounded by the app shell's fixed-height layout),
   // so it scrolls independently from the reading pane (InboxDetailPanel) next to it — the
@@ -46,32 +58,31 @@ const InboxList = () => {
 
   return (
     <Box
-      ref={scrollContainerRef}
-      sx={{ height: '100%', overflowY: 'auto' }}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+      }}
     >
-      <List
-        data-testid="inbox-list"
-        disablePadding
-        sx={{ bgcolor: 'background.default' }}
-      >
-        {items.map((item) => (
-          <InboxItem
-            key={item.id}
-            item={item}
-          />
-        ))}
-      </List>
+      <InboxListHeader />
+      <Box ref={scrollContainerRef} sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        <List data-testid="inbox-list" disablePadding sx={{ bgcolor: 'background.default' }}>
+          {items.map((item) => (
+            <InboxItem key={item.id} item={item} />
+          ))}
+        </List>
 
-      {/* Sentinel — pulls in the next page once it scrolls into view; removed once no more pages remain. */}
-      {hasNextPage && (
-        <Box
-          ref={sentinelRef}
-          data-testid="inbox-list-load-more-sentinel"
-          sx={{ display: 'flex', justifyContent: 'center', py: 2 }}
-        >
-          <CircularProgress size={24} />
-        </Box>
-      )}
+        {/* Sentinel — pulls in the next page once it scrolls into view; removed once no more pages remain. */}
+        {hasNextPage && (
+          <Box
+            ref={sentinelRef}
+            data-testid="inbox-list-load-more-sentinel"
+            sx={{ display: 'flex', justifyContent: 'center', py: 2 }}
+          >
+            <CircularProgress size={24} />
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 };

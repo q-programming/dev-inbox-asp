@@ -163,6 +163,70 @@ public class GitHubClientTests
         Assert.Equal("Fix bug", detail.Title);
     }
 
+    [Fact(DisplayName = "GetPullRequestDetailAsync should merge comments, review summaries and review threads chronologically, keep the newest N and skip blank bodies")]
+    public async Task ShouldMergeLatestDiscussionAsync()
+    {
+        var now = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        _mockHttp.When(HttpMethod.Post, GraphQlEndpoint)
+            .Respond("application/json", JsonSerializer.Serialize(new
+            {
+                data = new
+                {
+                    repository = new
+                    {
+                        pullRequest = new
+                        {
+                            id = "node-1",
+                            number = 42,
+                            title = "Fix bug",
+                            url = "https://github.com/octocat/hello-world/pull/42",
+                            state = "OPEN",
+                            createdAt = now,
+                            updatedAt = now,
+                            repository = new { nameWithOwner = "octocat/hello-world" },
+                            comments = new { totalCount = 1 },
+                            latestComments = new { nodes = new[] { new { body = "conversation", createdAt = now.AddMinutes(3) } } },
+                            latestReviewBodies = new
+                            {
+                                nodes = new[]
+                                {
+                                    new { body = "review summary", createdAt = now.AddMinutes(1) },
+                                    new { body = "  ", createdAt = now.AddMinutes(9) }
+                                }
+                            },
+                            latestReviewThreads = new
+                            {
+                                nodes = new[] { new { comments = new { nodes = new[] { new { body = "inline", createdAt = now.AddMinutes(2) } } } } }
+                            },
+                            reviews = new
+                            {
+                                nodes = new[] { new { state = "APPROVED", submittedAt = now, author = new { login = "reviewer" } } }
+                            }
+                        }
+                    }
+                }
+            }));
+
+        var detail = await _client.GetPullRequestDetailAsync(AccessToken, "octocat", "hello-world", 42, latestCommentsCount: 2);
+
+        Assert.Equal(["inline", "conversation"], detail.LatestComments.Select(c => c.Body));
+        var reviewer = Assert.Single(detail.Reviewers);
+        Assert.Equal(now, reviewer.ReviewedAt);
+    }
+
+    [Fact(DisplayName = "GetPullRequestsInvolvingUserAsync should map assignee logins and skip blank ones")]
+    public async Task ShouldMapAssigneesAsync()
+    {
+        var prJson = BuildPrJson(1, "octocat/hello-world")
+            .Replace("\"comments\"", "\"assignees\": { \"nodes\": [ { \"login\": \"alice\" }, { \"login\": \"\" } ] }, \"comments\"");
+        _mockHttp.When(HttpMethod.Post, GraphQlEndpoint)
+            .Respond("application/json", BuildSearchResponseJson([prJson], hasNextPage: false, endCursor: null));
+
+        var result = await _client.GetPullRequestsInvolvingUserAsync(AccessToken, "is:pr");
+
+        Assert.Equal(["alice"], result.Single().Assignees);
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

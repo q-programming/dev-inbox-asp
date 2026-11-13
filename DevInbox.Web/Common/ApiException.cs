@@ -4,9 +4,15 @@ namespace DevInbox.Web.Common;
 /// Base exception that carries an HTTP status code.
 /// Extend this to define domain-specific exceptions — no handler changes needed.
 /// </summary>
-public abstract class ApiException(int statusCode, string message) : Exception(message)
+public abstract class ApiException(int statusCode, string message, string? errorCode = null) : Exception(message)
 {
     public int StatusCode { get; } = statusCode;
+
+    /// <summary>Stable machine-readable code (e.g. "SEARCH_SCOPE_TOO_BROAD") surfaced to clients via
+    /// ProblemDetails.Extensions["errorCode"], so the frontend can branch on a specific failure reason
+    /// instead of parsing the human-readable Title/status code alone. Optional — most ApiExceptions
+    /// don't need one, since the status code + title is enough for a generic error toast.</summary>
+    public string? ErrorCode { get; } = errorCode;
 }
 
 // 4xx Client errors

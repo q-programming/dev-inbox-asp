@@ -9,8 +9,9 @@ import MobileBottomNav from '@app/layout/mobilebar/MobileBottomNav.tsx';
 import Footer from '@app/common/footer/Footer.tsx';
 import useSettingsStore from '@feature/settings/store/settings.store';
 import NoteFormModal from '@feature/notes/components/NoteFormModal';
-import { useGlobalShortcuts } from '@shared/hooks/useGlobalShortcuts.ts';
-import { useLeaderKey } from '@shared/hooks/useLeaderKey.ts';
+import { useShortcutKeys } from '@shared/shortcuts/useShortcutKeys';
+import { useShortcutExecutor } from '@shared/shortcuts/useShortcutExecutor';
+import CommandPalette from '@shared/shortcuts/CommandPalette';
 import { useInboxHeartbeat } from '@feature/inbox/hooks/useInboxHeartBeat.ts';
 import { useBackgroundSync } from '@feature/inbox/hooks/useBackgroundSync.ts';
 import { AppRoute } from '@app/routes.ts';
@@ -24,8 +25,8 @@ const TRANSITION = 'width 200ms ease, margin-left 200ms ease';
  * sideBarCollapsed from the settings store.
  */
 const AppLayout = () => {
-  useGlobalShortcuts();
-  useLeaderKey();
+  useShortcutKeys();
+  useShortcutExecutor();
   useInboxHeartbeat()
   useBackgroundSync();
   const sideBarCollapsed = useSettingsStore((state) => state.sideBarCollapsed);
@@ -130,6 +131,7 @@ const AppLayout = () => {
       </Box>
       <MobileBottomNav />
       <NoteFormModal />
+      <CommandPalette />
     </Box>
   );
 };

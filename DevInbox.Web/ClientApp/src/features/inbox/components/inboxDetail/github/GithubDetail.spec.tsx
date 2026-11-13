@@ -167,6 +167,52 @@ describe('GithubDetail', () => {
       }
     });
 
+    it('shows a readable review state label next to each reviewer', () => {
+      renderWithProviders(
+        <GithubDetail
+          details={makeInboxItemDetail({
+            github: {
+              reviewers: [
+                { reviewer: { displayName: 'A', login: 'a' }, reviewState: ReviewState.ChangesRequested },
+                { reviewer: { displayName: 'B', login: 'b' } },
+              ],
+            },
+          })}
+        />,
+      );
+
+      expect(within(screen.getByTestId('github-reviewer-a')).getByTestId('github-reviewer-state-label').textContent).toBe(
+        'Changes requested',
+      );
+      expect(within(screen.getByTestId('github-reviewer-b')).getByTestId('github-reviewer-state-label').textContent).toBe(
+        'Waiting',
+      );
+    });
+
+    it('shows how long ago a review was submitted and nothing for a pending reviewer', () => {
+      renderWithProviders(
+        <GithubDetail
+          details={makeInboxItemDetail({
+            github: {
+              reviewers: [
+                {
+                  reviewer: { displayName: 'A', login: 'a' },
+                  reviewState: ReviewState.Approved,
+                  reviewedAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
+                },
+                { reviewer: { displayName: 'B', login: 'b' }, reviewState: ReviewState.Waiting },
+              ],
+            },
+          })}
+        />,
+      );
+
+      expect(within(screen.getByTestId('github-reviewer-a')).getByTestId('github-reviewer-time').textContent).toContain(
+        '5 hours ago',
+      );
+      expect(within(screen.getByTestId('github-reviewer-b')).getByTestId('github-reviewer-time').textContent).toBe('');
+    });
+
     it('hides the reviewers section when reviewers are absent or empty', () => {
       const { rerender } = renderWithProviders(
         <GithubDetail
