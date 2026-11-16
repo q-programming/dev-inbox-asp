@@ -41,6 +41,11 @@ public class InboxController(IInboxService inboxService) : IInboxBaseController,
         return inboxService.BulkUpdateInboxItemsAsync(body.Ids, body.IsDone, body.IsSaved);
     }
 
+    public async Task<ICollection<string>> GetUserRepositoriesAsync()
+    {
+        return await inboxService.GetUserRepositoriesAsync();
+    }
+
     public Task<InboxItemDetail> GetInboxItemAsync(long id)
     {
         return inboxService.GetInboxItemByIdAsync(id);
@@ -60,6 +65,11 @@ public class InboxController(IInboxService inboxService) : IInboxBaseController,
     public Task<InboxSummary> GetInboxSummaryAsync()
     {
         return inboxService.GetInboxSummaryAsync();
+    }
+
+    public async Task<ICollection<string>> GetUserTeamsAsync()
+    {
+        return await inboxService.GetUserTeamsAsync();
     }
 
     public async Task MarkInboxItemDoneAsync(long id, bool isDone)

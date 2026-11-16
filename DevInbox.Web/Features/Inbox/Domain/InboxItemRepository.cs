@@ -7,7 +7,8 @@ using Microsoft.FeatureManagement;
 
 namespace DevInbox.Web.Features.Inbox.Domain;
 
-public class InboxItemRepository(AppDbContext dbContext, IFeatureManager featureManager) : Repository<InboxItem>(dbContext), IInboxItemRepository
+public class InboxItemRepository(AppDbContext dbContext, IFeatureManager featureManager)
+    : Repository<InboxItem>(dbContext), IInboxItemRepository
 {
     /// <summary>
     /// Upper bound on how many rows (already scoped by userId/source/type/status/reason, but before
@@ -23,13 +24,14 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
         return Set;
     }
 
-    public async Task<TResult?> GetInboxSummaryAsync<TResult>(long userId, Expression<Func<IGrouping<int, InboxItem>, TResult>> selector) where TResult : class
+    public async Task<TResult?> GetInboxSummaryAsync<TResult>(long userId,
+        Expression<Func<IGrouping<int, InboxItem>, TResult>> selector) where TResult : class
     {
         return await Set
             .AsNoTracking()
             .Where(item => item.InboxId == userId &&
-                !item.State.IsClosed &&
-                (item.Source != ItemSource.Note || item.Note!.AttachedToInboxItemId == null))
+                           !item.State.IsClosed &&
+                           (item.Source != ItemSource.Note || item.Note!.AttachedToInboxItemId == null))
             .GroupBy(_ => 1)
             .Select(selector)
             .SingleOrDefaultAsync();
@@ -43,7 +45,9 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
             .LongCountAsync();
     }
 
-    public async Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(PageRequest pageRequest, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason, string? searchTerm)
+    public async Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(PageRequest pageRequest,
+        long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason,
+        string? searchTerm)
     {
         // Closed items (fully done with, e.g. a merged/closed PR) are excluded from every other
         // view — they only ever show up when the caller explicitly asks for the Closed status.
@@ -92,7 +96,8 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
         var orderedQuery = pageRequest.Sort switch
         {
             InboxSort.ActivityAsc => query.OrderBy(i => i.ActivityAt),
-            InboxSort.PriorityDesc => query.OrderByDescending(i => i.State.Priority).ThenByDescending(i => i.ActivityAt),
+            InboxSort.PriorityDesc => query.OrderByDescending(i => i.State.Priority)
+                .ThenByDescending(i => i.ActivityAt),
             InboxSort.CreatedDesc => query.OrderByDescending(i => i.CreatedAt),
             InboxSort.CommentsDesc => query.OrderByDescending(i => i.CommentCount).ThenByDescending(i => i.ActivityAt),
             _ => query.OrderByDescending(i => i.ActivityAt),
@@ -194,6 +199,23 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
         return item;
     }
 
+    public Task<List<InboxItem>> GetExistingItemsByScopePrefixAsync(
+        long inboxId,
+        ItemSource source,
+        ItemType type,
+        string scopePrefix,
+        IReadOnlyCollection<string> externalIds)
+    {
+        return Set
+            .Include(i => i.State)
+            .Where(i => i.InboxId == inboxId
+                        && i.Source == source
+                        && i.Type == type
+                        && i.Scope != null && i.Scope.StartsWith(scopePrefix)
+                        && i.ExternalId != null && externalIds.Contains(i.ExternalId))
+            .ToListAsync();
+    }
+
     public Task<List<InboxItem>> GetExistingItemsAsync(
         long inboxId,
         ItemSource source,
@@ -204,10 +226,10 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
         return Set
             .Include(i => i.State)
             .Where(i => i.InboxId == inboxId
-                && i.Source == source
-                && i.Type == type
-                && i.Repository != null && repositories.Contains(i.Repository)
-                && i.ExternalId != null && externalIds.Contains(i.ExternalId))
+                        && i.Source == source
+                        && i.Type == type
+                        && i.Scope != null && repositories.Contains(i.Scope)
+                        && i.ExternalId != null && externalIds.Contains(i.ExternalId))
             .ToListAsync();
     }
 
@@ -255,7 +277,8 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
         var attachedNotes = await dbContext.Notes
             .Include(note => note.InboxItem)
             .ThenInclude(item => item.State)
-            .Where(note => note.AttachedToInboxItemId != null && parentsById.Keys.Contains(note.AttachedToInboxItemId.Value))
+            .Where(note =>
+                note.AttachedToInboxItemId != null && parentsById.Keys.Contains(note.AttachedToInboxItemId.Value))
             .ToListAsync();
 
         if (attachedNotes.Count == 0)
@@ -275,11 +298,21 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
         await Context.SaveChangesAsync();
     }
 
+    public async Task<string[]> GetDistinctScopesAsync(long userId, ItemType type)
+    {
+        return await Set
+            .Where(i => i.InboxId == userId && i.Type == type && i.Scope != null)
+            .Select(i => i.Scope!)
+            .Distinct()
+            .OrderBy(scope => scope)
+            .ToArrayAsync();
+    }
+
     public async Task DeleteBySourceAsync(long userId, ItemSource source, string? organization = null)
     {
         var targetIds = await Set
             .Where(i => i.InboxId == userId && i.Source == source)
-            .Where(i => organization == null || (i.Repository != null && i.Repository.StartsWith(organization + "/")))
+            .Where(i => organization == null || (i.Scope != null && i.Scope.StartsWith(organization + "/")))
             .Select(i => i.Id)
             .ToListAsync();
 

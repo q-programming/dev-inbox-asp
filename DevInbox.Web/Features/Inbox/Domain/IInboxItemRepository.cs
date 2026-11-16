@@ -36,6 +36,14 @@ public interface IInboxItemRepository : IRepository<InboxItem>
         IReadOnlyCollection<string> repositories,
         IReadOnlyCollection<string> externalIds);
 
+    /// <summary>Like <see cref="GetExistingItemsAsync"/>, but matches scopes by prefix (e.g. "{organization}/") so items whose scope changed upstream are still found.</summary>
+    Task<List<InboxItem>> GetExistingItemsByScopePrefixAsync(
+        long inboxId,
+        ItemSource source,
+        ItemType type,
+        string scopePrefix,
+        IReadOnlyCollection<string> externalIds);
+
     /// <summary>Adds new items without saving — pair with <see cref="SaveChangesAsync"/> to batch
     /// inserts together with any updates made to entities returned by <see cref="GetExistingItemsAsync"/>.</summary>
     Task AddRangeAsync(IEnumerable<InboxItem> items);
@@ -72,4 +80,7 @@ public interface IInboxItemRepository : IRepository<InboxItem>
     /// A no-op for parents with no attached note.
     /// </summary>
     Task SyncAttachedNotesStateAsync(IEnumerable<InboxItem> parentItems);
+
+    /// <summary>Distinct, non-null scopes (repositories for PRs, teams for work items) across all of the user's items of the given type.</summary>
+    Task<string[]> GetDistinctScopesAsync(long userId, ItemType type);
 }

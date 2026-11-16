@@ -253,7 +253,7 @@ public class AccountDeletionIT : DatabaseIntegrationTest
     {
         var item = new InboxItem
         {
-            InboxId = inboxId, Source = source, Type = type, Reason = InboxReason.Authored, Repository = repository,
+            InboxId = inboxId, Source = source, Type = type, Reason = InboxReason.Authored, Scope = repository,
             ExternalId = Guid.NewGuid().ToString("N")[..8], Title = "Item",
             ActivityAt = DateTimeOffset.UtcNow, CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow,
             State = new InboxItemState { UpdatedAt = DateTimeOffset.UtcNow }

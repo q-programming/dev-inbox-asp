@@ -10,6 +10,7 @@ using DevInbox.Web.Features.Inbox.Exceptions;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.FeatureManagement;
 using NSubstitute;
 using InboxEntity = DevInbox.Web.Features.Inbox.Domain.Inbox;
@@ -33,6 +34,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
     private InboxService _service = default!;
     private InboxItemRepository _inboxItemRepository = default!;
     private readonly IInboxDetailService _detailService = Substitute.For<IInboxDetailService>();
+    private readonly MemoryCache _cache = new(new MemoryCacheOptions());
 
     public override async Task InitializeAsync()
     {
@@ -56,7 +58,8 @@ public class InboxServiceIT : DatabaseIntegrationTest
             new InboxRepository(DataBase),
             _inboxItemRepository,
             _detailService,
-            accessor);
+            accessor,
+            _cache);
     }
 
     /// <summary>
@@ -76,6 +79,8 @@ public class InboxServiceIT : DatabaseIntegrationTest
 
     public override async Task DisposeAsync()
     {
+        _cache.Clear();
+        _cache.Dispose();
         await DataBase.Notes.ExecuteDeleteAsync();
         await DataBase.InboxItemStates.ExecuteDeleteAsync();
         await DataBase.InboxItems.ExecuteDeleteAsync();
@@ -256,7 +261,8 @@ public class InboxServiceIT : DatabaseIntegrationTest
             new InboxRepository(DataBase),
             CreateInboxItemRepository(searchScopeGuardEnabled: true, maxCandidates: 2),
             _detailService,
-            CreateAccessorWithClaim(_user.Id));
+            CreateAccessorWithClaim(_user.Id),
+            _cache);
 
         await Assert.ThrowsAsync<SearchScopeTooBroadException>(() => service.ListInboxItemsAsync(
             new PageRequest { Page = 0, Size = 10 },
@@ -279,7 +285,8 @@ public class InboxServiceIT : DatabaseIntegrationTest
             new InboxRepository(DataBase),
             CreateInboxItemRepository(searchScopeGuardEnabled: false, maxCandidates: 2),
             _detailService,
-            CreateAccessorWithClaim(_user.Id));
+            CreateAccessorWithClaim(_user.Id),
+            _cache);
 
         var result = await service.ListInboxItemsAsync(
             new PageRequest { Page = 0, Size = 10 },
@@ -439,10 +446,10 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var fabrikamItem = await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned);
         var lookalikeItem = await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned);
         var otherUserItem = await AddItemAsync(_otherUser.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned);
-        contosoItem.Repository = "contoso/project";
-        fabrikamItem.Repository = "fabrikam/project";
-        lookalikeItem.Repository = "contoso-labs/project";
-        otherUserItem.Repository = "contoso/project";
+        contosoItem.Scope = "contoso/project";
+        fabrikamItem.Scope = "fabrikam/project";
+        lookalikeItem.Scope = "contoso-labs/project";
+        otherUserItem.Scope = "contoso/project";
         await DataBase.SaveChangesAsync();
 
         await _service.DeleteInboxItemsBySourceAsync(_user.Id, ItemSource.Ado, "contoso");
@@ -462,6 +469,72 @@ public class InboxServiceIT : DatabaseIntegrationTest
         await _service.DeleteInboxItemsBySourceAsync(_user.Id, ItemSource.Ado, organization: null);
 
         Assert.True(await DataBase.InboxItems.AsNoTracking().AnyAsync(i => i.Id == githubItem.Id));
+    }
+
+    [Fact(DisplayName = "GetUserTeamsAsync and GetUserRepositoriesAsync should return the current user's distinct sorted scopes by item type")]
+    public async Task GetUserScopesAsyncShouldReturnDistinctScopesPerTypeAsync()
+    {
+        await AddItemWithScopeAsync(_user.Id, ItemType.WorkItem, "contoso/Alpha/Frontend");
+        await AddItemWithScopeAsync(_user.Id, ItemType.WorkItem, "contoso/Alpha/Backend");
+        await AddItemWithScopeAsync(_user.Id, ItemType.WorkItem, "contoso/Alpha/Backend");
+        await AddItemWithScopeAsync(_user.Id, ItemType.PR, "contoso/Alpha/api");
+        await AddItemWithScopeAsync(_user.Id, ItemType.PR, "octocat/hello-world");
+        await AddItemWithScopeAsync(_user.Id, ItemType.PR, null);
+        await AddItemWithScopeAsync(_otherUser.Id, ItemType.WorkItem, "fabrikam/Beta/Ops");
+
+        var teams = await _service.GetUserTeamsAsync();
+        var repositories = await _service.GetUserRepositoriesAsync();
+
+        Assert.Equal(["contoso/Alpha/Backend", "contoso/Alpha/Frontend"], teams);
+        Assert.Equal(["contoso/Alpha/api", "octocat/hello-world"], repositories);
+    }
+
+    [Fact(DisplayName = "GetUserTeamsAsync should serve the cached list until the cache entry is gone")]
+    public async Task GetUserTeamsAsyncShouldServeCachedListAsync()
+    {
+        await AddItemWithScopeAsync(_user.Id, ItemType.WorkItem, "contoso/Alpha/Backend");
+        await _service.GetUserTeamsAsync();
+        await AddItemWithScopeAsync(_user.Id, ItemType.WorkItem, "contoso/Alpha/Frontend");
+
+        var cached = await _service.GetUserTeamsAsync();
+        _cache.Clear();
+        var refreshed = await _service.GetUserTeamsAsync();
+
+        Assert.Equal(["contoso/Alpha/Backend"], cached);
+        Assert.Equal(["contoso/Alpha/Backend", "contoso/Alpha/Frontend"], refreshed);
+    }
+
+    [Fact(DisplayName = "DeleteInboxItemsBySourceAsync should drop the disconnected integration's scopes from the cached lists")]
+    public async Task DeleteInboxItemsBySourceAsyncShouldRefreshCachedScopesAsync()
+    {
+        await AddItemWithScopeAsync(_user.Id, ItemType.WorkItem, "contoso/Alpha/Backend");
+        await AddItemWithScopeAsync(_user.Id, ItemType.PR, "octocat/hello-world");
+        Assert.Equal(["contoso/Alpha/Backend"], await _service.GetUserTeamsAsync());
+        Assert.Equal(["octocat/hello-world"], await _service.GetUserRepositoriesAsync());
+
+        await _service.DeleteInboxItemsBySourceAsync(_user.Id, ItemSource.Ado, "contoso");
+
+        Assert.Empty(await _service.GetUserTeamsAsync());
+        Assert.Equal(["octocat/hello-world"], await _service.GetUserRepositoriesAsync());
+    }
+
+    [Fact(DisplayName = "ClearUsersCache should make newly synced scopes visible on the next read")]
+    public async Task ClearUsersCacheShouldExposeNewScopesAsync()
+    {
+        await AddItemWithScopeAsync(_user.Id, ItemType.WorkItem, "contoso/Alpha/Backend");
+        await _service.GetUserTeamsAsync();
+        await AddItemWithScopeAsync(_user.Id, ItemType.WorkItem, "contoso/Alpha/Frontend");
+
+        _service.ClearUsersCache(_user.Id);
+
+        Assert.Equal(["contoso/Alpha/Backend", "contoso/Alpha/Frontend"], await _service.GetUserTeamsAsync());
+    }
+
+    private async Task AddItemWithScopeAsync(long inboxId, ItemType type, string? scope)
+    {
+        var item = await AddItemAsync(inboxId, type == ItemType.PR ? ItemSource.GitHub : ItemSource.Ado, type, InboxReason.Assigned);
+        item.Scope = scope;
+        await DataBase.SaveChangesAsync();
     }
 
     private async Task<Note> AddNoteAsync(long inboxId, long? attachedToInboxItemId)

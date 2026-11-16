@@ -27,7 +27,7 @@ public class GitHubService(
     /// </summary>
     public async Task<GitHubPullRequestDetail> GetDetailsAsync(InboxItem item, CancellationToken ct = default)
     {
-        if (item.Repository is null || item.ExternalId is null)
+        if (item.Scope is null || item.ExternalId is null)
         {
             throw new InvalidOperationException($"Inbox item {item.Id} has no GitHub repository/PR number to look up.");
         }
@@ -37,10 +37,10 @@ public class GitHubService(
             throw new InvalidOperationException($"Inbox item {item.Id} has a non-numeric GitHub PR number '{item.ExternalId}'.");
         }
 
-        var repoParts = item.Repository.Split('/', 2);
+        var repoParts = item.Scope.Split('/', 2);
         if (repoParts.Length != 2)
         {
-            throw new InvalidOperationException($"Inbox item {item.Id} has a malformed GitHub repository name '{item.Repository}' — expected \"owner/repo\".");
+            throw new InvalidOperationException($"Inbox item {item.Id} has a malformed GitHub repository name '{item.Scope}' — expected \"owner/repo\".");
         }
 
         // item.InboxId doubles as the owning user's id (Inbox's key is the user's own id).
@@ -167,7 +167,7 @@ public class GitHubService(
         var existingItems = await inboxItemRepository.GetExistingItemsAsync(
             profile.UserId, ItemSource.GitHub, ItemType.PR, repositories, externalIds);
 
-        var existingByKey = existingItems.ToDictionary(i => BuildKey(i.Repository!, i.ExternalId!));
+        var existingByKey = existingItems.ToDictionary(i => BuildKey(i.Scope!, i.ExternalId!));
 
         var newItems = new List<InboxItem>();
         var updatedItems = new List<InboxItem>();
@@ -307,7 +307,7 @@ public class GitHubService(
             Source = ItemSource.GitHub,
             Type = ItemType.PR,
             ExternalId = pr.Number.ToString(),
-            Repository = pr.RepositoryFullName,
+            Scope = pr.RepositoryFullName,
             Title = pr.Title,
             Reason = reason,
             CommentCount = pr.CommentsCount,

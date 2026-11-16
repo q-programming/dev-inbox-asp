@@ -64,7 +64,7 @@ public class GitHubInboxDetailProviderTests
             Type = DomainItemType.PR,
             Reason = DomainInboxReason.Authored,
             ExternalId = "42",
-            Repository = "octocat/hello-world",
+            Scope = "octocat/hello-world",
             Title = "Fix bug",
             ActivityAt = now,
             CreatedAt = now,

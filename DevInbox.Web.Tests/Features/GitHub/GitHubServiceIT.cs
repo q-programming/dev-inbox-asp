@@ -86,7 +86,7 @@ public class GitHubServiceIT : DatabaseIntegrationTest
             .Include(i => i.State)
             .SingleAsync(i => i.InboxId == _user.Id);
 
-        Assert.Equal("octocat/hello-world", persisted.Repository);
+        Assert.Equal("octocat/hello-world", persisted.Scope);
         Assert.Equal("7", persisted.ExternalId);
         Assert.Equal(DomainItemSource.GitHub, persisted.Source);
         Assert.Equal(DomainItemType.PR, persisted.Type);
@@ -105,7 +105,7 @@ public class GitHubServiceIT : DatabaseIntegrationTest
             Type = DomainItemType.PR,
             Reason = DomainInboxReason.Authored,
             ExternalId = "7",
-            Repository = "octocat/hello-world",
+            Scope = "octocat/hello-world",
             Title = "Old title",
             CommentCount = 1,
             ActivityAt = DateTimeOffset.UtcNow.AddDays(-1),
@@ -144,7 +144,7 @@ public class GitHubServiceIT : DatabaseIntegrationTest
             Type = DomainItemType.PR,
             Reason = DomainInboxReason.Authored,
             ExternalId = "7",
-            Repository = "octocat/hello-world",
+            Scope = "octocat/hello-world",
             Title = "Fix bug",
             CommentCount = 2,
             ActivityAt = updatedAt,
