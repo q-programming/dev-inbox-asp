@@ -6,9 +6,9 @@ import CloseIcon from '@mui/icons-material/Close';
 
 /** Auto-dismiss delay in milliseconds per alert type */
 const ALERT_TIMEOUT_MS: Record<AlertType, number> = {
-  [AlertType.INFO]: 3_000,
-  [AlertType.SUCCESS]: 3_000,
-  [AlertType.WARNING]: 6_000,
+  [AlertType.INFO]: 5_000,
+  [AlertType.SUCCESS]: 5_000,
+  [AlertType.WARNING]: 8_000,
   [AlertType.ERROR]: 10_000,
 };
 
@@ -47,7 +47,7 @@ const AlertBridge = () => {
         enqueueSnackbar(alert.message, {
           variant: 'inboxItem',
           integration: alert.inboxItem.integration,
-          externalId : alert.inboxItem.externalId,
+          externalId: alert.inboxItem.externalId,
           title: alert.inboxItem.title,
           changeKind: alert.inboxItem.changeKind,
           autoHideDuration: ALERT_TIMEOUT_MS[alert.type],

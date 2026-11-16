@@ -148,7 +148,7 @@ describe('useBackgroundSync', () => {
 
     await waitFor(() => expect(messageHandler).toBeDefined());
 
-    const items = Array.from({ length: 6 }, (_, i) => makeItem({ title: `Item ${i}`, externalId: `${i}` }));
+    const items = Array.from({ length: 6 }, (_value, index) => makeItem({ title: `Item ${index}`, externalId: `${index}` }));
 
     act(() => {
       messageHandler!({ data: { type: 'SYNC_RESULT', items } } as MessageEvent);

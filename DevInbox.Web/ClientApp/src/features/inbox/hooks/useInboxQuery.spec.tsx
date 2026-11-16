@@ -110,8 +110,8 @@ describe('useInboxQuery hooks', () => {
     });
 
     it('should fetch the next page and append its items when fetchNextPage is called', async () => {
-      const pageOneItems = Array.from({ length: 20 }, (_, i) =>
-        createInboxItem({ id: i + 1, title: `Item ${i + 1}` }),
+      const pageOneItems = Array.from({ length: 20 }, (_value, index) =>
+        createInboxItem({ id: index + 1, title: `Item ${index + 1}` }),
       );
       const pageTwoItems = [createInboxItem({ id: 21, title: 'Item 21' })];
 

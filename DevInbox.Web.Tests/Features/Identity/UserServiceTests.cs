@@ -44,6 +44,44 @@ public class UserServiceTests
         _service = new UserService(_userRepository, Substitute.For<IHttpContextAccessor>(), Substitute.For<ILogger<UserService>>(), _asyncPublisher, _gitHubIntegrationService, MockDataOptions);
     }
 
+    [Fact(DisplayName = "RemoveUserAsync should publish UserRemovedEvent synchronously before deleting the user")]
+    public async Task RemoveUserAsyncShouldPublishEventBeforeDeleteAsync()
+    {
+        var user = new User { Id = TestUserId, Email = TestEmail };
+        var calls = new List<string>();
+        _asyncPublisher.Publish(Arg.Any<UserRemovedEvent>(), Arg.Any<CancellationToken>())
+            .Returns(_ => { calls.Add("publish"); return Task.CompletedTask; });
+        _userRepository.DeleteAsync(user).Returns(_ => { calls.Add("delete"); return Task.CompletedTask; });
+
+        await _service.RemoveUserAsync(user);
+
+        Assert.Equal(["publish", "delete"], calls);
+        await _asyncPublisher.Received(1).Publish(
+            Arg.Is<UserRemovedEvent>(ev => ev.UserId == TestUserId && ev.Email == TestEmail),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact(DisplayName = "RemoveUserAsync should not delete the user when a UserRemovedEvent handler fails")]
+    public async Task RemoveUserAsyncShouldNotDeleteWhenHandlerFailsAsync()
+    {
+        var user = new User { Id = TestUserId, Email = TestEmail };
+        _asyncPublisher.Publish(Arg.Any<UserRemovedEvent>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new InvalidOperationException("handler failed")));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.RemoveUserAsync(user));
+
+        await _userRepository.DidNotReceive().DeleteAsync(Arg.Any<User>());
+    }
+
+    [Fact(DisplayName = "RemoveUserAsync should propagate repository failures")]
+    public async Task RemoveUserAsyncShouldPropagateDeleteFailureAsync()
+    {
+        var user = new User { Id = TestUserId, Email = TestEmail };
+        _userRepository.DeleteAsync(user).Returns(Task.FromException(new InvalidOperationException("db down")));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.RemoveUserAsync(user));
+    }
+
     [Fact(DisplayName = "RegisterAsync should normalize email, hash password, and persist user")]
     public async Task RegisterAsyncShouldMapUserAndPersistViaRepositoryAsync()
     {

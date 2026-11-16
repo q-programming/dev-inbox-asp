@@ -23,4 +23,10 @@ public interface IUserService
 
     /// <summary>Logins or creates new user based on GitHub profile</summary>
     Task<User> LoginOrCreateGitHubUserAsync(GitHubUserProfileDTO profile, string accessToken);
+
+    /// <summary>
+    /// Publishes <see cref="Events.UserRemovedEvent"/> synchronously (audit and other handlers), then deletes the
+    /// user; related data is removed by FK cascade. Expected to run inside a transaction (see UserController.DeleteAccountAsync).
+    /// </summary>
+    Task RemoveUserAsync(User user);
 }

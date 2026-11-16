@@ -140,7 +140,16 @@ paths:
           description: Missing or invalid OAuth callback parameters
         "401":
           description: Authentication failed
-
+  /auth/account/delete:
+    delete:
+      operationId: deleteAccount
+      tags: [auth]
+      summary: Removes account with its all integrations
+      responses:
+        "204":
+          description: Account deleted
+        "401":
+          description: Authentication failed          
   # ── Integrations ─────────────────────────────────────────────
   /integrations/github/pat:
     post:

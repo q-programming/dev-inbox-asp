@@ -77,7 +77,7 @@ const MarkdownContent = ({ children }: { children: string }) => (
 /** Sanitizes raw HTML (e.g. an Azure DevOps rich-text field) before rendering it, stripping scripts/event handlers/etc. */
 const HtmlContent = ({ children }: { children: string }) => {
   const sanitized = useMemo(() => DOMPurify.sanitize(children), [children]);
-  // eslint-disable-next-line react/no-danger -- content is sanitized via DOMPurify immediately above.
+  // Content is sanitized via DOMPurify immediately above.
   return <div dangerouslySetInnerHTML={{ __html: sanitized }} />;
 };
 

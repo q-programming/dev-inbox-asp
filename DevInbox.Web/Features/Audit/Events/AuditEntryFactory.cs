@@ -18,6 +18,8 @@ public sealed class AuditEntryFactory(IHttpContextAccessor httpContextAccessor) 
                 CreateAuthenticationFailed(ev),
             UserCreatedEvent ev => CreateUserCreated(ev),
             ApplicationStartedEvent ev => CreateApplicationStarted(ev),
+            UserRemovedEvent ev => CreateUserRemovedEvent(ev),
+            UserRemovalFailedEvent ev => CreateUserRemovalFailed(ev),
 
             _ => throw new NotSupportedException(
                 $"Audit mapping not found for {notification.GetType().Name}")
@@ -72,6 +74,32 @@ public sealed class AuditEntryFactory(IHttpContextAccessor httpContextAccessor) 
             Username = null,
             IpAddress = null,
             Details = null,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+    }
+
+    private AuditEntry CreateUserRemovedEvent(
+        UserRemovedEvent ev)
+    {
+        return new AuditEntry
+        {
+            EventType = ev.AuditEventType,
+            Username = ev.Email,
+            IpAddress = GetIpAddress(),
+            Details = $"{EmailUtils.MaskEmail(ev.Email)} deactivated and removed account",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+    }
+
+    private AuditEntry CreateUserRemovalFailed(
+        UserRemovalFailedEvent ev)
+    {
+        return new AuditEntry
+        {
+            EventType = ev.AuditEventType,
+            Username = ev.Email,
+            IpAddress = GetIpAddress(),
+            Details = $"{EmailUtils.MaskEmail(ev.Email)} account removal failed - {ev.Cause}",
             CreatedAt = DateTimeOffset.UtcNow
         };
     }

@@ -4,6 +4,7 @@ using DevInbox.Web.Features.ADO;
 using DevInbox.Web.Features.GitHub;
 using DevInbox.Web.Features.Identity;
 using DevInbox.Web.Features.Identity.Domain;
+using DevInbox.Web.Features.Sync;
 using DevInbox.Web.Features.Sync.Events;
 using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
@@ -20,7 +21,7 @@ public class IntegrationsControllerTests
     private readonly IAdoIntegrationService _adoIntegrationService;
     private readonly IUserService _userService;
     private readonly IPublisher _publisher;
-    private readonly DevInbox.Web.Features.GitHub.IntegrationsController _controller;
+    private readonly IntegrationsController _controller;
 
     public IntegrationsControllerTests()
     {
@@ -28,7 +29,7 @@ public class IntegrationsControllerTests
         _adoIntegrationService = Substitute.For<IAdoIntegrationService>();
         _userService = Substitute.For<IUserService>();
         _publisher = Substitute.For<IPublisher>();
-        _controller = new DevInbox.Web.Features.GitHub.IntegrationsController(
+        _controller = new IntegrationsController(
             _gitHubIntegrationService,
             _adoIntegrationService,
             _userService,
@@ -51,7 +52,7 @@ public class IntegrationsControllerTests
             ev.UserId == UserId &&
             ev.Email == Email &&
             ev.ForceFullSync));
-        await _publisher.DidNotReceive().Publish(Arg.Any<IntegrationDisconnectedEvent>(), Arg.Any<CancellationToken>());
+        await _publisher.DidNotReceive().Publish(Arg.Any<IntegrationDisconnectRequestEvent>(), Arg.Any<CancellationToken>());
     }
 
     [Fact(DisplayName = "ConnectAdoPatAsync should reject a missing organization")]
@@ -62,13 +63,32 @@ public class IntegrationsControllerTests
         await Assert.ThrowsAsync<BadRequestException>(() => _controller.ConnectAdoPatAsync(body));
     }
 
-    [Fact(DisplayName = "DisconnectAdoAsync should delegate to the service and publish an ADO integration-disconnected event synchronously")]
+    [Fact(DisplayName = "DisconnectGithubAsync should publish a GitHub disconnect request synchronously")]
+    public async Task DisconnectGithubAsyncShouldPublishDisconnectRequestAsync()
+    {
+        await _controller.DisconnectGithubAsync();
+
+        await _publisher.Received(1).Publish(Arg.Is<IntegrationDisconnectRequestEvent>(ev =>
+            ev.UserId == UserId &&
+            ev.Source == DomainItemSource.GitHub &&
+            ev.Organization == null), Arg.Any<CancellationToken>());
+    }
+
+    [Fact(DisplayName = "DisconnectAdoAsync should propagate a handler failure to the caller")]
+    public async Task DisconnectAdoAsyncShouldPropagateHandlerFailureAsync()
+    {
+        _publisher.Publish(Arg.Any<IntegrationDisconnectRequestEvent>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new InvalidOperationException("boom")));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _controller.DisconnectAdoAsync("contoso"));
+    }
+
+    [Fact(DisplayName = "DisconnectAdoAsync should publish an ADO disconnect request synchronously")]
     public async Task DisconnectAdoAsyncShouldPublishDisconnectedEventAsync()
     {
         await _controller.DisconnectAdoAsync("contoso");
 
-        await _adoIntegrationService.Received(1).DisconnectAsync(UserId, "contoso");
-        await _publisher.Received(1).Publish(Arg.Is<IntegrationDisconnectedEvent>(ev =>
+        await _publisher.Received(1).Publish(Arg.Is<IntegrationDisconnectRequestEvent>(ev =>
             ev.UserId == UserId &&
             ev.Source == DomainItemSource.Ado &&
             ev.Organization == "contoso"), Arg.Any<CancellationToken>());

@@ -14,12 +14,12 @@ public class SettingsService(ISettingsRepository repository, IUserService userSe
     {
         var user = await userService.GetCurrentUserAsync();
         var userSettings = await repository.GetByUserId(user.Id);
-        if (userSettings is null)
+        if (userSettings is not null)
         {
-            userSettings = CreateDefaultSettings(user);
-            await repository.AddAsync(userSettings);
-
+            return userSettings;
         }
+        userSettings = CreateDefaultSettings(user);
+        await repository.AddAsync(userSettings);
         return userSettings;
     }
 

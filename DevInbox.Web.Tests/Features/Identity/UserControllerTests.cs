@@ -6,8 +6,11 @@ using DevInbox.Web.Features.Identity;
 using DevInbox.Web.Features.Identity.Domain;
 using DevInbox.Web.Features.Identity.OAuth;
 using DevInbox.Web.Infrastructure.Auth;
+using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
+using DevInbox.Web.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace DevInbox.Web.Tests.Features.Identity;
@@ -38,6 +41,7 @@ public class UserControllerTests
         private readonly IJwtTokenService _jwtTokenService;
         private readonly IGitHubProfileRepository _gitHubProfileRepository;
         private readonly IAdoProfileRepository _adoProfileRepository;
+        private readonly IPublisher _publisher;
         private readonly UserController _controller;
 
         public StandardEndpoints()
@@ -46,13 +50,16 @@ public class UserControllerTests
             _jwtTokenService = Substitute.For<IJwtTokenService>();
             _gitHubProfileRepository = Substitute.For<IGitHubProfileRepository>();
             _adoProfileRepository = Substitute.For<IAdoProfileRepository>();
+            _publisher = Substitute.For<IPublisher>();
             _controller = new UserController(
                 _userService,
                 _jwtTokenService,
                 Substitute.For<IHttpContextAccessor>(),
                 Substitute.For<IGitHubOAuthService>(),
                 _gitHubProfileRepository,
-                _adoProfileRepository);
+                _adoProfileRepository,
+                _publisher,
+                Substitute.For<ITransactionRunner>(), NullLogger<UserController>.Instance);
         }
 
         [Fact(DisplayName = "LogoutAsync should revoke the JWT token")]
@@ -78,7 +85,8 @@ public class UserControllerTests
         {
             _userService.LoginAsync(Arg.Any<LoginRequest>()).Returns(BuildUser());
 
-            var result = await _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = StrongPassword });
+            var result = await _controller.LoginAsync(new LoginRequest
+                { Email = TestEmail, Password = StrongPassword });
 
             Assert.Equal(TestEmail, result.Email);
             Assert.Equal(FirstName, result.FirstName);
@@ -88,7 +96,8 @@ public class UserControllerTests
         [Fact(DisplayName = "LoginAsync should propagate UnauthorizedException and not issue token")]
         public async Task LoginAsyncShouldPropagateUnauthorizedExceptionAsync()
         {
-            _userService.LoginAsync(Arg.Any<LoginRequest>()).Returns<User>(_ => throw new UnauthorizedException("Authentication failed"));
+            _userService.LoginAsync(Arg.Any<LoginRequest>())
+                .Returns<User>(_ => throw new UnauthorizedException("Authentication failed"));
 
             await Assert.ThrowsAsync<UnauthorizedException>(() =>
                 _controller.LoginAsync(new LoginRequest { Email = TestEmail, Password = "wrong" }));
@@ -136,19 +145,21 @@ public class UserControllerTests
         private readonly IGitHubProfileRepository _gitHubProfileRepository;
         private readonly IAdoProfileRepository _adoProfileRepository;
         private readonly UserController _controller;
+        private readonly IPublisher _publisher;
 
         public IntegrationLoading()
         {
             _userService = Substitute.For<IUserService>();
             _gitHubProfileRepository = Substitute.For<IGitHubProfileRepository>();
             _adoProfileRepository = Substitute.For<IAdoProfileRepository>();
+            _publisher = Substitute.For<IPublisher>();
             _controller = new UserController(
                 _userService,
                 Substitute.For<IJwtTokenService>(),
                 Substitute.For<IHttpContextAccessor>(),
                 Substitute.For<IGitHubOAuthService>(),
                 _gitHubProfileRepository,
-                _adoProfileRepository);
+                _adoProfileRepository, _publisher, Substitute.For<ITransactionRunner>(), NullLogger<UserController>.Instance);
             _userService.GetCurrentUserAsync().Returns(BuildUser());
         }
 
@@ -257,6 +268,7 @@ public class UserControllerTests
         private readonly IUserService _userService;
         private readonly IJwtTokenService _jwtTokenService;
         private readonly UserController _controller;
+        private readonly IPublisher _publisher;
 
         public GitHubOAuthEndpoints()
         {
@@ -267,14 +279,17 @@ public class UserControllerTests
             _githubAuthService = Substitute.For<IGitHubOAuthService>();
             _userService = Substitute.For<IUserService>();
             _jwtTokenService = Substitute.For<IJwtTokenService>();
-
+            _publisher = Substitute.For<IPublisher>();
             _controller = new UserController(
                 _userService,
                 _jwtTokenService,
                 accessor,
                 _githubAuthService,
                 Substitute.For<IGitHubProfileRepository>(),
-                Substitute.For<IAdoProfileRepository>());
+                Substitute.For<IAdoProfileRepository>(),
+                _publisher,
+                Substitute.For<ITransactionRunner>(), NullLogger<UserController>.Instance
+            );
         }
 
         [Fact(DisplayName = "GithubAuthAsync should redirect to the authorization URL returned by the service")]

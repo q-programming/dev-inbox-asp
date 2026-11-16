@@ -7,7 +7,7 @@ public interface IAdoProfileRepository : IRepository<AdoProfile>
 
     Task<AdoProfile?> GetByUserIdAndOrganizationAsync(long userId, string organization);
 
-    /// <summary>Disconnects a single organization — the caller (event handler) is responsible for
-    /// also removing that organization's inbox items, this only removes the profile/PAT row itself.</summary>
+    /// <summary>Disconnects a single organization — removes only the profile/PAT row (silent no-op when
+    /// none exists). The caller (event handler) is responsible for also removing that organization's inbox items.</summary>
     Task DeleteByUserIdAndOrganizationAsync(long userId, string organization);
 }

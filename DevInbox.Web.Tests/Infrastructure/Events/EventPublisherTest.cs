@@ -48,6 +48,37 @@ public sealed class EventPublisherTests
         Assert.Null(exception);
     }
 
+    [Fact(DisplayName = "Publish should run handlers by ascending Order, keeping registration order for equal Order")]
+    public async Task PublishShouldRunHandlersInOrderAsync()
+    {
+        var order = new ExecutionOrder();
+        _services.AddScoped<IEventHandler<TestEvent>>(_ => new OrderedTestHandler("late", 10, order));
+        _services.AddScoped<IEventHandler<TestEvent>>(_ => new OrderedTestHandler("default-1", 0, order));
+        _services.AddScoped<IEventHandler<TestEvent>>(_ => new OrderedTestHandler("early", -5, order));
+        _services.AddScoped<IEventHandler<TestEvent>>(_ => new OrderedTestHandler("default-2", 0, order));
+        using var provider = BuildProvider();
+        var publisher = CreatePublisher(provider);
+
+        await publisher.Publish(new TestEvent("hello"));
+
+        Assert.Equal(["early", "default-1", "default-2", "late"], order.Steps);
+    }
+
+    [Fact(DisplayName = "Publish should stop at a failing handler, propagate its exception and skip later-ordered handlers")]
+    public async Task PublishShouldStopAtFailingHandlerAsync()
+    {
+        var order = new ExecutionOrder();
+        _services.AddScoped<IEventHandler<TestEvent>>(_ => new OrderedTestHandler("after", 10, order));
+        _services.AddScoped<IEventHandler<TestEvent>, FailingEventHandler>();
+        _services.AddScoped<IEventHandler<TestEvent>>(_ => new OrderedTestHandler("before", -1, order));
+        using var provider = BuildProvider();
+        var publisher = CreatePublisher(provider);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.Publish(new TestEvent("hello")));
+
+        Assert.Equal(["before"], order.Steps);
+    }
+
     [Fact(DisplayName = "PublishAsync should execute handler in background")]
     public async Task PublishAsyncShouldExecuteHandlerAsync()
     {
@@ -149,4 +180,15 @@ public sealed class EventPublisherTests
 public sealed class ExecutionOrder
 {
     public List<string> Steps { get; } = [];
+}
+
+public sealed class OrderedTestHandler(string name, int order, ExecutionOrder executionOrder) : IEventHandler<TestEvent>
+{
+    public int Order => order;
+
+    public Task Handle(TestEvent message, CancellationToken cancellationToken)
+    {
+        executionOrder.Steps.Add(name);
+        return Task.CompletedTask;
+    }
 }

@@ -9,6 +9,7 @@ import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import {
   authKeys,
   useAuthBootstrap,
+  useDeleteAccount,
   useLoginMutation,
   useLogoutMutation,
   useMeQuery,
@@ -190,6 +191,46 @@ describe('useRegisterMutation', () => {
       firstName: 'Dup',
       lastName: 'User',
     });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+});
+
+describe('useDeleteAccount', () => {
+  it('calls DELETE /auth/account/delete and succeeds on 204', async () => {
+    let called = 0;
+    server.use(
+      http.delete('/api/auth/account/delete', () => {
+        called++;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const { result } = renderHook(() => useDeleteAccount(), { wrapper: makeWrapper() });
+    result.current.mutate();
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(called).toBe(1);
+  });
+
+  it('exposes the error when the server fails', async () => {
+    server.use(
+      http.delete('/api/auth/account/delete', () => HttpResponse.json({}, { status: 500 })),
+    );
+
+    const { result } = renderHook(() => useDeleteAccount(), { wrapper: makeWrapper() });
+    result.current.mutate();
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it('exposes the error when the session is unauthorized', async () => {
+    server.use(
+      http.delete('/api/auth/account/delete', () => HttpResponse.json({}, { status: 401 })),
+    );
+
+    const { result } = renderHook(() => useDeleteAccount(), { wrapper: makeWrapper() });
+    result.current.mutate();
 
     await waitFor(() => expect(result.current.isError).toBe(true));
   });

@@ -1,9 +1,11 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import useAlertStore, { AlertType } from '@shared/store/alert.store.ts';
+import { useDeleteAccount, useLogoutMutation } from '@shared/hooks/useAuthQuery.ts';
+import ConfirmModal from '@shared/components/confirmModal/ConfirmModal.tsx';
 
 /**
  * Danger zone section — destructive account actions.
@@ -11,6 +13,29 @@ import useAlertStore, { AlertType } from '@shared/store/alert.store.ts';
  */
 const DangerZoneSection = memo(() => {
   const { addAlert } = useAlertStore();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false);
+  const logout = useLogoutMutation();
+  const deleteAccount = useDeleteAccount();
+
+  const confirmedDeleteAccount = () => {
+    deleteAccount.mutate(undefined, {
+      onSuccess() {
+        addAlert({ message: 'Your account was removed from DevInbox', type: AlertType.SUCCESS });
+        logout.mutate();
+      },
+      onError(error) {
+        addAlert({
+          message:
+            'There were errors while trying to remove your account. Please try again or contact administrator',
+          type: AlertType.ERROR,
+        });
+        console.log(error);
+      },
+      onSettled() {
+        setDeleteConfirmOpen(false);
+      },
+    });
+  };
   return (
     <Box id="danger-zone" sx={{ scrollMarginTop: '72px' }}>
       <Paper
@@ -33,13 +58,23 @@ const DangerZoneSection = memo(() => {
           color="error"
           size="small"
           data-testid="deactivate-btn"
-          onClick={() =>
-            addAlert({ type: AlertType.WARNING, message: 'Sorry , not implemented yet :(' })
-          }
+          onClick={() => setDeleteConfirmOpen(true)}
         >
           Deactivate Account
         </Button>
       </Paper>
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        title="Delete DevInbox Account?"
+        body="This action cannot be undone, Your whole DevInbox account will be removed and cannot be restored. All integration items will be removed as well"
+        confirmLabel="Deactive Account"
+        cancelLabel="Cancel"
+        loading={deleteAccount.isPending}
+        onConfirm={() => {
+          confirmedDeleteAccount();
+        }}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </Box>
   );
 });

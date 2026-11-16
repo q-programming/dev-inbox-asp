@@ -15,7 +15,11 @@ beforeEach(() => {
     toggleItemSelected: (itemId) =>
       useInboxStore.setState((state) => {
         const selectedIds = new Set(state.selectedIds);
-        selectedIds.has(itemId) ? selectedIds.delete(itemId) : selectedIds.add(itemId);
+        if (selectedIds.has(itemId)) {
+          selectedIds.delete(itemId);
+        } else {
+          selectedIds.add(itemId);
+        }
         return { selectedIds };
       }),
   });

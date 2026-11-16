@@ -76,8 +76,8 @@ describe('InboxList', () => {
   });
 
   it('should fetch and append the next page when the sentinel scrolls into view', async () => {
-    const pageOneItems = Array.from({ length: 20 }, (_, i) =>
-      createInboxItem({ id: i + 1, title: `Item ${i + 1}` }),
+    const pageOneItems = Array.from({ length: 20 }, (_value, index) =>
+      createInboxItem({ id: index + 1, title: `Item ${index + 1}` }),
     );
     const pageTwoItems = [createInboxItem({ id: 21, title: 'Item 21' })];
 

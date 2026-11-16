@@ -12,8 +12,8 @@ public class GitHubProfileRepository(AppDbContext db) : Repository<GitHubProfile
 
     public async Task DeleteByUserIdAsync(long userId)
     {
-        var profile = await GetByUserIdAsync(userId)
-            ?? throw new NotFoundException("No GitHub integration to disconnect.");
-        await DeleteAsync(profile);
+        await db.GitHubProfiles
+            .Where(profile => profile.UserId.Equals(userId))
+            .ExecuteDeleteAsync();
     }
 }
