@@ -146,7 +146,7 @@ public class InboxService(
         await inboxItemRepository.BulkUpdateStateAsync(userId, ids, isDone, isSaved);
     }
 
-    public async Task DeleteInboxItemsBySourceAsync(long userId, ItemSource source, string? organization, CancellationToken cancellationToken)
+    public async Task DeleteInboxItemsBySourceAsync(long userId, ItemSource source, string? organization)
     {
         await inboxItemRepository.DeleteBySourceAsync(userId, source, organization);
     }

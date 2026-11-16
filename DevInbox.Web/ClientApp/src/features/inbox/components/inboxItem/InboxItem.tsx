@@ -161,7 +161,7 @@ const InboxItem = ({ item }: IInboxItem) => {
                 toggleItemSelected(item.id);
               }
             }}
-            sx={{ p: 0.25 }}
+            sx={{ padding: 0.25 }}
           />
         )}
 

@@ -142,4 +142,11 @@ public class UserService(
         await publisher.PublishAsync(new SyncRequestedEvent(user.Id, user.Email, TriggerType.Login));
         return user;
     }
+
+    public async Task RemoveUserAsync(User user)
+    {
+        logger.LogInformation("Requesting to remove completely user account {UserId}", user.Id);
+        await publisher.Publish(new UserRemovedEvent(user.Id, user.Email));
+        await userRepository.DeleteAsync(user);
+    }
 }

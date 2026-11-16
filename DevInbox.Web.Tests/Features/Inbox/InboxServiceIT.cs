@@ -415,7 +415,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var attachedNote = await AddNoteAsync(_user.Id, attachedToInboxItemId: githubItem.Id);
         var standaloneNote = await AddNoteAsync(_user.Id, attachedToInboxItemId: null);
 
-        await _service.DeleteInboxItemsBySourceAsync(_user.Id, ItemSource.GitHub, organization: null, CancellationToken.None);
+        await _service.DeleteInboxItemsBySourceAsync(_user.Id, ItemSource.GitHub, organization: null);
 
         var remainingItemIds = await DataBase.InboxItems.AsNoTracking().Select(i => i.Id).ToListAsync();
         Assert.DoesNotContain(githubItem.Id, remainingItemIds);
@@ -430,6 +430,38 @@ public class InboxServiceIT : DatabaseIntegrationTest
         Assert.DoesNotContain(attachedNote.InboxItemId, remainingItemIds);
         Assert.Contains(standaloneNote.Id, remainingNoteIds);
         Assert.Contains(standaloneNote.InboxItemId, remainingItemIds);
+    }
+
+    [Fact(DisplayName = "DeleteInboxItemsBySourceAsync should only remove items of the given ADO organization")]
+    public async Task DeleteInboxItemsBySourceAsyncShouldScopeToOrganizationAsync()
+    {
+        var contosoItem = await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned);
+        var fabrikamItem = await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned);
+        var lookalikeItem = await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned);
+        var otherUserItem = await AddItemAsync(_otherUser.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned);
+        contosoItem.Repository = "contoso/project";
+        fabrikamItem.Repository = "fabrikam/project";
+        lookalikeItem.Repository = "contoso-labs/project";
+        otherUserItem.Repository = "contoso/project";
+        await DataBase.SaveChangesAsync();
+
+        await _service.DeleteInboxItemsBySourceAsync(_user.Id, ItemSource.Ado, "contoso");
+
+        var remainingItemIds = await DataBase.InboxItems.AsNoTracking().Select(i => i.Id).ToListAsync();
+        Assert.DoesNotContain(contosoItem.Id, remainingItemIds);
+        Assert.Contains(fabrikamItem.Id, remainingItemIds);
+        Assert.Contains(lookalikeItem.Id, remainingItemIds);
+        Assert.Contains(otherUserItem.Id, remainingItemIds);
+    }
+
+    [Fact(DisplayName = "DeleteInboxItemsBySourceAsync should do nothing when the user has no items of that source")]
+    public async Task DeleteInboxItemsBySourceAsyncShouldIgnoreEmptyResultAsync()
+    {
+        var githubItem = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored);
+
+        await _service.DeleteInboxItemsBySourceAsync(_user.Id, ItemSource.Ado, organization: null);
+
+        Assert.True(await DataBase.InboxItems.AsNoTracking().AnyAsync(i => i.Id == githubItem.Id));
     }
 
     private async Task<Note> AddNoteAsync(long inboxId, long? attachedToInboxItemId)

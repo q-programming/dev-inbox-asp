@@ -6,6 +6,8 @@ public enum AuditEventType
     UserAuthenticated,
     AuthenticationFailed,
     UserLoggedOut,
+    UserRemoved,
+    UserRemovalFailed,
     SessionExpired,
     GithubCredentialUpdated,
     AdoCredentialUpdated,

@@ -276,3 +276,53 @@ jobs:
                 body,
               });
             }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Job 5 – Publish Docker image (push to master only)
+# Builds the Dockerfile and pushes it to ghcr.io/q-programming/dev-inbox.
+# ──────────────────────────────────────────────────────────────────────────────
+  publish-docker:
+    name: Publish Docker Image
+    needs: [test-backend, test-frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read version from csproj
+        id: version
+        run: echo "value=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' DevInbox.Web/DevInbox.Web.csproj | head -n1)" >> "$GITHUB_OUTPUT"
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/q-programming/dev-inbox
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ steps.version.outputs.value }}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

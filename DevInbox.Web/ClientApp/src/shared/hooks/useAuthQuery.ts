@@ -150,3 +150,10 @@ export const useRegisterMutation = () =>
       skipAuthRedirect: true,
     },
   });
+
+export const useDeleteAccount = () => {
+  return useMutation({
+    mutationFn: () => authApi.deleteAccount(),
+    meta: { silent: true },
+  });
+};

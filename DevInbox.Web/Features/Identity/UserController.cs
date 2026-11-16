@@ -2,9 +2,12 @@ using DevInbox.Web.Features.ADO.Domain;
 using DevInbox.Web.Features.ADO.Mapper;
 using DevInbox.Web.Features.GitHub.Domain;
 using DevInbox.Web.Features.GitHub.Mapper;
+using DevInbox.Web.Features.Identity.Events;
 using DevInbox.Web.Features.Identity.OAuth;
 using DevInbox.Web.Infrastructure.Auth;
+using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
+using DevInbox.Web.Infrastructure.Persistence;
 
 namespace DevInbox.Web.Features.Identity;
 
@@ -18,7 +21,10 @@ public class UserController(
     IHttpContextAccessor httpContextAccessor,
     IGitHubOAuthService githubAuthService,
     IGitHubProfileRepository gitHubProfileRepository,
-    IAdoProfileRepository adoProfileRepository) : IAuthBaseController, IComponent
+    IAdoProfileRepository adoProfileRepository,
+    IPublisher publisher,
+    ITransactionRunner transactionRunner,
+    ILogger<UserController> logger) : IAuthBaseController, IComponent
 {
     private static readonly UserMapper _mapper = new();
     private static readonly GitHubIntegrationMapper _integrationMapper = new();
@@ -80,6 +86,26 @@ public class UserController(
     }
 
     /// <summary>
+    /// Deletes the user account. Integration profiles, inbox, items, notes and settings are removed by the
+    /// database FK cascade from the user row.
+    /// </summary>
+    public async Task DeleteAccountAsync()
+    {
+        var user = await userService.GetCurrentUserAsync();
+        try
+        {
+            // All-or-nothing: if any handler or the user removal fails, nothing is deleted.
+            await transactionRunner.ExecuteAsync(() => userService.RemoveUserAsync(user));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to remove account for user {UserId}", user.Id);
+            await publisher.PublishAsync(new UserRemovalFailedEvent(user.Id, user.Email, ex.GetType().Name));
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Builds the current integrations list for a user — one entry per connected external service
     /// (GitHub, Azure DevOps), omitting any that aren't connected.
     /// </summary>
@@ -99,4 +125,3 @@ public class UserController(
         return integrations;
     }
 }
-

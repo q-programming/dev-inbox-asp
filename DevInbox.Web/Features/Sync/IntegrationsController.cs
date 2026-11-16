@@ -1,11 +1,12 @@
 using DevInbox.Web.Features.ADO;
+using DevInbox.Web.Features.GitHub;
 using DevInbox.Web.Features.Identity;
 using DevInbox.Web.Features.Sync.Events;
 using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using ItemSource = DevInbox.Web.Features.Inbox.Domain.ItemSource;
 
-namespace DevInbox.Web.Features.GitHub;
+namespace DevInbox.Web.Features.Sync;
 
 /// <summary>
 /// Handles integration connection endpoints — GitHub and ADO PAT connect/disconnect.
@@ -47,19 +48,17 @@ public class IntegrationsController(
     public async Task DisconnectAdoAsync(string organization)
     {
         var user = await userService.GetCurrentUserAsync();
-        await adoIntegrationService.DisconnectAsync(user.Id, organization);
         // Cleanup runs synchronously — the user expects previously-synced items from this
         // organization gone from their inbox immediately, not eventually via a background handler.
-        // Other connected organizations' items are untouched (see IntegrationDisconnectedEvent).
-        await publisher.Publish(new IntegrationDisconnectedEvent(user.Id, ItemSource.Ado, organization));
+        // Other connected organizations' items are untouched (see IntegrationDisconnectRequestEvent).
+        await publisher.Publish(new IntegrationDisconnectRequestEvent(user.Id, ItemSource.Ado, organization));
     }
 
     public async Task DisconnectGithubAsync()
     {
         var user = await userService.GetCurrentUserAsync();
-        await gitHubIntegrationService.DisconnectAsync(user.Id);
         // Cleanup runs synchronously — the user expects previously-synced GitHub items gone from
         // their inbox immediately, not eventually via a background handler.
-        await publisher.Publish(new IntegrationDisconnectedEvent(user.Id, ItemSource.GitHub));
+        await publisher.Publish(new IntegrationDisconnectRequestEvent(user.Id, ItemSource.GitHub));
     }
 }

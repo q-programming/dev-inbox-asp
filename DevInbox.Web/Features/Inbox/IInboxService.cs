@@ -14,5 +14,5 @@ public interface IInboxService
     Task MarkInboxItemDoneAsync(long id, bool isDone);
     Task SaveInboxItemAsync(long id, bool save);
     Task BulkUpdateInboxItemsAsync(IReadOnlyCollection<long> ids, bool? isDone, bool? isSaved);
-    Task DeleteInboxItemsBySourceAsync(long userId, Domain.ItemSource source, string? organization, CancellationToken cancellationToken);
+    Task DeleteInboxItemsBySourceAsync(long userId, Domain.ItemSource source, string? organization);
 }

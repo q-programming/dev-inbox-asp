@@ -19,8 +19,8 @@ public class AdoProfileRepository(AppDbContext db) : Repository<AdoProfile>(db),
 
     public async Task DeleteByUserIdAndOrganizationAsync(long userId, string organization)
     {
-        var profile = await GetByUserIdAndOrganizationAsync(userId, organization)
-            ?? throw new NotFoundException($"No Azure DevOps integration for organization '{organization}' to disconnect.");
-        await DeleteAsync(profile);
+        await db.AdoProfiles
+            .Where(p => p.UserId == userId && p.Organization == organization)
+            .ExecuteDeleteAsync();
     }
 }

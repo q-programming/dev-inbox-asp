@@ -70,6 +70,8 @@
     On publish: build React app and embed output in wwwroot for a self-contained binary.
   -->
   <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
+    <!-- csproj <Version> is the single source of truth; keep package.json (and its lockfile) in sync. -->
+    <Exec WorkingDirectory="ClientApp" Command="npm version $(Version) --no-git-tag-version --allow-same-version" />
     <Exec WorkingDirectory="ClientApp" Command="npm install" />
     <Exec WorkingDirectory="ClientApp" Command="npm run build" />
     <ItemGroup>

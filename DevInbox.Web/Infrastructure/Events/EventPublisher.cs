@@ -7,6 +7,7 @@ namespace DevInbox.Web.Infrastructure.Events;
 ///   - synchronous
 ///   - caller waits
 ///   - exceptions propagate
+///   - handlers can be Ordered
 ///
 /// PublishAsync(...)
 ///   - fire and forget
@@ -29,6 +30,7 @@ public sealed class EventPublisher(
         var handlers =
             serviceProvider
                 .GetServices<IEventHandler<TEvent>>()
+                .OrderBy(handler => handler.Order)
                 .ToList();
 
         if (handlers.Count == 0)
