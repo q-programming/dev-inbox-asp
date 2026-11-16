@@ -1,8 +1,11 @@
-import { memo } from 'react';
+import { memo, type MouseEvent, type ReactNode, useCallback, useState } from 'react';
+import Menu from '@mui/material/Menu';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
+import Collapse from '@mui/material/Collapse';
+import List from '@mui/material/List';
 import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -19,6 +22,12 @@ export interface NavRowProps {
   collapsed: boolean;
   /** Called after navigating — used to close the temporary mobile drawer on tap. */
   onNavigate?: () => void;
+  /** Whether an expandable row currently reveals its children. */
+  expanded?: boolean;
+  /** Called with the item id when an expandable row is clicked (instead of `onNavigate`). */
+  onToggle?: (id: string) => void;
+  /** Rows revealed below an expandable row when expanded, or in a pop-out menu when the sidebar is collapsed. */
+  children?: ReactNode;
 }
 
 /** Row sizing per density level — mirrors the scaling applied to inbox list rows. */
@@ -36,7 +45,29 @@ const DENSITY_NAV_ROW_STYLES: Record<Density, { minHeight: number; marginY: numb
  * When collapsed, labels and counts are hidden and a Tooltip provides
  * discoverability.
  */
-const NavRow = memo(({ item, activeId, collapsed, onNavigate }: NavRowProps) => {
+const NavRow = memo(({ item, activeId, collapsed, onNavigate, expanded = false, onToggle, children }: NavRowProps) => {
+  // Expanding a group must not close the mobile drawer — only selecting a destination does.
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const handleClick = useCallback(
+    (event: MouseEvent<HTMLElement>): void => {
+      if (!item.expandable) {
+        onNavigate?.();
+        return;
+      }
+      if (collapsed) {
+        // No room for an inline list: pop the children out as a menu instead.
+        // Toggle only when closed so the lazy fetch is enabled but never switched off.
+        setMenuAnchor(event.currentTarget);
+        if (!expanded) {
+          onToggle?.(item.id);
+        }
+        return;
+      }
+      onToggle?.(item.id);
+    },
+    [item.expandable, item.id, collapsed, expanded, onToggle, onNavigate],
+  );
+  const closeMenu = useCallback((): void => setMenuAnchor(null), []);
   const isActive = item.id === activeId;
   const density = useSettingsStore((state) => state.density);
   const { minHeight, marginY } = DENSITY_NAV_ROW_STYLES[density];
@@ -54,7 +85,8 @@ const NavRow = memo(({ item, activeId, collapsed, onNavigate }: NavRowProps) => 
       selected={isActive}
       component={item.route ? NavLink : 'div'}
       {...(to ? { to, end: true } : {})}
-      onClick={onNavigate}
+      {...(item.expandable ? { 'aria-expanded': expanded } : {})}
+      onClick={handleClick}
       sx={{
         borderRadius: 1,
         marginY,
@@ -87,9 +119,17 @@ const NavRow = memo(({ item, activeId, collapsed, onNavigate }: NavRowProps) => 
             }}
           />
           {item.expandable && (
-            <ChevronRightIcon fontSize="small" sx={{ color: 'text.disabled', fontSize: '1rem' }} />
+            <ChevronRightIcon
+              fontSize="small"
+              sx={{
+                color: 'text.disabled',
+                fontSize: '1rem',
+                transform: expanded ? 'rotate(90deg)' : 'none',
+                transition: 'transform 150ms ease',
+              }}
+            />
           )}
-          {(item.count !== undefined && item.count !== 0) && !item.expandable && (
+          {item.count !== undefined && item.count !== 0 && !item.expandable && (
             <ListItemSecondaryAction>
               <Typography
                 variant="caption"
@@ -108,16 +148,46 @@ const NavRow = memo(({ item, activeId, collapsed, onNavigate }: NavRowProps) => 
   // Wrap in Tooltip when collapsed so the label is still discoverable
   if (collapsed) {
     return (
-      <Tooltip
-        title={item.count !== undefined ? `${item.label} (${item.count})` : item.label}
-        placement="right"
-      >
-        {button}
-      </Tooltip>
+      <>
+        <Tooltip
+          title={item.count !== undefined ? `${item.label} (${item.count})` : item.label}
+          placement="right"
+        >
+          {button}
+        </Tooltip>
+        {item.expandable && (
+          <Menu
+            anchorEl={menuAnchor}
+            open={!!menuAnchor}
+            onClose={closeMenu}
+            // Selecting a child bubbles up here and dismisses the menu.
+            onClick={closeMenu}
+            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          >
+            <List disablePadding dense sx={{ minWidth: 180, px: 0.5 }}>
+              {children}
+            </List>
+          </Menu>
+        )}
+      </>
     );
   }
 
-  return button;
+  if (!item.expandable) {
+    return button;
+  }
+
+  return (
+    <>
+      {button}
+      <Collapse in={expanded} timeout="auto" unmountOnExit>
+        <List disablePadding dense sx={{ pl: 1.5 }}>
+          {children}
+        </List>
+      </Collapse>
+    </>
+  );
 });
 
 export default NavRow;

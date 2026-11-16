@@ -286,7 +286,7 @@ const InboxItem = ({ item }: IInboxItem) => {
                 {type}{item.externalId}
               </Typography>
             )}
-            {!!item.repository && (
+            {!!item.scope && (
               <Typography
                 variant="body2"
                 sx={{
@@ -298,7 +298,7 @@ const InboxItem = ({ item }: IInboxItem) => {
                   maxWidth: '100%',
                 }}
               >
-                {item.repository}
+                {item.scope}
               </Typography>
             )}
 

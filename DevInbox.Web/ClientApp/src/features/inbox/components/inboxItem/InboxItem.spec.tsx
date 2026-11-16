@@ -16,7 +16,7 @@ function makeInboxItem(overrides: Partial<InboxItemSummary> = {}): InboxItemSumm
     title: 'Review API contract',
     isDone: false,
     activityAt: '2026-07-31T10:15:00.000Z' as unknown as Date,
-    repository: 'octo/dev-inbox',
+    scope: 'octo/dev-inbox',
     reason: InboxReason.ReviewRequested,
     priority: Priority.High,
     sourceType: ItemSource.Github,
@@ -53,7 +53,7 @@ describe('InboxItem', () => {
     });
 
     it('hides repository text when repository is absent', () => {
-      renderWithProviders(<InboxItem item={makeInboxItem({ repository: undefined })} />);
+      renderWithProviders(<InboxItem item={makeInboxItem({ scope: undefined })} />);
 
       expect(screen.queryByText('octo/dev-inbox')).toBeNull();
     });

@@ -11,9 +11,11 @@ import {
   CORE_FOCUS_ITEMS,
   FILTER_ITEMS,
   INTEGRATION_FOCUS_ITEMS,
+  type SidebarNavItem,
 } from '../navConfig.tsx';
 import useSettingsStore from '@feature/settings/store/settings.store';
 import NavRow from './NavRow.tsx';
+import NavGroup from './NavGroup.tsx';
 import SectionLabel from './SectionLabel.tsx';
 import { useLocation } from 'react-router-dom';
 import { useInboxSummaryQuery } from '@feature/inbox/hooks/useInboxQuery.tsx';
@@ -121,6 +123,25 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
     [summary],
   );
 
+  const renderItem = (item: SidebarNavItem): React.ReactElement =>
+    item.expandable ? (
+      <NavGroup
+        key={item.id}
+        item={item}
+        activeId={activeId}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+      />
+    ) : (
+      <NavRow
+        key={item.id}
+        item={item}
+        activeId={activeId}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+      />
+    );
+
   return (
     <Box
       component="nav"
@@ -142,45 +163,21 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
     >
       <SectionLabel label="Focus" collapsed={collapsed} />
       <List disablePadding dense>
-        {focusItems.map((item) => (
-          <NavRow
-            key={item.id}
-            item={item}
-            activeId={activeId}
-            collapsed={collapsed}
-            onNavigate={onNavigate}
-          />
-        ))}
+        {focusItems.map(renderItem)}
       </List>
 
       <Divider sx={{ marginY: 1 }} />
 
       <SectionLabel label="Integrations" collapsed={collapsed} />
       <List disablePadding dense>
-        {integrationItems.map((item) => (
-          <NavRow
-            key={item.id}
-            item={item}
-            activeId={activeId}
-            collapsed={collapsed}
-            onNavigate={onNavigate}
-          />
-        ))}
+        {integrationItems.map(renderItem)}
       </List>
 
       <Divider sx={{ marginY: 1 }} />
 
       <SectionLabel label="Filters" collapsed={collapsed} />
       <List disablePadding dense>
-        {filterItems.map((item) => (
-          <NavRow
-            key={item.id}
-            item={item}
-            activeId={activeId}
-            collapsed={collapsed}
-            onNavigate={onNavigate}
-          />
-        ))}
+        {filterItems.map(renderItem)}
       </List>
 
       <Box sx={{ flexGrow: 1 }} />
