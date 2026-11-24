@@ -102,8 +102,8 @@ public class AccountDeletionIT : DatabaseIntegrationTest
         // The success audit entry was written inside the transaction, so it must be rolled back too.
         Assert.DoesNotContain(await DataBase.AuditEntries.AsNoTracking().ToListAsync(),
             a => a.EventType == AuditEventType.UserRemoved);
-        Assert.Contains(await DataBase.AuditEntries.AsNoTracking().ToListAsync(),
-            a => a.EventType == AuditEventType.UserRemovalFailed);
+        // The failure audit is published fire-and-forget, so wait for it to land.
+        await WaitForAuditEntryAsync(AuditEventType.UserRemovalFailed);
     }
 
     [Fact(DisplayName = "DeleteAccountAsync should record a UserRemovalFailed audit entry without leaking the exception message")]
