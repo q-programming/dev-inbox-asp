@@ -187,7 +187,7 @@ public class GitHubServiceTests
         await _inboxItemRepository.Received(1).AddRangeAsync(Arg.Is<IEnumerable<InboxItem>>(items =>
             items.Count() == 1 &&
             !items.First().State.IsDone &&
-            items.First().Repository == "octocat/hello-world" &&
+            items.First().Scope == "octocat/hello-world" &&
             items.First().ExternalId == "42"));
         await _inboxItemRepository.Received(1).SaveChangesAsync();
     }
@@ -545,7 +545,7 @@ public class GitHubServiceTests
             Type = DomainItemType.PR,
             Reason = DomainInboxReason.Authored,
             ExternalId = externalId,
-            Repository = repository,
+            Scope = repository,
             Title = "Fix bug",
             ActivityAt = now,
             CreatedAt = now,

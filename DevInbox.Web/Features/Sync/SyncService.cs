@@ -3,15 +3,24 @@ using DevInbox.Web.Features.ADO;
 using DevInbox.Web.Features.GitHub;
 using DevInbox.Web.Features.Inbox;
 using DevInbox.Web.Features.Sync.Domain;
+using DevInbox.Web.Features.Sync.Events;
+using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 
 namespace DevInbox.Web.Features.Sync;
 
-public class SyncService(IInboxService inboxService, IServiceScopeFactory scopeFactory, ILogger<SyncService> logger) : ISyncService, IService
+public class SyncService(
+    IInboxService inboxService,
+    IServiceScopeFactory scopeFactory,
+    IPublisher publisher,
+    ILogger<SyncService> logger) : ISyncService, IService
 {
-    public async Task<IReadOnlyList<InboxItemChange>> SynchronizeIntegrations(long userId, string email, TriggerType trigger, bool forceFullSync = false, CancellationToken ct = default)
+    public async Task<IReadOnlyList<InboxItemChange>> SynchronizeIntegrations(long userId, string email,
+        TriggerType trigger, bool forceFullSync = false, CancellationToken ct = default)
     {
-        var inbox = await inboxService.GetUserInboxAsync(userId) ?? throw new ArgumentException("Inbox not found for user {UserId}", nameof(userId)); ;
+        var inbox = await inboxService.GetUserInboxAsync(userId) ??
+                    throw new ArgumentException("Inbox not found for user {UserId}", nameof(userId));
+        ;
         inbox.LastSyncStartedAt = DateTime.UtcNow;
         inbox.SyncStatus = Inbox.Domain.SyncStatus.Running;
         await inboxService.UpdateAsync(inbox);
@@ -47,6 +56,7 @@ public class SyncService(IInboxService inboxService, IServiceScopeFactory scopeF
         logger.LogDebug(
             "Sync for user {UserId} ({Email}) completed with {ChangedItemsCount} new/updated item(s) (trigger: {Trigger})",
             userId, EmailUtils.MaskEmail(email), changedItems.Count, trigger);
+        await publisher.Publish(new SyncFinishedEvent(userId), ct);
         return changedItems;
     }
 
@@ -76,7 +86,6 @@ public class SyncService(IInboxService inboxService, IServiceScopeFactory scopeF
                 ex,
                 "Error occurred while synchronizing {Integration} for user {UserId} ({Email})",
                 integrationName, userId, EmailUtils.MaskEmail(email));
-            // TODO Notification center
             return new IntegrationSyncResult(false, []);
         }
     }
@@ -87,7 +96,8 @@ public class SyncService(IInboxService inboxService, IServiceScopeFactory scopeF
     /// Resolves <typeparamref name="TService"/> in its own DI scope and runs the given operation.
     /// Prevents concurrent sync tasks from sharing (and corrupting) the same scoped DbContext instance.
     /// </summary>
-    private async Task<TResult> RunInOwnScopeAsync<TService, TResult>(Func<TService, CancellationToken, Task<TResult>> operation, CancellationToken ct)
+    private async Task<TResult> RunInOwnScopeAsync<TService, TResult>(
+        Func<TService, CancellationToken, Task<TResult>> operation, CancellationToken ct)
         where TService : notnull
     {
         using var scope = scopeFactory.CreateScope();
@@ -95,4 +105,3 @@ public class SyncService(IInboxService inboxService, IServiceScopeFactory scopeF
         return await operation(service, ct);
     }
 }
-

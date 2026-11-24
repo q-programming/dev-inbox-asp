@@ -53,7 +53,7 @@ public class AdoServiceTests
             Id = 1,
             InboxId = UserId,
             Type = ItemType.WorkItem,
-            Repository = "contoso/Alpha",
+            Scope = "contoso/Alpha",
             ExternalId = "501"
         };
 
@@ -110,7 +110,7 @@ public class AdoServiceTests
             Id = 2,
             InboxId = UserId,
             Type = ItemType.PR,
-            Repository = "contoso/Alpha/alpha-service",
+            Scope = "contoso/Alpha/alpha-service",
             ExternalId = "2101"
         };
 
@@ -182,7 +182,7 @@ public class AdoServiceTests
     [Fact(DisplayName = "GetDetailsAsync should mark the profile invalid and throw ForbiddenException when Azure DevOps rejects the token")]
     public async Task GetDetailsAsyncShouldMarkProfileInvalidOnAuthorizationFailureAsync()
     {
-        var item = new InboxItem { Id = 4, InboxId = UserId, Type = ItemType.WorkItem, Repository = "contoso/Alpha", ExternalId = "501" };
+        var item = new InboxItem { Id = 4, InboxId = UserId, Type = ItemType.WorkItem, Scope = "contoso/Alpha", ExternalId = "501" };
         _adoClient.GetWorkItemDetailAsync(Pat, "contoso", 501, Arg.Any<CancellationToken>())
             .Returns<Task<AdoWorkItemDTO>>(_ => throw new AdoAuthorizationException(System.Net.HttpStatusCode.Forbidden, "workitems", "missing vso.work scope"));
 
@@ -195,7 +195,7 @@ public class AdoServiceTests
     [Fact(DisplayName = "GetDetailsAsync should throw when the inbox item has no repository/organization reference")]
     public async Task GetDetailsAsyncShouldThrowWhenRepositoryMissingAsync()
     {
-        var item = new InboxItem { Id = 3, InboxId = UserId, Type = ItemType.WorkItem, ExternalId = "501", Repository = null };
+        var item = new InboxItem { Id = 3, InboxId = UserId, Type = ItemType.WorkItem, ExternalId = "501", Scope = null };
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetDetailsAsync(item, CancellationToken.None));
     }
@@ -252,14 +252,14 @@ public class AdoServiceTests
             InboxId = userId,
             Source = ItemSource.Ado,
             Type = ItemType.WorkItem,
-            Repository = "contoso/Alpha",
+            Scope = "contoso/Alpha",
             ExternalId = "501",
             Title = "Implement inbox sync retry policy",
             Reason = InboxReason.Authored,
             ActivityAt = new DateTimeOffset(2026, 1, 10, 9, 0, 0, TimeSpan.Zero),
             State = new InboxItemState { IsDone = false, IsClosed = false }
         };
-        _inboxItemRepository.GetExistingItemsAsync(userId, ItemSource.Ado, ItemType.WorkItem, Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
+        _inboxItemRepository.GetExistingItemsByScopePrefixAsync(userId, ItemSource.Ado, ItemType.WorkItem, "contoso/", Arg.Any<IReadOnlyCollection<string>>())
             .Returns(new List<InboxItem> { existing });
 
         await _service.SyncWorkItemsAsync(userId);
@@ -313,20 +313,142 @@ public class AdoServiceTests
             InboxId = userId,
             Source = ItemSource.Ado,
             Type = ItemType.WorkItem,
-            Repository = "contoso/Alpha",
+            Scope = "contoso/Alpha",
             ExternalId = "501",
             Title = "Implement inbox sync retry policy",
             Reason = InboxReason.Assigned,
             ActivityAt = unchangedDate,
             State = new InboxItemState { IsDone = false, IsClosed = false }
         };
-        _inboxItemRepository.GetExistingItemsAsync(userId, ItemSource.Ado, ItemType.WorkItem, Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<IReadOnlyCollection<string>>())
+        _inboxItemRepository.GetExistingItemsByScopePrefixAsync(userId, ItemSource.Ado, ItemType.WorkItem, "contoso/", Arg.Any<IReadOnlyCollection<string>>())
             .Returns(new List<InboxItem> { existing });
 
         await _service.SyncWorkItemsAsync(userId);
 
         Assert.Equal(InboxReason.Assigned, existing.Reason);
         await _inboxItemRepository.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact(DisplayName = "SyncWorkItemsAsync should update an existing work item's scope in place when it moves to another team")]
+    public async Task SyncWorkItemsAsyncShouldUpdateScopeWhenWorkItemMovedAsync()
+    {
+        const long userId = 9;
+        var profile = new AdoProfile
+        {
+            UserId = userId,
+            Organization = "contoso",
+            AdoUserId = "ado-user-1",
+            AdoEmail = "jane@contoso.com",
+            AdoLogin = "Jane Doe",
+            AccessToken = Pat,
+            Status = DomainIntegrationStatus.Active
+        };
+        _profileRepository.GetAllByUserIdAsync(userId).Returns(new List<AdoProfile> { profile });
+
+        _adoClient.GetProjectsAsync(Pat, "contoso", Arg.Any<CancellationToken>())
+            .Returns([new AdoProjectDTO { Id = "proj-1", Name = "Alpha" }]);
+        _adoClient.QueryWorkItemIdsAsync(Pat, "contoso", "Alpha", Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns([501]);
+
+        var unchangedDate = new DateTimeOffset(2026, 1, 10, 9, 0, 0, TimeSpan.Zero);
+        var workItem = new AdoWorkItemDTO
+        {
+            Id = 501,
+            Fields = new AdoWorkItemFieldsDTO
+            {
+                Title = "Implement inbox sync retry policy",
+                State = "Active",
+                TeamProject = "Alpha",
+                AreaPath = "Alpha\\Backend\\Sync",
+                AssignedTo = new AdoIdentityRefDTO { DisplayName = "Jane Doe", UniqueName = "jane@contoso.com" },
+                ChangedDate = unchangedDate
+            }
+        };
+        _adoClient.GetWorkItemsBatchAsync(Pat, "contoso", "Alpha", Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns([workItem]);
+        _adoClient.GetPullRequestsAsync(Pat, "contoso", "Alpha", Arg.Any<AdoPullRequestSearchStatus>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<DateTimeOffset?>(), Arg.Any<CancellationToken>())
+            .Returns(new List<AdoPullRequestDTO>());
+
+        var existing = new InboxItem
+        {
+            InboxId = userId,
+            Source = ItemSource.Ado,
+            Type = ItemType.WorkItem,
+            Scope = "contoso/Alpha",
+            ExternalId = "501",
+            Title = "Implement inbox sync retry policy",
+            Reason = InboxReason.Assigned,
+            ActivityAt = unchangedDate,
+            State = new InboxItemState { IsDone = false, IsClosed = false }
+        };
+        _inboxItemRepository.GetExistingItemsByScopePrefixAsync(userId, ItemSource.Ado, ItemType.WorkItem, "contoso/", Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(new List<InboxItem> { existing });
+
+        await _service.SyncWorkItemsAsync(userId);
+
+        Assert.Equal("contoso/Alpha/Backend", existing.Scope);
+        await _inboxItemRepository.Received(1).SaveChangesAsync();
+        await _inboxItemRepository.DidNotReceive().AddRangeAsync(Arg.Any<IEnumerable<InboxItem>>());
+    }
+
+    [Fact(DisplayName = "SyncWorkItemsAsync should drop the team from the scope when a work item moves to the project root")]
+    public async Task SyncWorkItemsAsyncShouldUseProjectScopeWhenWorkItemMovedToRootAsync()
+    {
+        const long userId = 10;
+        var profile = new AdoProfile
+        {
+            UserId = userId,
+            Organization = "contoso",
+            AdoUserId = "ado-user-1",
+            AdoEmail = "jane@contoso.com",
+            AdoLogin = "Jane Doe",
+            AccessToken = Pat,
+            Status = DomainIntegrationStatus.Active
+        };
+        _profileRepository.GetAllByUserIdAsync(userId).Returns(new List<AdoProfile> { profile });
+        _adoClient.GetProjectsAsync(Pat, "contoso", Arg.Any<CancellationToken>())
+            .Returns([new AdoProjectDTO { Id = "proj-1", Name = "Alpha" }]);
+        _adoClient.QueryWorkItemIdsAsync(Pat, "contoso", "Alpha", Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns([501]);
+
+        var unchangedDate = new DateTimeOffset(2026, 1, 10, 9, 0, 0, TimeSpan.Zero);
+        var workItem = new AdoWorkItemDTO
+        {
+            Id = 501,
+            Fields = new AdoWorkItemFieldsDTO
+            {
+                Title = "Implement inbox sync retry policy",
+                State = "Active",
+                TeamProject = "Alpha",
+                AreaPath = "Alpha",
+                AssignedTo = new AdoIdentityRefDTO { DisplayName = "Jane Doe", UniqueName = "jane@contoso.com" },
+                ChangedDate = unchangedDate
+            }
+        };
+        _adoClient.GetWorkItemsBatchAsync(Pat, "contoso", "Alpha", Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns([workItem]);
+        _adoClient.GetPullRequestsAsync(Pat, "contoso", "Alpha", Arg.Any<AdoPullRequestSearchStatus>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<DateTimeOffset?>(), Arg.Any<CancellationToken>())
+            .Returns(new List<AdoPullRequestDTO>());
+
+        var existing = new InboxItem
+        {
+            InboxId = userId,
+            Source = ItemSource.Ado,
+            Type = ItemType.WorkItem,
+            Scope = "contoso/Alpha/Backend",
+            ExternalId = "501",
+            Title = "Implement inbox sync retry policy",
+            Reason = InboxReason.Assigned,
+            ActivityAt = unchangedDate,
+            State = new InboxItemState { IsDone = false, IsClosed = false }
+        };
+        _inboxItemRepository.GetExistingItemsByScopePrefixAsync(userId, ItemSource.Ado, ItemType.WorkItem, "contoso/", Arg.Any<IReadOnlyCollection<string>>())
+            .Returns(new List<InboxItem> { existing });
+
+        await _service.SyncWorkItemsAsync(userId);
+
+        Assert.Equal("contoso/Alpha", existing.Scope);
+        await _inboxItemRepository.Received(1).SaveChangesAsync();
     }
 
     [Fact(DisplayName = "SyncWorkItemsAsync should bound an incremental sync's pull request search to Active + recently-closed, never an unbounded full-history search")]

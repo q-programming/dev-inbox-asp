@@ -123,8 +123,20 @@ export const FILTER_ITEMS: SidebarNavItem[] = [
     route: AppRoute.INBOX,
     filter: { status: ItemStatus.ToDo },
   },
-  { id: 'needs-attention', label: 'Needs attention', icon: <ErrorOutlineIcon fontSize="small" /> },
-  { id: 'stale', label: 'Stale', icon: <AccessTimeIcon fontSize="small" /> },
+  {
+    id: 'needs-attention',
+    label: 'Needs attention',
+    icon: <ErrorOutlineIcon fontSize="small" />,
+    route: AppRoute.INBOX,
+    filter: { status: ItemStatus.NeedsAttention },
+  },
+  {
+    id: 'stale',
+    label: 'Stale',
+    icon: <AccessTimeIcon fontSize="small" />,
+    route: AppRoute.INBOX,
+    filter: { status: ItemStatus.Stale },
+  },
   {
     id: 'done',
     label: 'Done',

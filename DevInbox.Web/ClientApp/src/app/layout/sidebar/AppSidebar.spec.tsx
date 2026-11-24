@@ -2,13 +2,19 @@
  * Integration tests for AppSidebar.
  * Individual building blocks are unit-tested in NavRow.spec.tsx and SectionLabel.spec.tsx.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@test/renderWithProviders.tsx';
 import useUserStore, { AuthStatus } from '@shared/store/user.store.ts';
 import useSettingsStore from '@feature/settings/store/settings.store';
 import AppSidebar from './AppSidebar.tsx';
+
+vi.mock('@feature/inbox/hooks/useInboxQuery.tsx', () => ({
+  useInboxSummaryQuery: () => ({ data: undefined }),
+  useUserTeams: () => ({ data: ['org/project/team a'], isLoading: false }),
+  useUserRepos: () => ({ data: [], isLoading: false }),
+}));
 
 function renderSidebar() {
   return renderWithProviders(<AppSidebar />);
@@ -44,6 +50,16 @@ describe('AppSidebar', () => {
       expect(screen.getAllByText(/filters/i).length).toBeGreaterThan(0);
       expect(screen.getByText('To Do')).toBeTruthy();
       expect(screen.getByText('Stale')).toBeTruthy();
+    });
+  });
+
+  describe('scope entries', () => {
+    it('should highlight the scope entry matching the scope query param', async () => {
+      renderWithProviders(<AppSidebar />, { initialEntries: ['/inbox?scope=org%2Fproject%2Fteam+a'] });
+      await userEvent.click(screen.getByText('Teams'));
+
+      const entry = await screen.findByText('team a');
+      expect(entry.closest('a')?.className).toContain('Mui-selected');
     });
   });
 

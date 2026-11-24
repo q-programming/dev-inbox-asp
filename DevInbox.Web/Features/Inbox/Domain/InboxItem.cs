@@ -11,7 +11,7 @@ public class InboxItem
     public ItemSource Source { get; set; }
     public ItemType Type { get; set; }
     public string? Title { get; set; }
-    public string? Repository { get; set; }
+    public string? Scope { get; set; }
     public long InboxId { get; set; }
     [ForeignKey(nameof(InboxId))]
     public Inbox Inbox { get; set; } = null!;

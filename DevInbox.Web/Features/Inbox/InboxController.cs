@@ -18,10 +18,11 @@ public class InboxController(IInboxService inboxService) : IInboxBaseController,
         ItemType? itemType,
         ItemStatus? status,
         InboxReason? reason,
+        string? scope,
         string? term)
     {
         if (term is not null &&
-            (term.Length < MinimumSearchTermLength || term.Length > MaximumSearchTermLength))
+            term.Length is < MinimumSearchTermLength or > MaximumSearchTermLength)
         {
             throw new BadRequestException(
                 $"The inbox search term must contain between {MinimumSearchTermLength} and {MaximumSearchTermLength} characters.");
@@ -33,12 +34,18 @@ public class InboxController(IInboxService inboxService) : IInboxBaseController,
             itemType,
             status,
             reason,
+            scope,
             term);
     }
 
     public Task BulkUpdateInboxItemsAsync(BulkInboxItemUpdateRequest body)
     {
         return inboxService.BulkUpdateInboxItemsAsync(body.Ids, body.IsDone, body.IsSaved);
+    }
+
+    public async Task<ICollection<string>> GetUserRepositoriesAsync()
+    {
+        return await inboxService.GetUserRepositoriesAsync();
     }
 
     public Task<InboxItemDetail> GetInboxItemAsync(long id)
@@ -60,6 +67,11 @@ public class InboxController(IInboxService inboxService) : IInboxBaseController,
     public Task<InboxSummary> GetInboxSummaryAsync()
     {
         return inboxService.GetInboxSummaryAsync();
+    }
+
+    public async Task<ICollection<string>> GetUserTeamsAsync()
+    {
+        return await inboxService.GetUserTeamsAsync();
     }
 
     public async Task MarkInboxItemDoneAsync(long id, bool isDone)

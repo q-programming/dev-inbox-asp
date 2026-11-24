@@ -5,6 +5,7 @@ using DevInbox.Web.Features.Inbox.Details;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Features.Notes;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using NSubstitute;
 using InboxEntity = DevInbox.Web.Features.Inbox.Domain.Inbox;
 using GeneratedItemSource = DevInbox.Web.Infrastructure.OpenApi.Generated.ItemSource;
@@ -23,7 +24,7 @@ namespace DevInbox.Web.Tests.Features.Inbox;
 /// like every other repository call (the actual EF Core translation of the projection expression is
 /// covered separately by <c>InboxServiceIT</c> against a real Postgres Testcontainer).
 /// </summary>
-public class InboxServiceTests
+public class InboxServiceTests : IDisposable
 {
     private const long UserId = 1;
     private const long OtherUserId = 2;
@@ -31,6 +32,7 @@ public class InboxServiceTests
     private readonly IInboxRepository _inboxRepository;
     private readonly IInboxItemRepository _inboxItemRepository;
     private readonly IInboxDetailService _inboxDetailService;
+    private readonly MemoryCache _cache = new(new MemoryCacheOptions());
     private readonly Web.Features.Inbox.InboxService _service;
 
     public InboxServiceTests()
@@ -42,8 +44,11 @@ public class InboxServiceTests
             _inboxRepository,
             _inboxItemRepository,
             _inboxDetailService,
-            CreateAccessorWithClaim(UserId));
+            CreateAccessorWithClaim(UserId),
+            _cache);
     }
+
+    public void Dispose() => _cache.Dispose();
 
     private static IHttpContextAccessor CreateAccessorWithClaim(long? userId)
     {
@@ -66,6 +71,101 @@ public class InboxServiceTests
     };
 
     // ── GetInboxSummaryAsync ──────────────────────────────────────────────────
+
+    [Fact(DisplayName = "GetUserTeamsAsync should query work item scopes once and serve repeated calls from the cache")]
+    public async Task GetUserTeamsAsyncShouldCacheResultAsync()
+    {
+        _inboxItemRepository.GetDistinctScopesAsync(UserId, ItemType.WorkItem)
+            .Returns(["contoso/Alpha/Backend", "contoso/Alpha/Frontend"]);
+
+        var first = await _service.GetUserTeamsAsync();
+        var second = await _service.GetUserTeamsAsync();
+
+        Assert.Equal(["contoso/Alpha/Backend", "contoso/Alpha/Frontend"], first);
+        Assert.Equal(first, second);
+        await _inboxItemRepository.Received(1).GetDistinctScopesAsync(UserId, ItemType.WorkItem);
+    }
+
+    [Fact(DisplayName = "GetUserRepositoriesAsync should query pull request scopes and not share the teams cache entry")]
+    public async Task GetUserRepositoriesAsyncShouldUsePullRequestScopesAsync()
+    {
+        _inboxItemRepository.GetDistinctScopesAsync(UserId, ItemType.WorkItem).Returns(["contoso/Alpha/Backend"]);
+        _inboxItemRepository.GetDistinctScopesAsync(UserId, ItemType.PR).Returns(["octocat/hello-world"]);
+
+        var teams = await _service.GetUserTeamsAsync();
+        var repositories = await _service.GetUserRepositoriesAsync();
+
+        Assert.Equal(["contoso/Alpha/Backend"], teams);
+        Assert.Equal(["octocat/hello-world"], repositories);
+    }
+
+    [Fact(DisplayName = "ClearUsersCache should evict the user's cached teams and repositories so the next read hits the repository")]
+    public async Task ClearUsersCacheShouldEvictTeamsAndRepositoriesAsync()
+    {
+        _inboxItemRepository.GetDistinctScopesAsync(UserId, ItemType.WorkItem).Returns(["contoso/Alpha/Backend"]);
+        _inboxItemRepository.GetDistinctScopesAsync(UserId, ItemType.PR).Returns(["octocat/hello-world"]);
+        await _service.GetUserTeamsAsync();
+        await _service.GetUserRepositoriesAsync();
+
+        _service.ClearUsersCache(UserId);
+        await _service.GetUserTeamsAsync();
+        await _service.GetUserRepositoriesAsync();
+
+        await _inboxItemRepository.Received(2).GetDistinctScopesAsync(UserId, ItemType.WorkItem);
+        await _inboxItemRepository.Received(2).GetDistinctScopesAsync(UserId, ItemType.PR);
+    }
+
+    [Fact(DisplayName = "ClearUsersCache should leave other users' cached lists untouched")]
+    public async Task ClearUsersCacheShouldNotAffectOtherUsersAsync()
+    {
+        var otherService = new Web.Features.Inbox.InboxService(
+            _inboxRepository, _inboxItemRepository, _inboxDetailService, CreateAccessorWithClaim(OtherUserId), _cache);
+        _inboxItemRepository.GetDistinctScopesAsync(OtherUserId, ItemType.WorkItem).Returns(["fabrikam/Beta/Ops"]);
+        await otherService.GetUserTeamsAsync();
+
+        _service.ClearUsersCache(UserId);
+        await otherService.GetUserTeamsAsync();
+
+        await _inboxItemRepository.Received(1).GetDistinctScopesAsync(OtherUserId, ItemType.WorkItem);
+    }
+
+    [Fact(DisplayName = "DeleteInboxItemsBySourceAsync should evict the user's cached lists after deleting, as disconnecting changes the scopes")]
+    public async Task DeleteInboxItemsBySourceAsyncShouldEvictCacheAsync()
+    {
+        _inboxItemRepository.GetDistinctScopesAsync(UserId, ItemType.WorkItem).Returns(["contoso/Alpha/Backend"]);
+        _inboxItemRepository.GetDistinctScopesAsync(UserId, ItemType.PR).Returns(["contoso/Alpha/api"]);
+        await _service.GetUserTeamsAsync();
+        await _service.GetUserRepositoriesAsync();
+
+        await _service.DeleteInboxItemsBySourceAsync(UserId, ItemSource.Ado, "contoso");
+        await _service.GetUserTeamsAsync();
+        await _service.GetUserRepositoriesAsync();
+
+        await _inboxItemRepository.Received(1).DeleteBySourceAsync(UserId, ItemSource.Ado, "contoso");
+        await _inboxItemRepository.Received(2).GetDistinctScopesAsync(UserId, ItemType.WorkItem);
+        await _inboxItemRepository.Received(2).GetDistinctScopesAsync(UserId, ItemType.PR);
+    }
+
+    [Fact(DisplayName = "GetUserRepositoriesAsync should serve repeated calls from the cache")]
+    public async Task GetUserRepositoriesAsyncShouldCacheResultAsync()
+    {
+        _inboxItemRepository.GetDistinctScopesAsync(UserId, ItemType.PR).Returns(["octocat/hello-world"]);
+
+        await _service.GetUserRepositoriesAsync();
+        var second = await _service.GetUserRepositoriesAsync();
+
+        Assert.Equal(["octocat/hello-world"], second);
+        await _inboxItemRepository.Received(1).GetDistinctScopesAsync(UserId, ItemType.PR);
+    }
+
+    [Fact(DisplayName = "GetUserTeamsAsync should throw when there is no authenticated user")]
+    public async Task GetUserTeamsAsyncShouldThrowWhenNoUserAsync()
+    {
+        var service = new Web.Features.Inbox.InboxService(
+            _inboxRepository, _inboxItemRepository, _inboxDetailService, CreateAccessorWithClaim(null), _cache);
+
+        await Assert.ThrowsAsync<UnauthorizedException>(service.GetUserTeamsAsync);
+    }
 
     [Fact(DisplayName = "GetInboxSummaryAsync should return the summary produced by the repository for the current user")]
     public async Task GetInboxSummaryAsyncShouldReturnRepositorySummaryAsync()
@@ -113,7 +213,8 @@ public class InboxServiceTests
             _inboxRepository,
             _inboxItemRepository,
             _inboxDetailService,
-            CreateAccessorWithClaim(null));
+            CreateAccessorWithClaim(null),
+            _cache);
         _ = await Assert.ThrowsAsync<UnauthorizedException>(() => service.GetUserInboxAsync());
     }
 
@@ -180,10 +281,11 @@ public class InboxServiceTests
                 null,
                 null,
                 null,
+                null,
                 null)
             .Returns((items, 1L));
 
-        var result = await _service.ListInboxItemsAsync(pageRequest, GeneratedItemSource.Github, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(pageRequest, GeneratedItemSource.Github, null, null, null, null, null);
 
         Assert.Equal(1, result.TotalElements);
         Assert.Equal(0, result.Page);
@@ -204,10 +306,11 @@ public class InboxServiceTests
                 null,
                 null,
                 null,
+                null,
                 null)
             .Returns(([], 0L));
 
-        var result = await _service.ListInboxItemsAsync(pageRequest, null, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(pageRequest, null, null, null, null, null, null);
 
         Assert.Empty(result.Items);
         Assert.Equal(0, result.TotalElements);
@@ -225,16 +328,18 @@ public class InboxServiceTests
                 null,
                 null,
                 null,
+                null,
                 null)
             .Returns(([], 0L));
 
-        var result = await _service.ListInboxItemsAsync(pageRequest, null, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(pageRequest, null, null, null, null, null, null);
 
         Assert.Equal(0, result.TotalElements);
         await _inboxItemRepository.Received(1)
             .GetInboxItemsFilteredAsync(
                 pageRequest,
                 UserId,
+                null,
                 null,
                 null,
                 null,
@@ -260,10 +365,11 @@ public class InboxServiceTests
                     (ItemType)itemType,
                     (GeneratedItemStatus)status,
                     (InboxReason)reason,
+                    "org/repo",
                     searchTerm)
                 .Returns(([], 0L));
 
-        await _service.ListInboxItemsAsync(pageRequest, source, itemType, status, reason, searchTerm);
+        await _service.ListInboxItemsAsync(pageRequest, source, itemType, status, reason, "org/repo", searchTerm);
 
         await _inboxItemRepository.Received(1)
                 .GetInboxItemsFilteredAsync(
@@ -273,6 +379,7 @@ public class InboxServiceTests
                     (ItemType)itemType,
                     (GeneratedItemStatus)status,
                     (InboxReason)reason,
+                    "org/repo",
                     searchTerm);
     }
 

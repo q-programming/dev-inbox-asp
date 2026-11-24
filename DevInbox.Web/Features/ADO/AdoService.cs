@@ -33,15 +33,15 @@ public class AdoService(
 
     public async Task<AdoWorkItemDetail> GetDetailsAsync(InboxItem item, CancellationToken ct)
     {
-        if (item.ExternalId is null || item.Repository is null)
+        if (item.ExternalId is null || item.Scope is null)
         {
             throw new InvalidOperationException($"Inbox item {item.Id} has no ADO organization/project reference to look up.");
         }
 
         // Both work item and PR Repository encodings start with "{organization}/..." — see
-        // BuildWorkItemRepository/BuildPrRepository — so the organization can be extracted before
+        // BuildWorkItemScope/BuildPrRepository — so the organization can be extracted before
         // knowing which shape the rest of the string has.
-        var organization = item.Repository.Split('/', 2)[0];
+        var organization = item.Scope.Split('/', 2)[0];
 
         // item.InboxId doubles as the owning user's id (Inbox's key is the user's own id).
         var profile = await repository.GetByUserIdAndOrganizationAsync(item.InboxId, organization)
@@ -75,11 +75,11 @@ public class AdoService(
 
     private async Task<AdoWorkItemDetail> GetWorkItemDetailsAsync(string accessToken, InboxItem item, CancellationToken ct)
     {
-        // Work items are keyed "{organization}/{project}" — see BuildWorkItemRepository.
-        var parts = item.Repository!.Split('/', 2);
-        if (parts.Length != 2)
+        // Work items are scoped "{organization}/{project}[/{team}]" — see BuildWorkItemScope.
+        var parts = item.Scope!.Split('/', 3);
+        if (parts.Length < 2)
         {
-            throw new InvalidOperationException($"Inbox item {item.Id} has a malformed ADO project reference '{item.Repository}' — expected \"organization/project\".");
+            throw new InvalidOperationException($"Inbox item {item.Id} has a malformed ADO project reference '{item.Scope}' — expected \"organization/project[/team]\".");
         }
         var (organization, project) = (parts[0], parts[1]);
 
@@ -125,10 +125,10 @@ public class AdoService(
     private async Task<AdoWorkItemDetail> GetPullRequestDetailsAsync(string accessToken, InboxItem item, CancellationToken ct)
     {
         // Pull requests are keyed "{organization}/{project}/{repository}" — see BuildPrRepository.
-        var parts = item.Repository!.Split('/', 3);
+        var parts = item.Scope!.Split('/', 3);
         if (parts.Length != 3)
         {
-            throw new InvalidOperationException($"Inbox item {item.Id} has a malformed ADO repository reference '{item.Repository}' — expected \"organization/project/repository\".");
+            throw new InvalidOperationException($"Inbox item {item.Id} has a malformed ADO repository reference '{item.Scope}' — expected \"organization/project/repository\".");
         }
         var (organization, project, repositoryName) = (parts[0], parts[1], parts[2]);
 
@@ -442,20 +442,22 @@ public class AdoService(
             return [];
         }
 
-        var repositories = workItems.Select(w => BuildWorkItemRepository(profile.Organization, w)).Distinct().ToList();
         var externalIds = workItems.Select(w => w.Id.ToString()).Distinct().ToList();
 
-        var existingItems = await inboxItemRepository.GetExistingItemsAsync(
-            profile.UserId, ItemSource.Ado, ItemType.WorkItem, repositories, externalIds);
-        var existingByKey = existingItems.ToDictionary(i => (i.Repository!, i.ExternalId!));
+        // Matched by organization + external id rather than full scope: work item ids are unique per
+        // organization, and a work item moved to another project/team must update in place
+        // instead of being re-created under its new scope.
+        var existingItems = await inboxItemRepository.GetExistingItemsByScopePrefixAsync(
+            profile.UserId, ItemSource.Ado, ItemType.WorkItem, $"{profile.Organization}/", externalIds);
+        var existingByKey = existingItems.ToDictionary(i => i.ExternalId!);
 
         var newItems = new List<InboxItem>();
-        var newItemKeys = new HashSet<(string Repository, string ExternalId)>();
+        var newItemKeys = new HashSet<string>();
         var updatedItems = new List<InboxItem>();
 
         foreach (var workItem in workItems)
         {
-            var key = (BuildWorkItemRepository(profile.Organization, workItem), workItem.Id.ToString());
+            var key = workItem.Id.ToString();
             if (existingByKey.TryGetValue(key, out var existing))
             {
                 if (UpdateExistingWorkItem(existing, workItem, profile))
@@ -509,7 +511,7 @@ public class AdoService(
 
         var existingItems = await inboxItemRepository.GetExistingItemsAsync(
             profile.UserId, ItemSource.Ado, ItemType.PR, repositories, externalIds);
-        var existingByKey = existingItems.ToDictionary(i => (i.Repository!, i.ExternalId!));
+        var existingByKey = existingItems.ToDictionary(i => (i.Scope!, i.ExternalId!));
 
         var newItems = new List<InboxItem>();
         var newItemKeys = new HashSet<(string Repository, string ExternalId)>();
@@ -560,8 +562,19 @@ public class AdoService(
     /// <summary>"{organization}/{project}/{repo}" — disambiguates repos with the same name across different ADO projects and organizations.</summary>
     private static string BuildPrRepository(string organization, AdoPullRequestDTO pr) => $"{organization}/{pr.Repository.Project.Name}/{pr.Repository.Name}";
 
-    /// <summary>"{organization}/{project}" — disambiguates projects with the same name across different ADO organizations.</summary>
-    private static string BuildWorkItemRepository(string organization, AdoWorkItemDTO workItem) => $"{organization}/{workItem.Fields.TeamProject}";
+    /// <summary>
+    /// "{organization}/{project}/{team}" — the team is the first area path segment below the project
+    /// (<c>Project\Team\Sub</c> → <c>Team</c>); items filed directly under the project root have no
+    /// team, so the scope is just "{organization}/{project}".
+    /// </summary>
+    private static string BuildWorkItemScope(string organization, AdoWorkItemDTO workItem)
+    {
+        var project = workItem.Fields.TeamProject;
+        var areaSegments = workItem.Fields.AreaPath?.Split('\\', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return areaSegments is { Length: > 1 }
+            ? $"{organization}/{project}/{areaSegments[1]}"
+            : $"{organization}/{project}";
+    }
 
     private static bool UpdateExistingWorkItem(InboxItem existing, AdoWorkItemDTO workItem, AdoProfile profile)
     {
@@ -575,12 +588,14 @@ public class AdoService(
         // InferWorkItemReason's doc comment for the full priority rationale).
         var newReason = InferWorkItemReason(workItem, profile);
         var reasonChanged = existing.Reason != newReason;
+        var scopeChanged = ScopeChanged(existing, workItem, profile.Organization);
 
-        if (!hasActivityChange && !closedStateChanged && !reasonChanged)
+        if (!hasActivityChange && !closedStateChanged && !reasonChanged && !scopeChanged)
         {
             return false;
         }
 
+        existing.Scope = BuildWorkItemScope(profile.Organization, workItem);
         existing.Title = workItem.Fields.Title;
         existing.ActivityAt = workItem.Fields.ChangedDate ?? existing.ActivityAt;
         existing.UpdatedAt = DateTimeOffset.UtcNow;
@@ -607,7 +622,7 @@ public class AdoService(
             Source = ItemSource.Ado,
             Type = ItemType.WorkItem,
             ExternalId = workItem.Id.ToString(),
-            Repository = BuildWorkItemRepository(organization, workItem),
+            Scope = BuildWorkItemScope(organization, workItem),
             Title = workItem.Fields.Title,
             Reason = InferWorkItemReason(workItem, profile),
             ActivityAt = workItem.Fields.ChangedDate ?? DateTimeOffset.UtcNow,
@@ -655,7 +670,7 @@ public class AdoService(
             Source = ItemSource.Ado,
             Type = ItemType.PR,
             ExternalId = pr.PullRequestId.ToString(),
-            Repository = BuildPrRepository(organization, pr),
+            Scope = BuildPrRepository(organization, pr),
             Title = pr.Title,
             Reason = reason,
             ActivityAt = pr.ClosedDate ?? pr.CreationDate,
@@ -699,6 +714,10 @@ public class AdoService(
 
         return InboxReason.Assigned;
     }
+
+    /// <summary>True when the work item was moved (e.g. to another project or team) since the last sync.</summary>
+    private static bool ScopeChanged(InboxItem existing, AdoWorkItemDTO workItem, string organization) =>
+        !string.Equals(existing.Scope, BuildWorkItemScope(organization, workItem), StringComparison.Ordinal);
 
     private static bool IsMe(AdoIdentityRefDTO? identity, AdoProfile profile) =>
         string.Equals(identity?.Id, profile.AdoUserId, StringComparison.OrdinalIgnoreCase)

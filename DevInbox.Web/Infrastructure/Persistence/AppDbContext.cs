@@ -69,7 +69,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, EncryptionServ
             // Backstops the sync upsert logic's own in-memory dedup (see AdoService/GitHubService)
             // against any race — two concurrent syncs for the same user racing to insert the same
             // item would otherwise both pass the "does it already exist" check before either commits.
-            entity.HasIndex(item => new { item.InboxId, item.Source, item.Type, item.Repository, item.ExternalId }).IsUnique();
+            entity.HasIndex(item => new { item.InboxId, item.Source, item.Type, Repository = item.Scope, item.ExternalId }).IsUnique();
         });
         modelBuilder.Entity<Note>(entity =>
         {

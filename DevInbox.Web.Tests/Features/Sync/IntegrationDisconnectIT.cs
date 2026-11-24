@@ -13,6 +13,7 @@ using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.FeatureManagement;
 using NSubstitute;
@@ -31,6 +32,7 @@ public class IntegrationDisconnectIT : DatabaseIntegrationTest
 
     private User _user = default!;
     private User _otherUser = default!;
+    private readonly MemoryCache _cache = new(new MemoryCacheOptions());
     private IEventHandler<IntegrationDisconnectRequestEvent>[] _handlers = default!;
 
     public override async Task InitializeAsync()
@@ -44,7 +46,8 @@ public class IntegrationDisconnectIT : DatabaseIntegrationTest
             new InboxRepository(DataBase),
             new InboxItemRepository(DataBase, Substitute.For<IFeatureManager>()),
             Substitute.For<IInboxDetailService>(),
-            Substitute.For<IHttpContextAccessor>());
+            Substitute.For<IHttpContextAccessor>(),
+            _cache);
         _handlers =
         [
             new IntegrationDisconnectAdoHandler(new AdoProfileRepository(DataBase), NullLogger<IntegrationDisconnectAdoHandler>.Instance),
@@ -55,6 +58,8 @@ public class IntegrationDisconnectIT : DatabaseIntegrationTest
 
     public override async Task DisposeAsync()
     {
+        _cache.Clear();
+        _cache.Dispose();
         await DataBase.Notes.ExecuteDeleteAsync();
         await DataBase.InboxItemStates.ExecuteDeleteAsync();
         await DataBase.InboxItems.ExecuteDeleteAsync();
@@ -96,7 +101,7 @@ public class IntegrationDisconnectIT : DatabaseIntegrationTest
             .Where(p => p.UserId == _user.Id).Select(p => p.Organization).ToListAsync();
         Assert.Equal(["fabrikam"], organizations);
         var repositories = await DataBase.InboxItems.AsNoTracking()
-            .Where(i => i.InboxId == _user.Id && i.Source == ItemSource.Ado).Select(i => i.Repository).ToListAsync();
+            .Where(i => i.InboxId == _user.Id && i.Source == ItemSource.Ado).Select(i => i.Scope).ToListAsync();
         // "contoso-labs" merely starts with the same letters — it is a different organization.
         Assert.Equal(["contoso-labs/project", "fabrikam/project"], repositories.Order());
     }
@@ -189,7 +194,7 @@ public class IntegrationDisconnectIT : DatabaseIntegrationTest
     private async Task<InboxItem> AddItemAsync(long inboxId, ItemSource source, ItemType type, string repository)
     {
         var item = NewItem(inboxId, source, type, InboxReason.Authored, "Item");
-        item.Repository = repository;
+        item.Scope = repository;
         item.ExternalId = Guid.NewGuid().ToString("N")[..8];
         DataBase.InboxItems.Add(item);
         await DataBase.SaveChangesAsync();

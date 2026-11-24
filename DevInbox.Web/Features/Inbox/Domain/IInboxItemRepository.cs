@@ -6,7 +6,7 @@ namespace DevInbox.Web.Features.Inbox.Domain;
 public interface IInboxItemRepository : IRepository<InboxItem>
 {
     IQueryable<InboxItem> Query();
-    Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(PageRequest pageRequest, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason, string? searchTerm);
+    Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(PageRequest pageRequest, long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason, string? scope, string? searchTerm);
 
     /// <summary>
     /// Applies the same isDone/isSaved overlay update to every item in <paramref name="ids"/> that
@@ -36,6 +36,14 @@ public interface IInboxItemRepository : IRepository<InboxItem>
         IReadOnlyCollection<string> repositories,
         IReadOnlyCollection<string> externalIds);
 
+    /// <summary>Like <see cref="GetExistingItemsAsync"/>, but matches scopes by prefix (e.g. "{organization}/") so items whose scope changed upstream are still found.</summary>
+    Task<List<InboxItem>> GetExistingItemsByScopePrefixAsync(
+        long inboxId,
+        ItemSource source,
+        ItemType type,
+        string scopePrefix,
+        IReadOnlyCollection<string> externalIds);
+
     /// <summary>Adds new items without saving — pair with <see cref="SaveChangesAsync"/> to batch
     /// inserts together with any updates made to entities returned by <see cref="GetExistingItemsAsync"/>.</summary>
     Task AddRangeAsync(IEnumerable<InboxItem> items);
@@ -57,6 +65,12 @@ public interface IInboxItemRepository : IRepository<InboxItem>
     /// query's "visible" set (they're surfaced inline on their target item, not as their own row).</summary>
     Task<long> CountNotesAsync(long userId);
 
+    /// <summary>Counts visible (own, not closed, not an attached note) items matching <paramref name="predicate"/>.</summary>
+    Task<long> CountVisibleAsync(long userId, Expression<Func<InboxItem, bool>> predicate);
+
+    /// <summary>Stamps <see cref="InboxItemState.LastViewedAt"/> without loading or re-attaching the item.</summary>
+    Task MarkViewedAsync(long itemId, DateTimeOffset viewedAt);
+
     /// <summary>
     /// Deletes all inbox items for the given user and source. Used when a user disconnects an external integration (e.g. GitHub) to remove all items that were synced from that source.
     /// </summary>
@@ -72,4 +86,7 @@ public interface IInboxItemRepository : IRepository<InboxItem>
     /// A no-op for parents with no attached note.
     /// </summary>
     Task SyncAttachedNotesStateAsync(IEnumerable<InboxItem> parentItems);
+
+    /// <summary>Distinct, non-null scopes (repositories for PRs, teams for work items) across all of the user's items of the given type.</summary>
+    Task<string[]> GetDistinctScopesAsync(long userId, ItemType type);
 }

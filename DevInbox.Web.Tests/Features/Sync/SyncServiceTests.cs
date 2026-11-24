@@ -4,6 +4,8 @@ using DevInbox.Web.Features.Inbox;
 using DevInbox.Web.Features.Inbox.Domain;
 using DevInbox.Web.Features.Sync;
 using DevInbox.Web.Features.Sync.Domain;
+using DevInbox.Web.Features.Sync.Events;
+using DevInbox.Web.Infrastructure.Events;
 using DevInbox.Web.Infrastructure.OpenApi.Generated;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -30,6 +32,7 @@ public class SyncServiceTests
     private readonly IInboxService _inboxService = Substitute.For<IInboxService>();
     private readonly IGitHubService _gitHubService = Substitute.For<IGitHubService>();
     private readonly IAdoService _adoService = Substitute.For<IAdoService>();
+    private readonly IPublisher _publisher = Substitute.For<IPublisher>();
 
     private SyncService CreateService()
     {
@@ -38,7 +41,7 @@ public class SyncServiceTests
         services.AddScoped(_ => _adoService);
         var provider = services.BuildServiceProvider();
 
-        return new SyncService(_inboxService, provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<SyncService>.Instance);
+        return new SyncService(_inboxService, provider.GetRequiredService<IServiceScopeFactory>(), _publisher, NullLogger<SyncService>.Instance);
     }
 
     private static InboxEntity BuildInbox(DateTimeOffset? lastSyncCompletedAt) => new()
@@ -127,6 +130,38 @@ public class SyncServiceTests
 
         Assert.Equal(DomainSyncStatus.Failed, inbox.SyncStatus);
         Assert.Empty(result);
+    }
+
+    [Fact(DisplayName = "SynchronizeIntegrations should publish SyncFinishedEvent for the user once all integrations are done")]
+    public async Task SynchronizeIntegrationsShouldPublishSyncFinishedEventAsync()
+    {
+        var inbox = BuildInbox(DateTimeOffset.UtcNow.AddMinutes(-15));
+        _inboxService.GetUserInboxAsync(UserId).Returns(inbox);
+        _gitHubService.SyncUserPRAsync(UserId, inbox.LastSyncCompletedAt, Arg.Any<CancellationToken>())
+            .Returns<IReadOnlyList<InboxItemChange>>([]);
+        _adoService.SyncWorkItemsAsync(UserId, inbox.LastSyncCompletedAt, false, Arg.Any<CancellationToken>())
+            .Returns<IReadOnlyList<InboxItemChange>>([]);
+        var service = CreateService();
+
+        await service.SynchronizeIntegrations(UserId, Email, TriggerType.Background);
+
+        await _publisher.Received(1).Publish(new SyncFinishedEvent(UserId), Arg.Any<CancellationToken>());
+    }
+
+    [Fact(DisplayName = "SynchronizeIntegrations should still publish SyncFinishedEvent when one integration failed, since the other may have changed data")]
+    public async Task SynchronizeIntegrationsShouldPublishSyncFinishedEventWhenOneIntegrationFailedAsync()
+    {
+        var inbox = BuildInbox(DateTimeOffset.UtcNow.AddMinutes(-15));
+        _inboxService.GetUserInboxAsync(UserId).Returns(inbox);
+        _gitHubService.SyncUserPRAsync(UserId, inbox.LastSyncCompletedAt, Arg.Any<CancellationToken>())
+            .Returns<IReadOnlyList<InboxItemChange>>(_ => throw new InvalidOperationException("boom"));
+        _adoService.SyncWorkItemsAsync(UserId, inbox.LastSyncCompletedAt, false, Arg.Any<CancellationToken>())
+            .Returns<IReadOnlyList<InboxItemChange>>([BuildChange(DomainItemSource.Ado)]);
+        var service = CreateService();
+
+        await service.SynchronizeIntegrations(UserId, Email, TriggerType.Background);
+
+        await _publisher.Received(1).Publish(new SyncFinishedEvent(UserId), Arg.Any<CancellationToken>());
     }
 }
 

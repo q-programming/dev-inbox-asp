@@ -28,6 +28,8 @@ export const inboxKeys = {
   items: ['inbox', 'items'] as const,
   detail: ['inbox', 'detail'] as const,
   summary: ['inbox', 'summary'] as const,
+  teams: ['inbox', 'teams'] as const,
+  repos: ['inbox', 'repos'] as const,
 } as const;
 
 /**
@@ -44,6 +46,7 @@ export const useInboxQuery = (filter?: InboxFilter) =>
       filter?.reason,
       filter?.status,
       filter?.sort,
+      filter?.scope,
       filter?.term,
     ],
     queryFn: ({ pageParam }) =>
@@ -55,7 +58,8 @@ export const useInboxQuery = (filter?: InboxFilter) =>
         filter?.itemType as ItemType | undefined,
         filter?.status as ItemStatus | undefined,
         filter?.reason as InboxReason | undefined,
-        filter?.term
+        filter?.scope,
+        filter?.term,
       ),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
@@ -77,14 +81,35 @@ export const useInboxSummaryQuery = () =>
     queryFn: () => inboxApi.getInboxSummary(),
   });
 
-export const useInboxItemQuery = (itemId?: number) =>
-  useQuery({
+export const useInboxItemQuery = (itemId?: number) => {
+  const queryClient = useQueryClient();
+  return useQuery({
     queryKey: [...inboxKeys.detail, itemId],
-    queryFn: () => inboxApi.getInboxItem(itemId!),
+    queryFn: async () => {
+      const item = await inboxApi.getInboxItem(itemId!);
+      // Fetching the detail stamps LastViewedAt server-side, which can change the Needs attention count.
+      queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
+      return item;
+    },
     enabled: !!itemId,
     meta: { silent: true },
     staleTime: 30_000, // 30 seconds
     gcTime: 5 * 60_000, // 5 minutes
+  });
+};
+
+export const useUserTeams = (teams: boolean) =>
+  useQuery({
+    queryKey: inboxKeys.teams,
+    enabled: teams,
+    queryFn: () => inboxApi.getUserTeams(),
+  });
+
+export const useUserRepos = (repos: boolean) =>
+  useQuery({
+    queryKey: inboxKeys.repos,
+    enabled: repos,
+    queryFn: () => inboxApi.getUserRepositories(),
   });
 
 export const useSyncMutation = () => {

@@ -226,6 +226,7 @@ describe('shortcuts.registry', () => {
         ['goto-mentions', `${AppRoute.INBOX}?reason=Mentioned`],
         ['goto-my-prs', `${AppRoute.INBOX}?itemType=PR&reason=Authored`],
         ['goto-ado-items', `${AppRoute.INBOX}?source=Ado`],
+        ['goto-github-items', `${AppRoute.INBOX}?source=Github`],
         ['goto-saved', `${AppRoute.INBOX}?status=Saved`],
         ['goto-done', `${AppRoute.INBOX}?status=Done`],
       ];

@@ -323,6 +323,14 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/InboxReason"
+        - name: scope
+          in: query
+          required: false
+          description: Filter by item scope — a repository ("owner/repo") or an ADO team ("organization/project/team").
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 200
         - name: term
           in: query
           schema:
@@ -337,6 +345,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InboxPage"
+        "400":
+          description: Invalid filters (e.g. search term length out of range)
 
   /inbox/bulk:
     patch:
@@ -383,6 +393,34 @@ paths:
                 $ref: "#/components/schemas/InboxSummary"
         "404":
           description: Not found
+  /inbox/teams:
+    get:
+      operationId: getUserTeams
+      tags: [inbox]
+      summary: Get list of user teams from connected integrations
+      responses:
+        "200":
+          description: List of user teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  type: string
+  /inbox/repositories:
+    get:
+      operationId: getUserRepositories
+      tags: [inbox]
+      summary: Get list of user teams from connected integrations
+      responses:
+        "200":
+          description: List of user repositories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
   /inbox/item/{id}:
     get:
       operationId: getInboxItem
@@ -863,7 +901,7 @@ components:
           $ref: "#/components/schemas/ItemType"
         title:
           type: string
-        repository:
+        scope:
           type: string
         reason:
           $ref: "#/components/schemas/InboxReason"
@@ -1191,7 +1229,7 @@ components:
 
     ItemStatus:
       type: string
-      enum: [ToDo, Saved, Done, Pinned, Closed]
+      enum: [ToDo, Saved, Done, Pinned, Closed, NeedsAttention, Stale]
 
     Priority:
       type: string

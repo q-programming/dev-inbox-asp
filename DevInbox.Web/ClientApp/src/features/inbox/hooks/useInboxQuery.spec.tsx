@@ -36,7 +36,7 @@ const createInboxItem = (overrides: Partial<InboxItemSummary> = {}): InboxItemSu
   sourceType: ItemSource.Github,
   itemType: ItemType.PR,
   title: 'Review PR',
-  repository: 'octo/repo',
+  scope: 'octo/repo',
   reason: InboxReason.ReviewRequested,
   isClosed: false,
   isSaved: false,
@@ -180,12 +180,14 @@ describe('useInboxQuery hooks', () => {
         undefined,
         undefined,
         undefined,
+        undefined,
       ] as const;
       const adoKey = [
         ...inboxKeys.items,
         adoFilter.source,
         undefined,
         adoFilter.reason,
+        undefined,
         undefined,
         undefined,
         undefined,

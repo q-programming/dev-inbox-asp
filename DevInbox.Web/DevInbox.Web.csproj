@@ -39,6 +39,11 @@
     <InternalsVisibleTo Include="DevInbox.Web.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Infrastructure\OpenApi\" />
+    <Folder Include="Infrastructure\OpenApi\Generated\" />
+  </ItemGroup>
+
   <!--
     Ensure local dotnet tools (nswag, from dotnet-tools.json) are restored before they're invoked.
     Without this, a fresh clone on a machine that never ran `dotnet tool restore` (e.g. Visual Studio's

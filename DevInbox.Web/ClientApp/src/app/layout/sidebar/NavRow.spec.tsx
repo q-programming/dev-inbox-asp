@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import InboxIcon from '@mui/icons-material/Inbox';
 import { renderWithProviders } from '@test/renderWithProviders.tsx';
 import { AppRoute } from '@app/routes';
+import { ItemSource } from '@api';
 import NavRow from './NavRow.tsx';
 import type { SidebarNavItem } from '../navConfig.tsx';
 
@@ -29,6 +30,42 @@ const noCountItem: SidebarNavItem = {
 };
 
 describe('NavRow', () => {
+  describe('combined filters', () => {
+    const githubItem: SidebarNavItem = {
+      ...noCountItem,
+      id: 'github-items',
+      filter: { source: ItemSource.Github },
+    };
+
+    it('should merge its filter into the active one in the link', () => {
+      renderWithProviders(<NavRow item={githubItem} collapsed={false} />, {
+        initialEntries: ['/inbox?status=ToDo'],
+      });
+      expect(screen.getByRole('link').getAttribute('href')).toBe('/inbox?source=Github&status=ToDo');
+    });
+
+    it('should link without its filter once it is already active (toggle off)', () => {
+      renderWithProviders(<NavRow item={githubItem} collapsed={false} />, {
+        initialEntries: ['/inbox?source=Github&status=ToDo'],
+      });
+      expect(screen.getByRole('link').getAttribute('href')).toBe('/inbox?status=ToDo');
+    });
+
+    it('should be selected when its filter is part of the active filters', () => {
+      renderWithProviders(<NavRow item={githubItem} collapsed={false} />, {
+        initialEntries: ['/inbox?source=Github&status=ToDo'],
+      });
+      expect(screen.getByRole('link').className).toContain('Mui-selected');
+    });
+
+    it('should reset all filters when the item has no filter', () => {
+      renderWithProviders(<NavRow item={noCountItem} collapsed={false} />, {
+        initialEntries: ['/inbox?source=Github&status=ToDo'],
+      });
+      expect(screen.getByRole('link').getAttribute('href')).toBe('/inbox');
+    });
+  });
+
   describe('expanded mode', () => {
     it('should render item label', () => {
       renderWithProviders(<NavRow item={baseItem} collapsed={false} />);

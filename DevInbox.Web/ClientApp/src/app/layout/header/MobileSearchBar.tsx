@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useInboxStore } from '@feature/inbox/store/inbox.store';
 import Box from '@mui/material/Box';
 import InputBase from '@mui/material/InputBase';
 import IconButton from '@mui/material/IconButton';
@@ -21,8 +22,27 @@ interface MobileSearchBarProps {
   onExpandChange?: (expanded: boolean) => void;
 }
 
+const SEARCH_DEBOUNCE_MS = 500;
+
 const MobileSearchBar = ({ onExpandChange }: MobileSearchBarProps) => {
   const [expanded, setExpanded] = useState(false);
+  const searchTerm = useInboxStore((state) => state.searchTerm);
+  const setSearchTerm = useInboxStore((state) => state.setSearchTerm);
+  const [draft, setDraft] = useState(searchTerm ?? '');
+
+  // Keeps the draft in sync when the term is changed elsewhere (e.g. the filter chip is dismissed).
+  useEffect(() => {
+    setDraft(searchTerm ?? '');
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const normalized = draft.trim();
+    if (normalized === (searchTerm ?? '')) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => setSearchTerm(normalized), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [draft, searchTerm, setSearchTerm]);
 
   const handleOpen = useCallback(() => {
     setExpanded(true);
@@ -56,6 +76,8 @@ const MobileSearchBar = ({ onExpandChange }: MobileSearchBarProps) => {
           placeholder="Search across all streams…"
           inputProps={{ 'aria-label': 'mobile search', 'data-testid': 'mobile-search-input' }}
           sx={{ flex: 1, fontSize: '0.875rem' }}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
         />
         <IconButton
           size="small"

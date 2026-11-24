@@ -17,6 +17,7 @@ public class InboxControllerTests
                 Arg.Any<ItemType?>(),
                 Arg.Any<ItemStatus?>(),
                 Arg.Any<InboxReason?>(),
+                Arg.Any<string?>(),
                 Arg.Any<string?>())
             .Returns(new InboxPage());
         var controller = new InboxController(service);
@@ -29,6 +30,7 @@ public class InboxControllerTests
             ItemType.PR,
             ItemStatus.ToDo,
             InboxReason.ReviewRequested,
+            null,
             "release");
 
         await service.Received(1).ListInboxItemsAsync(
@@ -40,6 +42,7 @@ public class InboxControllerTests
             ItemType.PR,
             ItemStatus.ToDo,
             InboxReason.ReviewRequested,
+            null,
             "release");
     }
 
@@ -53,11 +56,12 @@ public class InboxControllerTests
                 Arg.Any<ItemType?>(),
                 Arg.Any<ItemStatus?>(),
                 Arg.Any<InboxReason?>(),
+                Arg.Any<string?>(),
                 Arg.Any<string?>())
             .Returns(new InboxPage());
         var controller = new InboxController(service);
 
-        await controller.ListInboxItemsAsync(0, 20, null, null, null, null, null, null);
+        await controller.ListInboxItemsAsync(0, 20, null, null, null, null, null, null, null);
 
         await service.Received(1).ListInboxItemsAsync(
             Arg.Is<DevInbox.Web.Features.Inbox.Domain.PageRequest>(request =>
@@ -68,7 +72,25 @@ public class InboxControllerTests
             null,
             null,
             null,
+            null,
             null);
+    }
+
+    [Theory]
+    [InlineData("org/repo")]
+    [InlineData("org/project/team")]
+    public async Task ListInboxItemsAsyncShouldForwardScopeAsync(string scope)
+    {
+        var service = Substitute.For<IInboxService>();
+        service.ListInboxItemsAsync(default!, default, default, default, default, default, default)
+            .ReturnsForAnyArgs(new InboxPage());
+        var controller = new InboxController(service);
+
+        await controller.ListInboxItemsAsync(0, 20, null, null, null, null, null, scope, null);
+
+        await service.Received(1).ListInboxItemsAsync(
+            Arg.Any<DevInbox.Web.Features.Inbox.Domain.PageRequest>(),
+            null, null, null, null, scope, null);
     }
 
     [Theory]
@@ -80,15 +102,10 @@ public class InboxControllerTests
         var controller = new InboxController(service);
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            controller.ListInboxItemsAsync(0, 20, null, null, null, null, null, term));
+            controller.ListInboxItemsAsync(0, 20, null, null, null, null, null, null, term));
 
         await service.DidNotReceiveWithAnyArgs().ListInboxItemsAsync(
-            default!,
-            default,
-            default,
-            default,
-            default,
-            default);
+            default!, default, default, default, default, default, default);
     }
 
     [Fact]
@@ -98,14 +115,9 @@ public class InboxControllerTests
         var controller = new InboxController(service);
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            controller.ListInboxItemsAsync(0, 20, null, null, null, null, null, new string('a', 201)));
+            controller.ListInboxItemsAsync(0, 20, null, null, null, null, null, null, new string('a', 201)));
 
         await service.DidNotReceiveWithAnyArgs().ListInboxItemsAsync(
-            default!,
-            default,
-            default,
-            default,
-            default,
-            default);
+            default!, default, default, default, default, default, default);
     }
 }

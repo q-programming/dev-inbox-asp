@@ -115,6 +115,7 @@ builder.Services.AddScoped<
     IPublisher,
     EventPublisher>();
 
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 //Middlewares
