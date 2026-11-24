@@ -18,10 +18,11 @@ public class InboxController(IInboxService inboxService) : IInboxBaseController,
         ItemType? itemType,
         ItemStatus? status,
         InboxReason? reason,
+        string? scope,
         string? term)
     {
         if (term is not null &&
-            (term.Length < MinimumSearchTermLength || term.Length > MaximumSearchTermLength))
+            term.Length is < MinimumSearchTermLength or > MaximumSearchTermLength)
         {
             throw new BadRequestException(
                 $"The inbox search term must contain between {MinimumSearchTermLength} and {MaximumSearchTermLength} characters.");
@@ -33,6 +34,7 @@ public class InboxController(IInboxService inboxService) : IInboxBaseController,
             itemType,
             status,
             reason,
+            scope,
             term);
     }
 

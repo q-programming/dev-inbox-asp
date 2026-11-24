@@ -323,6 +323,14 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/InboxReason"
+        - name: scope
+          in: query
+          required: false
+          description: Filter by item scope — a repository ("owner/repo") or an ADO team ("organization/project/team").
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 200
         - name: term
           in: query
           schema:
@@ -337,6 +345,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InboxPage"
+        "400":
+          description: Invalid filters (e.g. search term length out of range)
 
   /inbox/bulk:
     patch:

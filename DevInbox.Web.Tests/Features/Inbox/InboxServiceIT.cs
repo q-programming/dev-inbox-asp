@@ -99,11 +99,12 @@ public class InboxServiceIT : DatabaseIntegrationTest
 
     private async Task<InboxItem> AddItemAsync(long inboxId, ItemSource source, ItemType type, InboxReason reason,
         bool isDone = false, bool isSaved = false, Priority priority = Priority.None,
-        DateTimeOffset? activityAt = null, bool isClosed = false, DateTimeOffset? createdAt = null)
+        DateTimeOffset? activityAt = null, bool isClosed = false, DateTimeOffset? createdAt = null, string? scope = null)
     {
         var item = new InboxItem
         {
             InboxId = inboxId,
+            Scope = scope,
             Source = source,
             Type = type,
             Reason = reason,
@@ -163,6 +164,41 @@ public class InboxServiceIT : DatabaseIntegrationTest
         Assert.Equal(0, summary.Total);
     }
 
+    [Fact(DisplayName = "ListInboxItemsAsync should filter by repository scope")]
+    public async Task ListInboxItemsAsyncShouldFilterByRepoScopeAsync()
+    {
+        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, scope: "org/repo-a");
+        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, scope: "org/repo-b");
+        await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned, scope: "org/project/team");
+
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10 }, null, null, null, null, "org/repo-a", null);
+
+        Assert.Equal(1, result.TotalElements);
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should filter by team scope")]
+    public async Task ListInboxItemsAsyncShouldFilterByTeamScopeAsync()
+    {
+        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, scope: "org/repo-a");
+        await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned, scope: "org/project/team");
+        await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned, scope: "org/project/other");
+
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10 }, null, null, null, null, "org/project/team", null);
+
+        Assert.Equal(1, result.TotalElements);
+    }
+
+    [Fact(DisplayName = "ListInboxItemsAsync should not filter by scope when it is blank")]
+    public async Task ListInboxItemsAsyncShouldIgnoreBlankScopeAsync()
+    {
+        await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, scope: "org/repo-a");
+        await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned, scope: "org/project/team");
+
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10 }, null, null, null, null, "  ", null);
+
+        Assert.Equal(2, result.TotalElements);
+    }
+
     [Fact(DisplayName = "ListInboxItemsAsync should filter by source and paginate against the real database")]
     public async Task ListInboxItemsAsyncShouldFilterAndPaginateAsync()
     {
@@ -170,7 +206,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
         await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.Issue, InboxReason.Mentioned, activityAt: DateTimeOffset.UtcNow.AddMinutes(-2));
         await AddItemAsync(_user.Id, ItemSource.Ado, ItemType.WorkItem, InboxReason.Assigned, activityAt: DateTimeOffset.UtcNow.AddMinutes(-3));
 
-        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 1 }, GeneratedItemSource.Github, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 1 }, GeneratedItemSource.Github, null, null, null, null, null);
 
         Assert.Equal(2, result.TotalElements);
         _ = Assert.Single(result.Items);
@@ -184,7 +220,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var oldest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-10));
         var newest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-1));
 
-        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10 }, null, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0,         Size = 10 }, null, null, null, null, null, null);
 
         Assert.Equal([newest.Id, oldest.Id], result.Items.Select(i => i.Id).ToArray());
     }
@@ -195,7 +231,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var oldest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-10));
         var newest = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, activityAt: DateTimeOffset.UtcNow.AddMinutes(-1));
 
-        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.ActivityAsc }, null, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.ActivityAsc }, null, null, null, null, null, null);
 
         Assert.Equal([oldest.Id, newest.Id], result.Items.Select(i => i.Id).ToArray());
     }
@@ -207,7 +243,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var critical = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, priority: Priority.Critical);
         var medium = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, priority: Priority.Medium);
 
-        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.PriorityDesc }, null, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.PriorityDesc }, null, null, null, null, null, null);
 
         Assert.Equal([critical.Id, medium.Id, low.Id], result.Items.Select(i => i.Id).ToArray());
     }
@@ -218,7 +254,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
         var older = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, createdAt: DateTimeOffset.UtcNow.AddDays(-2));
         var newer = await AddItemAsync(_user.Id, ItemSource.GitHub, ItemType.PR, InboxReason.Authored, createdAt: DateTimeOffset.UtcNow.AddDays(-1));
 
-        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.CreatedDesc }, null, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(new PageRequest { Page = 0, Size = 10, Sort = GeneratedInboxSort.CreatedDesc }, null, null, null, null, null, null);
 
         Assert.Equal([newer.Id, older.Id], result.Items.Select(i => i.Id).ToArray());
     }
@@ -236,6 +272,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
 
         var result = await _service.ListInboxItemsAsync(
             new PageRequest { Page = 0, Size = 10 },
+            null,
             null,
             null,
             null,
@@ -270,6 +307,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
             null,
             null,
             null,
+            null,
             "test"));
     }
 
@@ -290,6 +328,7 @@ public class InboxServiceIT : DatabaseIntegrationTest
 
         var result = await service.ListInboxItemsAsync(
             new PageRequest { Page = 0, Size = 10 },
+            null,
             null,
             null,
             null,

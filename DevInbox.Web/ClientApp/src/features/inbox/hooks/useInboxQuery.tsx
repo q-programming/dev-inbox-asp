@@ -46,6 +46,7 @@ export const useInboxQuery = (filter?: InboxFilter) =>
       filter?.reason,
       filter?.status,
       filter?.sort,
+      filter?.scope,
       filter?.term,
     ],
     queryFn: ({ pageParam }) =>
@@ -57,6 +58,7 @@ export const useInboxQuery = (filter?: InboxFilter) =>
         filter?.itemType as ItemType | undefined,
         filter?.status as ItemStatus | undefined,
         filter?.reason as InboxReason | undefined,
+        filter?.scope,
         filter?.term,
       ),
     initialPageParam: 0,

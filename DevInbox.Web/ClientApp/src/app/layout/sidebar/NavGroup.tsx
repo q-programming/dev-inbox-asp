@@ -4,6 +4,7 @@ import Typography from '@mui/material/Typography';
 import NavRow from './NavRow.tsx';
 import { getNavGroupSource } from './navGroups.ts';
 import { type SidebarNavItem } from '../navConfig.tsx';
+import { AppRoute } from '@app/routes';
 
 const SCOPE_ID_PREFIX = 'scope:';
 
@@ -52,6 +53,8 @@ const NavGroup = memo(({ item, activeId, collapsed, onNavigate }: NavGroupProps)
             id: `${SCOPE_ID_PREFIX}${value}`,
             label: value.split('/').pop() ?? value,
             icon: null,
+            route: AppRoute.INBOX,
+            filter: { scope: value },
           }}
           activeId={activeId}
           collapsed={false}

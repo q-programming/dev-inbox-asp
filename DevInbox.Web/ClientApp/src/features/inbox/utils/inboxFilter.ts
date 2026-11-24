@@ -7,6 +7,7 @@ export interface InboxFilter {
   reason?: InboxReason;
   status?: ItemStatus;
   sort?: InboxSort;
+  scope?: string;
   term?: string;
 }
 
@@ -35,6 +36,9 @@ export const buildInboxSearch = (filter?: InboxFilter): string => {
   if (filter.term) {
     params.set('term', filter.term);
   }
+  if (filter.scope) {
+    params.set('scope', filter.scope);
+  }
 
   const query = params.toString();
   return query ? `?${query}` : '';
@@ -47,6 +51,7 @@ export const parseInboxFilter = (searchParams: URLSearchParams): InboxFilter => 
   reason: (searchParams.get('reason') as InboxReason) || undefined,
   status: (searchParams.get('status') as ItemStatus) || undefined,
   sort: (searchParams.get('sort') as InboxSort) || undefined,
+  scope: searchParams.get('scope') || undefined,
   term: searchParams.get('term') || undefined,
 });
 

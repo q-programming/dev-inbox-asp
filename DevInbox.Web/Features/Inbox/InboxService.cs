@@ -91,6 +91,7 @@ public class InboxService(
         Infrastructure.OpenApi.Generated.ItemType? itemType,
         ItemStatus? status,
         Infrastructure.OpenApi.Generated.InboxReason? reason,
+        string? scope,
         string? searchTerm)
     {
         var userId = GetCurrentUserId();
@@ -101,6 +102,7 @@ public class InboxService(
             (ItemType?)itemType,
             status,
             (InboxReason?)reason,
+            scope,
             searchTerm);
 
         return new InboxPage

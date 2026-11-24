@@ -19,7 +19,8 @@ import NavGroup from './NavGroup.tsx';
 import SectionLabel from './SectionLabel.tsx';
 import { useLocation } from 'react-router-dom';
 import { useInboxSummaryQuery } from '@feature/inbox/hooks/useInboxQuery.tsx';
-import { buildInboxSearch } from '@feature/inbox/utils/inboxFilter';
+import { buildInboxSearch, parseInboxFilter } from '@feature/inbox/utils/inboxFilter';
+import { AppRoute } from '@app/routes';
 import type { InboxSummary } from '@api';
 import { useToggleMutation } from '@feature/settings/hooks/useSettingsQuery.tsx';
 
@@ -60,7 +61,18 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
       (item) => item.route === pathname && buildInboxSearch(item.filter) === location.search,
     );
 
-    return match?.id ?? pathname.split('/').filter(Boolean)[0] ?? '';
+    if (match) {
+      return match.id;
+    }
+    // Scope entries (team/repo) are generated per value, so match them from the query string.
+    if (pathname === AppRoute.INBOX) {
+      const { scope } = parseInboxFilter(new URLSearchParams(location.search));
+      if (scope) {
+        return `scope:${scope}`;
+      }
+    }
+
+    return pathname.split('/').filter(Boolean)[0] ?? '';
   }, [pathname, location.search]);
   const { data: summary } = useInboxSummaryQuery();
 

@@ -46,7 +46,7 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
     }
 
     public async Task<(List<InboxItem> Items, long TotalElements)> GetInboxItemsFilteredAsync(PageRequest pageRequest,
-        long userId, ItemSource? source, ItemType? itemType, ItemStatus? status, InboxReason? reason,
+        long userId, ItemSource? source, ItemType? itemType, ItemStatus? status,         InboxReason? reason, string? scope,
         string? searchTerm)
     {
         // Closed items (fully done with, e.g. a merged/closed PR) are excluded from every other
@@ -88,6 +88,12 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
                 ItemStatus.Pinned => query.Where(i => i.State.IsPinned),
                 _ => query
             };
+        }
+
+        var trimmedScope = scope?.Trim() ?? string.Empty;
+        if (!string.IsNullOrEmpty(trimmedScope))
+        {
+            query = query.Where(i => i.Scope == trimmedScope);
         }
 
         // Every sort keeps ActivityAt desc as a stable tie-breaker/secondary key, so items with equal

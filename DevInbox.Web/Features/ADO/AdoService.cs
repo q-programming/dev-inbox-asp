@@ -75,12 +75,11 @@ public class AdoService(
 
     private async Task<AdoWorkItemDetail> GetWorkItemDetailsAsync(string accessToken, InboxItem item, CancellationToken ct)
     {
-        // Work items are scoped "{organization}/{project}/{team}" — see BuildWorkItemScope. Rows
-        // not yet resynced may still hold the legacy "{organization}/{project}" form.
+        // Work items are scoped "{organization}/{project}[/{team}]" — see BuildWorkItemScope.
         var parts = item.Scope!.Split('/', 3);
         if (parts.Length < 2)
         {
-            throw new InvalidOperationException($"Inbox item {item.Id} has a malformed ADO project reference '{item.Scope}' — expected \"organization/project/team\".");
+            throw new InvalidOperationException($"Inbox item {item.Id} has a malformed ADO project reference '{item.Scope}' — expected \"organization/project[/team]\".");
         }
         var (organization, project) = (parts[0], parts[1]);
 
@@ -565,15 +564,16 @@ public class AdoService(
 
     /// <summary>
     /// "{organization}/{project}/{team}" — the team is the first area path segment below the project
-    /// (<c>Project\Team\Sub</c> → <c>Team</c>); items filed directly under the project root fall back
-    /// to the project name, which is the project's default team.
+    /// (<c>Project\Team\Sub</c> → <c>Team</c>); items filed directly under the project root have no
+    /// team, so the scope is just "{organization}/{project}".
     /// </summary>
     private static string BuildWorkItemScope(string organization, AdoWorkItemDTO workItem)
     {
         var project = workItem.Fields.TeamProject;
         var areaSegments = workItem.Fields.AreaPath?.Split('\\', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var team = areaSegments is { Length: > 1 } ? areaSegments[1] : project;
-        return $"{organization}/{project}/{team}";
+        return areaSegments is { Length: > 1 }
+            ? $"{organization}/{project}/{areaSegments[1]}"
+            : $"{organization}/{project}";
     }
 
     private static bool UpdateExistingWorkItem(InboxItem existing, AdoWorkItemDTO workItem, AdoProfile profile)

@@ -281,10 +281,11 @@ public class InboxServiceTests : IDisposable
                 null,
                 null,
                 null,
+                null,
                 null)
             .Returns((items, 1L));
 
-        var result = await _service.ListInboxItemsAsync(pageRequest, GeneratedItemSource.Github, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(pageRequest, GeneratedItemSource.Github, null, null, null, null, null);
 
         Assert.Equal(1, result.TotalElements);
         Assert.Equal(0, result.Page);
@@ -305,10 +306,11 @@ public class InboxServiceTests : IDisposable
                 null,
                 null,
                 null,
+                null,
                 null)
             .Returns(([], 0L));
 
-        var result = await _service.ListInboxItemsAsync(pageRequest, null, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(pageRequest, null, null, null, null, null, null);
 
         Assert.Empty(result.Items);
         Assert.Equal(0, result.TotalElements);
@@ -326,16 +328,18 @@ public class InboxServiceTests : IDisposable
                 null,
                 null,
                 null,
+                null,
                 null)
             .Returns(([], 0L));
 
-        var result = await _service.ListInboxItemsAsync(pageRequest, null, null, null, null, null);
+        var result = await _service.ListInboxItemsAsync(pageRequest, null, null, null, null, null, null);
 
         Assert.Equal(0, result.TotalElements);
         await _inboxItemRepository.Received(1)
             .GetInboxItemsFilteredAsync(
                 pageRequest,
                 UserId,
+                null,
                 null,
                 null,
                 null,
@@ -361,10 +365,11 @@ public class InboxServiceTests : IDisposable
                     (ItemType)itemType,
                     (GeneratedItemStatus)status,
                     (InboxReason)reason,
+                    "org/repo",
                     searchTerm)
                 .Returns(([], 0L));
 
-        await _service.ListInboxItemsAsync(pageRequest, source, itemType, status, reason, searchTerm);
+        await _service.ListInboxItemsAsync(pageRequest, source, itemType, status, reason, "org/repo", searchTerm);
 
         await _inboxItemRepository.Received(1)
                 .GetInboxItemsFilteredAsync(
@@ -374,6 +379,7 @@ public class InboxServiceTests : IDisposable
                     (ItemType)itemType,
                     (GeneratedItemStatus)status,
                     (InboxReason)reason,
+                    "org/repo",
                     searchTerm);
     }
 
