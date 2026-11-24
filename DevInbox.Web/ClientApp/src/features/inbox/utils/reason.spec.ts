@@ -59,6 +59,8 @@ describe('reason utilities', () => {
       expect(translateItemSource(undefined)).toBe('');
       expect(translateItemStatus(ItemStatus.ToDo)).toBe('To Do');
       expect(translateItemStatus(ItemStatus.Closed)).toBe('Closed');
+      expect(translateItemStatus(ItemStatus.NeedsAttention)).toBe('Needs attention');
+      expect(translateItemStatus(ItemStatus.Stale)).toBe('Stale');
       expect(translateItemStatus(undefined)).toBe('');
     });
   });

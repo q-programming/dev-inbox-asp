@@ -37,6 +37,24 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
             .SingleOrDefaultAsync();
     }
 
+    public Task<long> CountVisibleAsync(long userId, Expression<Func<InboxItem, bool>> predicate)
+    {
+        return Set
+            .AsNoTracking()
+            .Where(item => item.InboxId == userId &&
+                           !item.State.IsClosed &&
+                           (item.Source != ItemSource.Note || item.Note!.AttachedToInboxItemId == null))
+            .Where(predicate)
+            .LongCountAsync();
+    }
+
+    public Task MarkViewedAsync(long itemId, DateTimeOffset viewedAt)
+    {
+        return dbContext.InboxItemStates
+            .Where(s => s.InboxItemId == itemId)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.LastViewedAt, viewedAt));
+    }
+
     public Task<long> CountNotesAsync(long userId)
     {
         return Set
@@ -86,6 +104,8 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
                 ItemStatus.Saved => query.Where(i => i.State.IsSaved),
                 ItemStatus.Done => query.Where(i => i.State.IsDone),
                 ItemStatus.Pinned => query.Where(i => i.State.IsPinned),
+                ItemStatus.NeedsAttention => query.Where(InboxItemPredicates.NeedsAttention(DateTimeOffset.UtcNow)),
+                ItemStatus.Stale => query.Where(InboxItemPredicates.Stale(DateTimeOffset.UtcNow)),
                 _ => query
             };
         }

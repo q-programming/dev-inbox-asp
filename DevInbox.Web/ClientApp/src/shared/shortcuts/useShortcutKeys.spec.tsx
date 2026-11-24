@@ -214,6 +214,13 @@ describe('useShortcutKeys', () => {
       expect(lastDispatchedId()).toBe('goto-ado-items');
     });
 
+    it('should dispatch "goto-github-items" on g then h', () => {
+      renderShortcuts();
+      fireKey('g');
+      fireKey('h');
+      expect(lastDispatchedId()).toBe('goto-github-items');
+    });
+
     it('should dispatch "goto-notes" on g then n (not "new-note")', () => {
       renderShortcuts();
       fireKey('g');

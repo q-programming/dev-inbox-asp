@@ -81,15 +81,22 @@ export const useInboxSummaryQuery = () =>
     queryFn: () => inboxApi.getInboxSummary(),
   });
 
-export const useInboxItemQuery = (itemId?: number) =>
-  useQuery({
+export const useInboxItemQuery = (itemId?: number) => {
+  const queryClient = useQueryClient();
+  return useQuery({
     queryKey: [...inboxKeys.detail, itemId],
-    queryFn: () => inboxApi.getInboxItem(itemId!),
+    queryFn: async () => {
+      const item = await inboxApi.getInboxItem(itemId!);
+      // Fetching the detail stamps LastViewedAt server-side, which can change the Needs attention count.
+      queryClient.invalidateQueries({ queryKey: inboxKeys.summary });
+      return item;
+    },
     enabled: !!itemId,
     meta: { silent: true },
     staleTime: 30_000, // 30 seconds
     gcTime: 5 * 60_000, // 5 minutes
   });
+};
 
 export const useUserTeams = (teams: boolean) =>
   useQuery({

@@ -24,20 +24,13 @@ public class InboxService(
     {
         var userId = GetCurrentUserId();
         var now = DateTimeOffset.UtcNow;
-        var staleBefore = now.AddDays(-7);
-
         var summary = await inboxItemRepository.GetInboxSummaryAsync(userId, group => new InboxSummary
         {
             Total = group.LongCount(),
             ToDo = group.LongCount(item => !item.State.IsDone),
             Saved = group.LongCount(item => item.State.IsSaved && !item.State.IsDone),
-            NeedsAttention = group.LongCount(item =>
-                item.State.Priority == Priority.High ||
-                item.State.Priority == Priority.Critical ||
-                (item.State.FollowUpAt != null && item.State.FollowUpAt <= now)),
-            Stale = group.LongCount(item =>
-                !item.State.IsDone &&
-                item.ActivityAt < staleBefore),
+            NeedsAttention = 0, // filled below via the shared predicates
+            Stale = 0,
             ReviewRequests = group.LongCount(item =>
                 item.Reason == InboxReason.ReviewRequested &&
                 !item.State.IsDone),
@@ -62,6 +55,8 @@ public class InboxService(
 
         // Notes counts standalone + attached notes alike — unlike the metrics above, which only reflect
         // items that show up as their own row in the main inbox listing (attached notes don't).
+        summary.NeedsAttention = await inboxItemRepository.CountVisibleAsync(userId, InboxItemPredicates.NeedsAttention(now));
+        summary.Stale = await inboxItemRepository.CountVisibleAsync(userId, InboxItemPredicates.Stale(now));
         summary.Notes = await inboxItemRepository.CountNotesAsync(userId);
         return summary;
     }
@@ -123,6 +118,7 @@ public class InboxService(
                    throw new NotFoundException($"Inbox item with ID {id} not found for user {userId}");
         var itemDto = _inboxMapper.ToInboxItemDetail(item);
         await inboxDetailService.PopulateAsync(item, itemDto);
+        await inboxItemRepository.MarkViewedAsync(item.Id, DateTimeOffset.UtcNow);
         return itemDto;
     }
 

@@ -1229,7 +1229,7 @@ components:
 
     ItemStatus:
       type: string
-      enum: [ToDo, Saved, Done, Pinned, Closed]
+      enum: [ToDo, Saved, Done, Pinned, Closed, NeedsAttention, Stale]
 
     Priority:
       type: string

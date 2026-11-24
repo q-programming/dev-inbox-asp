@@ -90,6 +90,60 @@ public class InboxItemRepositoryIT : DatabaseIntegrationTest
         Assert.Equal(["48213"], items.Select(i => i.ExternalId!).ToList());
     }
 
+    private async Task<List<string>> ListIdsAsync(DevInbox.Web.Infrastructure.OpenApi.Generated.ItemStatus status)
+    {
+        var (items, _) = await _repository.GetInboxItemsFilteredAsync(
+            new PageRequest { Page = 0, Size = 50 }, _user.Id, null, null, status, null, null, null);
+        return items.Select(i => i.ExternalId!).Order().ToList();
+    }
+
+    private InboxItem BuildStateItem(string externalId, DomainInboxReason reason, int activityDaysAgo,
+        Action<InboxItemState>? configure = null)
+    {
+        var item = BuildItem("contoso/Alpha/Backend", externalId);
+        item.Reason = reason;
+        item.ActivityAt = DateTimeOffset.UtcNow.AddDays(-activityDaysAgo);
+        configure?.Invoke(item.State);
+        return item;
+    }
+
+    [Fact(DisplayName = "NeedsAttention should include priority, due follow-up, review requests and unviewed assigned items, but not done/closed")]
+    public async Task NeedsAttentionShouldApplyEachRuleAsync()
+    {
+        var now = DateTimeOffset.UtcNow;
+        await DataBase.InboxItems.AddRangeAsync(
+            BuildStateItem("high", DomainInboxReason.Authored, 1, s => s.Priority = Priority.High),
+            BuildStateItem("due", DomainInboxReason.Authored, 1, s => s.FollowUpAt = now.AddHours(-1)),
+            BuildStateItem("future", DomainInboxReason.Authored, 1, s => s.FollowUpAt = now.AddDays(2)),
+            BuildStateItem("review", DomainInboxReason.ReviewRequested, 1),
+            BuildStateItem("assigned-new", DomainInboxReason.Assigned, 1, s => s.LastViewedAt = now.AddDays(-5)),
+            BuildStateItem("assigned-seen", DomainInboxReason.Assigned, 3, s => s.LastViewedAt = now.AddDays(-1)),
+            BuildStateItem("done", DomainInboxReason.ReviewRequested, 1, s => s.IsDone = true),
+            BuildStateItem("closed", DomainInboxReason.ReviewRequested, 1, s => s.IsClosed = true));
+        await DataBase.SaveChangesAsync();
+
+        var ids = await ListIdsAsync(DevInbox.Web.Infrastructure.OpenApi.Generated.ItemStatus.NeedsAttention);
+
+        Assert.Equal(["assigned-new", "due", "high", "review"], ids);
+    }
+
+    [Fact(DisplayName = "Stale should be open, unsaved/unpinned, older than 14 days and not needing attention")]
+    public async Task StaleShouldApplyEachRuleAsync()
+    {
+        await DataBase.InboxItems.AddRangeAsync(
+            BuildStateItem("old", DomainInboxReason.Authored, 15),
+            BuildStateItem("recent", DomainInboxReason.Authored, 13),
+            BuildStateItem("saved", DomainInboxReason.Authored, 30, s => s.IsSaved = true),
+            BuildStateItem("pinned", DomainInboxReason.Authored, 30, s => s.IsPinned = true),
+            BuildStateItem("done", DomainInboxReason.Authored, 30, s => s.IsDone = true),
+            BuildStateItem("attention", DomainInboxReason.Authored, 30, s => s.Priority = Priority.Critical));
+        await DataBase.SaveChangesAsync();
+
+        var ids = await ListIdsAsync(DevInbox.Web.Infrastructure.OpenApi.Generated.ItemStatus.Stale);
+
+        Assert.Equal(["old"], ids);
+    }
+
     private InboxItem BuildItem(string scope, string externalId, string title = "Item") => new()
     {
         InboxId = _user.Id,

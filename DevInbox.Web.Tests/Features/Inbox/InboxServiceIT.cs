@@ -147,7 +147,8 @@ public class InboxServiceIT : DatabaseIntegrationTest
         Assert.Equal(5, summary.Total);
         Assert.Equal(4, summary.ToDo);
         Assert.Equal(1, summary.Saved);
-        Assert.Equal(1, summary.NeedsAttention);
+        Assert.Equal(2, summary.NeedsAttention);
+        Assert.Equal(0, summary.Stale);
         Assert.Equal(1, summary.ReviewRequests);
         Assert.Equal(1, summary.Mentions);
         Assert.Equal(1, summary.MyPullRequests);
@@ -381,6 +382,8 @@ public class InboxServiceIT : DatabaseIntegrationTest
 
         Assert.Equal(item.Title, detail.Title);
         await _detailService.Received(1).PopulateAsync(Arg.Any<InboxItem>(), detail, Arg.Any<CancellationToken>());
+        var state = await DataBase.InboxItemStates.AsNoTracking().SingleAsync(s => s.InboxItemId == item.Id);
+        Assert.NotNull(state.LastViewedAt);
     }
 
     [Fact(DisplayName = "GetInboxItemByIdAsync should throw NotFoundException when the item belongs to a different user")]

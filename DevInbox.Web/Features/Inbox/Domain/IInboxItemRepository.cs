@@ -65,6 +65,12 @@ public interface IInboxItemRepository : IRepository<InboxItem>
     /// query's "visible" set (they're surfaced inline on their target item, not as their own row).</summary>
     Task<long> CountNotesAsync(long userId);
 
+    /// <summary>Counts visible (own, not closed, not an attached note) items matching <paramref name="predicate"/>.</summary>
+    Task<long> CountVisibleAsync(long userId, Expression<Func<InboxItem, bool>> predicate);
+
+    /// <summary>Stamps <see cref="InboxItemState.LastViewedAt"/> without loading or re-attaching the item.</summary>
+    Task MarkViewedAsync(long itemId, DateTimeOffset viewedAt);
+
     /// <summary>
     /// Deletes all inbox items for the given user and source. Used when a user disconnects an external integration (e.g. GitHub) to remove all items that were synced from that source.
     /// </summary>

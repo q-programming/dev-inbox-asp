@@ -20,6 +20,7 @@ public class InboxItemState
     public string[] Tags { get; set; } = [];
     public DateTimeOffset? FollowUpAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset? LastViewedAt { get; set; }
 }
 
 public enum Priority

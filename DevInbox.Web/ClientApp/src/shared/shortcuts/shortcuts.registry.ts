@@ -255,6 +255,14 @@ export const SHORTCUT_ACTIONS = [
     run: (ctx) => navigateWithAlert(ctx, 'ADO Items', 'a', goToInbox({ source: ItemSource.Ado })),
   },
   {
+    id: 'goto-github-items',
+    keys: 'G then H',
+    label: 'Go to GitHub Items',
+    description: 'Navigate to the inbox filtered to GitHub items',
+    category: 'Navigation',
+    run: (ctx) => navigateWithAlert(ctx, 'GitHub Items', 'h', goToInbox({ source: ItemSource.Github })),
+  },
+  {
     id: 'goto-notes',
     keys: 'G then N',
     label: 'Go to Notes',
@@ -292,6 +300,7 @@ export type ShortcutActionId = (typeof SHORTCUT_ACTIONS)[number]['id'];
  * g then r	Go to Review Requests	g then n	Go to Notes
  * g then m	Go to Mentions		g then s	Go to Saved items
  * g then p	Go to My PRs		g then d	Go to Done
+ * g then h	Go to GitHub Items
  */
 export const LEADER_KEY_ACTIONS: Record<string, ShortcutActionId> = {
   'i': 'goto-inbox',
@@ -299,6 +308,7 @@ export const LEADER_KEY_ACTIONS: Record<string, ShortcutActionId> = {
   'm': 'goto-mentions',
   'p': 'goto-my-prs',
   'a': 'goto-ado-items',
+  'h': 'goto-github-items',
   'n': 'goto-notes',
   's': 'goto-saved',
   'd': 'goto-done',

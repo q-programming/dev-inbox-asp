@@ -41,6 +41,7 @@
 
   <ItemGroup>
     <Folder Include="Infrastructure\OpenApi\" />
+    <Folder Include="Infrastructure\OpenApi\Generated\" />
   </ItemGroup>
 
   <!--

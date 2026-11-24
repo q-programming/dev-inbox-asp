@@ -75,6 +75,10 @@ export const translateItemStatus = (status?: ItemStatus): string => {
       return 'Pinned';
     case ItemStatus.Closed:
       return 'Closed';
+    case ItemStatus.NeedsAttention:
+      return 'Needs attention';
+    case ItemStatus.Stale:
+      return 'Stale';
     default:
       return '';
   }
