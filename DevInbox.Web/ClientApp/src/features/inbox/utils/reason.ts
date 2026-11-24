@@ -1,4 +1,4 @@
-import { InboxReason, ItemType } from '@api';
+import { InboxReason, ItemSource, ItemStatus, ItemType } from '@api';
 import type { ChipProps } from '@mui/material/Chip';
 
 /** Human readable label for an inbox reason, used in badge chips across the inbox feature. */
@@ -46,6 +46,38 @@ export const ADO_STATE_CHIP_COLOR: Partial<Record<string, ChipProps['color']>> =
   ["closed"]: 'success',
   ["done"]: 'success',
   ["removed"]: 'default',
+};
+
+/** Human readable label for an item source, used in filter chips. */
+export const translateItemSource = (source?: ItemSource): string => {
+  switch (source) {
+    case ItemSource.Github:
+      return 'GitHub';
+    case ItemSource.Ado:
+      return 'Azure DevOps';
+    case ItemSource.Note:
+      return 'Notes';
+    default:
+      return '';
+  }
+};
+
+/** Human readable label for an item status, used in filter chips. */
+export const translateItemStatus = (status?: ItemStatus): string => {
+  switch (status) {
+    case ItemStatus.ToDo:
+      return 'To Do';
+    case ItemStatus.Saved:
+      return 'Saved';
+    case ItemStatus.Done:
+      return 'Done';
+    case ItemStatus.Pinned:
+      return 'Pinned';
+    case ItemStatus.Closed:
+      return 'Closed';
+    default:
+      return '';
+  }
 };
 
 /** Human readable label for an item type, used in detail panel headers. */

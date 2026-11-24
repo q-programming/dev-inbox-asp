@@ -19,7 +19,7 @@ import NavGroup from './NavGroup.tsx';
 import SectionLabel from './SectionLabel.tsx';
 import { useLocation } from 'react-router-dom';
 import { useInboxSummaryQuery } from '@feature/inbox/hooks/useInboxQuery.tsx';
-import { buildInboxSearch, parseInboxFilter } from '@feature/inbox/utils/inboxFilter';
+import { getActiveDimensions, parseInboxFilter } from '@feature/inbox/utils/inboxFilter';
 import { AppRoute } from '@app/routes';
 import type { InboxSummary } from '@api';
 import { useToggleMutation } from '@feature/settings/hooks/useSettingsQuery.tsx';
@@ -49,27 +49,10 @@ const AppSidebar = memo(({ onNavigate }: { onNavigate?: () => void }) => {
   };
 
   const activeId = useMemo(() => {
-    // Several nav items share the same /inbox route and are only
-    // distinguished by their filter query params — match on both.
-    const candidates = [
-      ...CORE_FOCUS_ITEMS,
-      ...INTEGRATION_FOCUS_ITEMS,
-      ...BOTTOM_FOCUS_ITEMS,
-      ...FILTER_ITEMS,
-    ];
-    const match = candidates.find(
-      (item) => item.route === pathname && buildInboxSearch(item.filter) === location.search,
-    );
-
-    if (match) {
-      return match.id;
-    }
-    // Scope entries (team/repo) are generated per value, so match them from the query string.
     if (pathname === AppRoute.INBOX) {
-      const { scope } = parseInboxFilter(new URLSearchParams(location.search));
-      if (scope) {
-        return `scope:${scope}`;
-      }
+      const filter = parseInboxFilter(new URLSearchParams(location.search));
+      // Filters are combinable; each filter row decides its own highlight, so only plain Inbox remains here.
+      return getActiveDimensions(filter).length > 0 ? '' : 'inbox';
     }
 
     return pathname.split('/').filter(Boolean)[0] ?? '';

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useInboxStore } from '@feature/inbox/store/inbox.store';
 import { renderWithProviders } from '@test/renderWithProviders.tsx';
 import MobileSearchBar from './MobileSearchBar.tsx';
 
@@ -53,6 +54,25 @@ describe('MobileSearchBar', () => {
   });
 
   describe('collapsing', () => {
+    it('should store the typed term after the debounce', async () => {
+      const user = userEvent.setup();
+      useInboxStore.setState({ searchTerm: '' });
+      renderBar();
+      await user.click(screen.getByRole('button', { name: /open search/i }));
+      await user.type(screen.getByTestId('mobile-search-input'), 'account');
+      await waitFor(() => expect(useInboxStore.getState().searchTerm).toBe('account'));
+    });
+
+    it('should reflect a term cleared elsewhere in the input', async () => {
+      const user = userEvent.setup();
+      useInboxStore.setState({ searchTerm: 'account' });
+      renderBar();
+      await user.click(screen.getByRole('button', { name: /open search/i }));
+      expect(screen.getByTestId('mobile-search-input')).toHaveValue('account');
+      act(() => useInboxStore.getState().setSearchTerm(''));
+      await waitFor(() => expect(screen.getByTestId('mobile-search-input')).toHaveValue(''));
+    });
+
     it('should restore the search icon button after closing', async () => {
       const user = userEvent.setup();
       renderBar();

@@ -136,7 +136,9 @@ public class InboxItemRepository(AppDbContext dbContext, IFeatureManager feature
             // case-insensitive string comparison — not a SQL pattern — so there is no SQL injection
             // surface and no LIKE wildcard-escaping concern either.
             var matched = (await orderedQuery.ToListAsync())
-                .Where(i => i.Title != null && i.Title.Contains(trimmedSearchTerm, StringComparison.OrdinalIgnoreCase))
+                .Where(i =>
+                    (i.Title != null && i.Title.Contains(trimmedSearchTerm, StringComparison.OrdinalIgnoreCase))
+                    || (i.ExternalId != null && i.ExternalId.Contains(trimmedSearchTerm, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
             totalElements = matched.Count;

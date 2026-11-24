@@ -9,10 +9,16 @@ import List from '@mui/material/List';
 import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { type SidebarNavItem } from '../navConfig.tsx';
 import IntegrationIcon from '@shared/components/integrationIcon/IntegrationIcon.tsx';
-import { buildInboxSearch } from '@feature/inbox/utils/inboxFilter';
+import {
+  buildInboxSearch,
+  filterIncludes,
+  mergeInboxFilter,
+  parseInboxFilter,
+} from '@feature/inbox/utils/inboxFilter';
+import { AppRoute } from '@app/routes';
 import useSettingsStore from '@feature/settings/store/settings.store';
 import { Density } from '@api';
 
@@ -68,7 +74,14 @@ const NavRow = memo(({ item, activeId, collapsed, onNavigate, expanded = false, 
     [item.expandable, item.id, collapsed, expanded, onToggle, onNavigate],
   );
   const closeMenu = useCallback((): void => setMenuAnchor(null), []);
-  const isActive = item.id === activeId;
+  const location = useLocation();
+  const currentFilter = parseInboxFilter(new URLSearchParams(location.search));
+  const isInboxRoute = item.route === AppRoute.INBOX;
+  // Filter rows are highlighted whenever their filter is part of the active one (several may be lit).
+  const isActive =
+    isInboxRoute && item.filter
+      ? location.pathname === item.route && filterIncludes(currentFilter, item.filter)
+      : item.id === activeId;
   const density = useSettingsStore((state) => state.density);
   const { minHeight, marginY } = DENSITY_NAV_ROW_STYLES[density];
   const icon =
@@ -77,7 +90,9 @@ const NavRow = memo(({ item, activeId, collapsed, onNavigate, expanded = false, 
     ) : (
       item.icon
     );
-  const to = item.route ? `${item.route}${buildInboxSearch(item.filter)}` : undefined;
+  const to = item.route
+    ? `${item.route}${isInboxRoute ? buildInboxSearch(mergeInboxFilter(location.pathname === item.route ? currentFilter : {}, item.filter)) : buildInboxSearch(item.filter)}`
+    : undefined;
 
   const button = (
     <ListItemButton

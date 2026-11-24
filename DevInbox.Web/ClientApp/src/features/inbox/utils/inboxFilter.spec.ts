@@ -1,6 +1,49 @@
-import { InboxReason, InboxSort, ItemSource, ItemType } from '@api';
+import { InboxReason, InboxSort, ItemSource, ItemStatus, ItemType } from '@api';
 import { describe, expect, it } from 'vitest';
-import { buildInboxSearch, parseInboxFilter, toInboxSearchTerm } from './inboxFilter';
+import {
+  buildInboxSearch,
+  clearFilterDimensions,
+  mergeInboxFilter,
+  parseInboxFilter,
+  removeFilterDimension,
+  toInboxSearchTerm,
+} from './inboxFilter';
+
+describe('inbox filter combining', () => {
+  it('adds a new dimension to the current filter', () => {
+    expect(mergeInboxFilter({ source: ItemSource.Github }, { status: ItemStatus.ToDo })).toEqual({
+      source: ItemSource.Github,
+      status: ItemStatus.ToDo,
+    });
+  });
+
+  it('replaces a value of the same dimension', () => {
+    expect(
+      mergeInboxFilter({ status: ItemStatus.ToDo }, { status: ItemStatus.Closed }),
+    ).toEqual({ status: ItemStatus.Closed });
+  });
+
+  it('toggles off a filter that is already applied', () => {
+    const merged = mergeInboxFilter(
+      { source: ItemSource.Github, status: ItemStatus.ToDo },
+      { status: ItemStatus.ToDo },
+    );
+    expect(merged.status).toBeUndefined();
+    expect(merged.source).toBe(ItemSource.Github);
+  });
+
+  it('resets filters but keeps sort when no target filter is given', () => {
+    expect(
+      mergeInboxFilter({ source: ItemSource.Ado, sort: InboxSort.PriorityDesc }, undefined),
+    ).toEqual({ sort: InboxSort.PriorityDesc });
+  });
+
+  it('removes a single dimension and clears all dimensions', () => {
+    const filter = { source: ItemSource.Ado, scope: 'org/repo', sort: InboxSort.ActivityAsc };
+    expect(removeFilterDimension(filter, 'scope').scope).toBeUndefined();
+    expect(clearFilterDimensions(filter)).toEqual({ sort: InboxSort.ActivityAsc });
+  });
+});
 
 const toObject = (search: string): Record<string, string> =>
   Object.fromEntries(new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).entries());

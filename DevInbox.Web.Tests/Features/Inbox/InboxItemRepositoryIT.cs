@@ -60,7 +60,37 @@ public class InboxItemRepositoryIT : DatabaseIntegrationTest
             result.Select(i => $"{i.Scope}:{i.ExternalId}").Order().ToList());
     }
 
-    private InboxItem BuildItem(string scope, string externalId) => new()
+    [Fact(DisplayName = "GetInboxItemsFilteredAsync should match the search term against the external id as well as the title")]
+    public async Task GetInboxItemsFilteredAsyncShouldMatchSearchTermOnExternalIdAsync()
+    {
+        await DataBase.InboxItems.AddRangeAsync(
+            BuildItem("contoso/Alpha/Backend", "48213", "Fix login redirect"),
+            BuildItem("contoso/Alpha/Backend", "777", "Update docs for 48213 migration"),
+            BuildItem("contoso/Alpha/Backend", "999", "Unrelated"));
+        await DataBase.SaveChangesAsync();
+
+        var (items, total) = await _repository.GetInboxItemsFilteredAsync(
+            new PageRequest { Page = 0, Size = 10 }, _user.Id, null, null, null, null, null, "48213");
+
+        Assert.Equal(2, total);
+        Assert.Equal(["48213", "777"], items.Select(i => i.ExternalId!).Order().ToList());
+    }
+
+    [Fact(DisplayName = "GetInboxItemsFilteredAsync should match a partial external id")]
+    public async Task GetInboxItemsFilteredAsyncShouldMatchPartialExternalIdAsync()
+    {
+        await DataBase.InboxItems.AddRangeAsync(
+            BuildItem("contoso/Alpha/Backend", "48213", "Fix login redirect"),
+            BuildItem("contoso/Alpha/Backend", "999", "Unrelated"));
+        await DataBase.SaveChangesAsync();
+
+        var (items, _) = await _repository.GetInboxItemsFilteredAsync(
+            new PageRequest { Page = 0, Size = 10 }, _user.Id, null, null, null, null, null, "8213");
+
+        Assert.Equal(["48213"], items.Select(i => i.ExternalId!).ToList());
+    }
+
+    private InboxItem BuildItem(string scope, string externalId, string title = "Item") => new()
     {
         InboxId = _user.Id,
         Source = DomainItemSource.Ado,
@@ -68,7 +98,7 @@ public class InboxItemRepositoryIT : DatabaseIntegrationTest
         Reason = DomainInboxReason.Assigned,
         ExternalId = externalId,
         Scope = scope,
-        Title = "Item",
+        Title = title,
         ActivityAt = DateTimeOffset.UtcNow,
         CreatedAt = DateTimeOffset.UtcNow,
         UpdatedAt = DateTimeOffset.UtcNow,

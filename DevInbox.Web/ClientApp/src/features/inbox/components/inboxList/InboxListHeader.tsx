@@ -10,6 +10,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import ActiveFilterBar from './ActiveFilterBar';
 
 /** Sort orders offered in the inbox list header, in menu display order. Triage-oriented rather
  * than generic (e.g. no alphabetical) — each maps to a real "what should I look at" decision. */
@@ -60,7 +61,7 @@ const InboxListHeader = () => {
       sx={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: hasSelection ? 'space-between' : 'flex-end',
+        justifyContent: 'space-between',
         gap: 1,
         px: 2,
         py: 1,
@@ -69,28 +70,31 @@ const InboxListHeader = () => {
         bgcolor: 'background.paper',
       }}
     >
-      {hasSelection && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography
-            data-testid="inbox-list-selection-count"
-            variant="body2"
-            color="text.secondary"
-          >
-            {selectedIds.size} selected
-          </Typography>
-          <Button
-            data-testid="inbox-selection-cancel-btn"
-            size="small"
-            color="inherit"
-            onClick={() => clearSelectedIds()}
-            sx={{ color: 'text.secondary' }}
-          >
-            Cancel
-          </Button>
-        </Box>
-      )}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, minWidth: 0 }}>
+        {hasSelection && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+            <Typography
+              data-testid="inbox-list-selection-count"
+              variant="body2"
+              color="text.secondary"
+            >
+              {selectedIds.size} selected
+            </Typography>
+            <Button
+              data-testid="inbox-selection-cancel-btn"
+              size="small"
+              color="inherit"
+              onClick={() => clearSelectedIds()}
+              sx={{ color: 'text.secondary' }}
+            >
+              Cancel
+            </Button>
+          </Box>
+        )}
+        <ActiveFilterBar />
+      </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
         {hasSelection && (
           <>
             <Button

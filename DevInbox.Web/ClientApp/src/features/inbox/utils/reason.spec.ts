@@ -1,6 +1,12 @@
-import { InboxReason, ItemType } from '@api';
+import { InboxReason, ItemSource, ItemStatus, ItemType } from '@api';
 import { describe, expect, it } from 'vitest';
-import { REASON_CHIP_COLOR, translateInboxReason, translateItemType } from './reason';
+import {
+  REASON_CHIP_COLOR,
+  translateInboxReason,
+  translateItemSource,
+  translateItemStatus,
+  translateItemType,
+} from './reason';
 
 describe('reason utilities', () => {
   describe('translateInboxReason', () => {
@@ -44,6 +50,16 @@ describe('reason utilities', () => {
 
     it('should return an empty string for undefined item types', () => {
       expect(translateItemType(undefined)).toBe('');
+    });
+  });
+
+  describe('translateItemSource / translateItemStatus', () => {
+    it('should translate sources and statuses for filter chips', () => {
+      expect(translateItemSource(ItemSource.Ado)).toBe('Azure DevOps');
+      expect(translateItemSource(undefined)).toBe('');
+      expect(translateItemStatus(ItemStatus.ToDo)).toBe('To Do');
+      expect(translateItemStatus(ItemStatus.Closed)).toBe('Closed');
+      expect(translateItemStatus(undefined)).toBe('');
     });
   });
 });
