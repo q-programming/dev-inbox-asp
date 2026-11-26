@@ -103,6 +103,8 @@ public class AdoService(
             DescriptionFormat = ContentFormatDetector.Detect(workItem.Fields.Description),
             AcceptanceCriteria = workItem.Fields.AcceptanceCriteria,
             AcceptanceCriteriaFormat = ContentFormatDetector.Detect(workItem.Fields.AcceptanceCriteria),
+            ReproSteps = workItem.Fields.ReproSteps,
+            ReproStepsFormat = ContentFormatDetector.Detect(workItem.Fields.ReproSteps),
             Area = workItem.Fields.AreaPath ?? string.Empty,
             AssignedTo = MapPerson(workItem.Fields.AssignedTo),
             CreatedAt = workItem.Fields.CreatedDate ?? DateTimeOffset.UtcNow,

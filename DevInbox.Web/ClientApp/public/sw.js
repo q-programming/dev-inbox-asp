@@ -19,11 +19,11 @@ const INTEGRATION_LABELS = {
   Note: 'Note',
 };
 
-/** Formats a single changed item to match the in-app alert structure: "New: Title (GitHub)". */
+/** Formats a single changed item: "Updated:\n(GitHub) #123 Title". */
 function formatItem(item) {
   const kind = item.changeKind === 'New' ? 'New' : 'Updated';
   const integration = INTEGRATION_LABELS[item.integration] ?? item.integration;
-  return `${kind}: #${item.externalId} ${item.title} (${integration})`;
+  return `${kind}:\n(${integration}) #${item.externalId} ${item.title}`;
 }
 
 self.addEventListener('install', () => {
@@ -92,25 +92,33 @@ async function showSyncNotification(items) {
 
   const lines = items.slice(0, 3).map(formatItem);
   const body =
-    items.length > 3 ? `${lines.join('\n')}\n+${items.length - 3} more` : lines.join('\n');
+    items.length > 3
+      ? `${lines.join('\n\n')}\n\n+${items.length - 3} more`
+      : lines.join('\n\n');
+
+  const first = items[0];
 
   await self.registration.showNotification('Dev Inbox', {
     body,
+    icon: '/logo.svg',
     tag: 'devinbox-sync',
     renotify: true,
-    data: { summary },
+    data: { summary, url: first.inboxItemId ? `/inbox/${first.inboxItemId}` : '/' },
   });
 }
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const url = event.notification.data?.url ?? '/';
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windowClients) => {
       const existing = windowClients[0];
       if (existing) {
-        return existing.focus();
+        // navigate() can fail for uncontrolled clients; fall back to just focusing.
+        const navigated = await existing.navigate(url).catch(() => existing);
+        return (navigated ?? existing).focus();
       }
-      return self.clients.openWindow('/');
+      return self.clients.openWindow(url);
     }),
   );
 });

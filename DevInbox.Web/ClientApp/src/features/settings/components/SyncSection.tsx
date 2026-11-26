@@ -39,10 +39,16 @@ const SyncSection = memo(() => {
   }, [sendNotifications, toggleSendNotifications]);
 
   return (
-    <Box id="sync" sx={{ display: 'flex', flexDirection: 'column', gap: 2, scrollMarginTop: '72px' }}>
+    <Box
+      id="sync"
+      sx={{ display: 'flex', flexDirection: 'column', gap: 2, scrollMarginTop: '72px' }}
+    >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <SyncOutlinedIcon sx={{ fontSize: 20, color: 'primary.main' }} />
-        <Typography variant="h6" sx={{ fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 700 }}>
+        <Typography
+          variant="h6"
+          sx={{ fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 700 }}
+        >
           Sync & Notifications
         </Typography>
       </Box>
@@ -71,14 +77,17 @@ const SyncSection = memo(() => {
             valueLabelDisplay="auto"
             valueLabelFormat={(value) => `${value} min`}
           />
-          <Typography sx={{ fontWeight: 700, minWidth: 64, textAlign: 'right' }} data-testid="sync-interval-value">
+          <Typography
+            sx={{ fontWeight: 700, minWidth: 64, textAlign: 'right' }}
+            data-testid="sync-interval-value"
+          >
             {syncIntervalMinutes} min
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
-          How often Dev Inbox checks GitHub and Azure DevOps for updates, between {SYNC_INTERVAL_MIN_MINUTES}
-          {' '}and {SYNC_INTERVAL_MAX_MINUTES} minutes. Lower values keep the inbox fresher but use more
-          background requests.
+          How often Dev Inbox checks GitHub and Azure DevOps for updates, between{' '}
+          {SYNC_INTERVAL_MIN_MINUTES} and {SYNC_INTERVAL_MAX_MINUTES} minutes. Lower values keep the
+          inbox fresher but use more background requests.
         </Typography>
       </Paper>
 

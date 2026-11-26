@@ -14,7 +14,8 @@ public partial class SyncMapper
         Integration = ToItemSource(change.Item.Source),
         Title = change.Item.Title ?? string.Empty,
         ChangeKind = ToChangeKind(change.Kind),
-        ExternalId = change.Item.ExternalId
+        ExternalId = change.Item.ExternalId,
+        InboxItemId = change.Item.Id
     };
 
     private partial ItemSource ToItemSource(Inbox.Domain.ItemSource source);

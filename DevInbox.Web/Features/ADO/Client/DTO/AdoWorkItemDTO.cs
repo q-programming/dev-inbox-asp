@@ -109,6 +109,10 @@ public sealed class AdoWorkItemFieldsDTO
     /// <summary>Populated by the single-item detail fetch only (<c>$expand=all</c>); absent on work item types without the field.</summary>
     [JsonPropertyName("Microsoft.VSTS.Common.AcceptanceCriteria")]
     public string? AcceptanceCriteria { get; set; }
+
+    /// <summary>Bugs often carry repro steps instead of a description; populated by the detail fetch only.</summary>
+    [JsonPropertyName("Microsoft.VSTS.TCM.ReproSteps")]
+    public string? ReproSteps { get; set; }
 }
 
 /// <summary>Azure DevOps' common "identity reference" shape — used for AssignedTo/CreatedBy/reviewers alike.</summary>

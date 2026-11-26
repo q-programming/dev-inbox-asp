@@ -172,6 +172,12 @@ const AdoDetail = ({ details }: IAdoDetail) => {
               </RichContent>
             </CollapsibleSection>
           )}
+
+          {!!workItem.reproSteps && (
+            <CollapsibleSection title="Repro Steps" data-testid="ado-detail-repro-steps">
+              <RichContent format={workItem.reproStepsFormat}>{workItem.reproSteps}</RichContent>
+            </CollapsibleSection>
+          )}
         </Paper>
         {!!workItem.comments?.length && (
           <Box sx={{ minWidth: 0 }} data-testid="ado-detail-comments">
