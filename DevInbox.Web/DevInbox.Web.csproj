@@ -7,7 +7,7 @@
     <RootNamespace>DevInbox.Web</RootNamespace>
     <AssemblyName>DevInbox.Web</AssemblyName>
     <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <UserSecretsId>devinbox-web-dev-secrets</UserSecretsId>
   </PropertyGroup>
 
@@ -41,7 +41,6 @@
 
   <ItemGroup>
     <Folder Include="Infrastructure\OpenApi\" />
-    <Folder Include="Infrastructure\OpenApi\Generated\" />
   </ItemGroup>
 
   <!--

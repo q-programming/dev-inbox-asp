@@ -140,6 +140,23 @@ describe('AdoDetail', () => {
     expect(screen.queryByTestId('ado-detail-acceptance-criteria')).toBeNull();
   });
 
+  it('renders the repro steps when present', () => {
+    const details = makeInboxItemDetail({ ado: {     reproSteps: 'Open the page' } });
+
+    renderWithProviders(<AdoDetail details={details} />);
+
+    expect(screen.getByTestId('ado-detail-repro-steps')).toHaveTextContent('Repro Steps');
+        expect(screen.getByTestId('ado-detail-repro-steps')).toHaveTextContent('Open the page');
+  });
+
+  it('does not render the repro steps section when missing', () => {
+    const details = makeInboxItemDetail({ ado: { reproSteps: undefined } });
+
+    renderWithProviders(<AdoDetail details={details} />);
+
+    expect(screen.queryByTestId('ado-detail-repro-steps')).toBeNull();
+  });
+
   it('renders tags when present', () => {
     const details = makeInboxItemDetail({ ado: { tags: ['backend', 'urgent'] } });
 

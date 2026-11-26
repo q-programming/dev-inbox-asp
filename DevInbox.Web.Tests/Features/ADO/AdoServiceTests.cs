@@ -70,6 +70,7 @@ public class AdoServiceTests
                 Tags = "backend; sync",
                 Description = "Full work item description",
                 AcceptanceCriteria = "Retries up to 3 times",
+                ReproSteps = "1. Trigger sync",
                 AssignedTo = new AdoIdentityRefDTO { DisplayName = "John Doe", UniqueName = "john@doe.com" },
                 CreatedDate = new DateTimeOffset(2026, 1, 10, 9, 0, 0, TimeSpan.Zero),
                 ChangedDate = new DateTimeOffset(2026, 1, 14, 15, 30, 0, TimeSpan.Zero)
@@ -90,6 +91,7 @@ public class AdoServiceTests
         Assert.Equal("Active", result.State);
         Assert.Equal("Full work item description", result.Description);
         Assert.Equal("Retries up to 3 times", result.AcceptanceCriteria);
+        Assert.Equal("1. Trigger sync", result.ReproSteps);
         Assert.Equal("Alpha\\Backend", result.Area);
         Assert.Equal("John Doe", result.AssignedTo.DisplayName);
         Assert.Contains("backend", result.Tags);

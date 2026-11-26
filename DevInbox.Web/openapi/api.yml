@@ -1079,6 +1079,11 @@ components:
           nullable: true
         acceptanceCriteriaFormat:
           $ref: "#/components/schemas/ContentFormat"
+        reproSteps:
+          type: string
+          nullable: true
+        reproStepsFormat:
+          $ref: "#/components/schemas/ContentFormat"
         area:
           type: string
         assignedTo:
@@ -1307,6 +1312,9 @@ components:
       description: Lightweight summary of a single new/updated item from a Background sync — just
         enough to build a notification (which integration, what item, was it new or updated).
       properties:
+        inboxItemId:
+          type: integer
+          format: int64
         externalId:
           type: string
         integration:
